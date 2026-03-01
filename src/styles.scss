@@ -1,0 +1,65 @@
+/* ── Reset & Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  color: #1e293b;
+  background: #f0f2f5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar personnalisée ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ── Typography ── */
+h1, h2, h3, h4 { color: #0c1a35; font-weight: 700; }
+
+/* ── Forms globaux ── */
+input, select, textarea, button {
+  font-family: inherit;
+  font-size: 14px;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { opacity: 1; }
+
+/* ── Animations ── */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.fade-in { animation: fadeIn .2s ease; }
+
+/* ── Toast / Snackbar global ── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  background: #0c1a35; color: #fff;
+  padding: 14px 20px; border-radius: 10px;
+  font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.2);
+  animation: slideIn .2s ease;
+}
+.toast.success { border-left: 4px solid #10b981; }
+.toast.error   { border-left: 4px solid #ef4444; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ── Couleurs KDI ── */
+:root {
+  --kdi-navy:  #0c1a35;
+  --kdi-gold:  #c8a96e;
+  --kdi-blue:  #1a3060;
+  --kdi-green: #10b981;
+  --kdi-red:   #ef4444;
+  --kdi-gray:  #64748b;
+}
+
+.btn-activer{background:#d1fae5;color:#065f46;border:none;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+.btn-activer:hover{background:#a7f3d0}
+
+/* ── Print ── */
+@media print {
+  .sidebar, .topbar, .btn, .header-actions { display: none !important; }
+  .page-content { padding: 0 !important; }
+  body { background: white; }
+}
