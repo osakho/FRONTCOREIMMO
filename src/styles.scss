@@ -48,7 +48,42 @@ input[type="number"]::-webkit-outer-spin-button { opacity: 1; }
 :root {
   --kdi-navy:  #0c1a35;
   --kdi-gold:  #c8a96e;
-  --kdi-blue:  #1a3060;
+  --kdi-blue:  #1a3060;/* ══════════════════════════════════════════════════
+   STYLES GLOBAUX — Khalifat Djické
+   À référencer dans angular.json > styles[]
+══════════════════════════════════════════════════ */
+
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+/* Reset minimal */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'DM Sans', sans-serif;
+  background: #F8F4ED;
+  color: #0D0D0D;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Le composant racine kdi-shell occupe tout l'écran */
+kdi-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Scrollbar globale */
+::-webkit-scrollbar       { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #EDE8DF; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #C9A84C; }
   --kdi-green: #10b981;
   --kdi-red:   #ef4444;
   --kdi-gray:  #64748b;
