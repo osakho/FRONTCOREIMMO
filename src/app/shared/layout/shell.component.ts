@@ -636,7 +636,7 @@ export class ShellComponent {
   toggleUserMenu(): void {
     this.userMenuOpen.update(v => !v);
   }
-
+  
   // Ferme le menu user si clic ailleurs
   @HostListener('document:click', ['$event'])
   onDocClick(e: Event): void {
