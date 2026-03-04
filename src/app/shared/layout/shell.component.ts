@@ -632,7 +632,7 @@ export class ShellComponent {
   closeSidebarMobile(): void {
     if (window.innerWidth < 900) this.sidebarOpen.set(false);
   }
-
+  
   toggleUserMenu(): void {
     this.userMenuOpen.update(v => !v);
   }
