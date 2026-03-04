@@ -388,4 +388,12 @@ export class DashboardService extends ApiService {
     const params = periodeMois ? new HttpParams().set('periodeMois', periodeMois) : undefined;
     return this.get<DashboardDto>('/dashboard', params);
   }
+
+  // Ajouter dans DashboardService
+  getRapportSemaineCourante(semaine: number, annee: number): Observable<RapportCollecteurDto[]> {
+    const params = new HttpParams()
+      .set('semaine', semaine)
+      .set('annee', annee);
+    return this.get<RapportCollecteurDto[]>('/collectes/rapport-global', params);
+  }
 }
