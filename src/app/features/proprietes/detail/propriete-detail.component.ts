@@ -62,7 +62,8 @@ import { PersonnelListItemDto, CollecteurAffecteDto } from '../../../core/models
             </span>
           </div>
           <div class="gestion-actions" *ngIf="!p.aContratGestion">
-            <a [routerLink]="['/contrats-gestion/nouveau']" [queryParams]="{proprieteId: p.id}"
+            <a [routerLink]="['/contrats-gestion']"
+               [queryParams]="{proprieteId: p.id, proprieteLibelle: p.libelle, proprietaireNom: p.proprietaireNom}"
                class="btn btn-primary mt">＋ Créer le contrat de gestion</a>
           </div>
         </div>

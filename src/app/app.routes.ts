@@ -44,6 +44,7 @@ export const routes: Routes = [
       { path: 'locataires',         loadComponent: () => import('./features/locataires/list/locataires-list.component').then(m => m.LocatairesListComponent) },
       { path: 'locataires/nouveau', loadComponent: () => import('./features/locataires/form/locataire-form.component').then(m => m.LocataireFormComponent) },
       { path: 'locataires/:id',     loadComponent: () => import('./features/locataires/detail/locataire-detail.component').then(m => m.LocataireDetailComponent) },
+      { path: 'locataires/:id/paiements', loadComponent: () => import('./features/locataires/paiements/locataire-paiements.component').then(m => m.LocatairePaiementsComponent) },
 
       // Contrats de location (bail)
       { path: 'contrats-location',         loadComponent: () => import('./features/contrats-location/list/contrats-location-list.component').then(m => m.ContratsLocationListComponent) },
@@ -71,6 +72,6 @@ export const routes: Routes = [
       },
     ]
   },
-
+  
   { path: '**', redirectTo: 'dashboard' }
 ];

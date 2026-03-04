@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, OnDestroy, signal, ChangeDetectorRef, NgZone } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -105,6 +106,7 @@ export class ContratsGestionListComponent implements OnInit, OnDestroy {
   private propSvc = inject(ProprietesService);
   private cdr     = inject(ChangeDetectorRef);
   private zone    = inject(NgZone);
+  private route   = inject(ActivatedRoute);
 
   liste = signal<PagedList<ContratGestionDto>>({
     items:[], totalCount:0, page:1, pageSize:20, totalPages:0, hasNext:false, hasPrevious:false
@@ -126,7 +128,21 @@ export class ContratsGestionListComponent implements OnInit, OnDestroy {
 
   private overlayEl: HTMLElement | null = null;
 
-  ngOnInit() { this.load(); }
+  ngOnInit() {
+    this.load();
+    // Si on arrive depuis la page détail d'une propriété avec ?proprieteId=...
+    this.route.queryParams.subscribe((params: Record<string, string>) => {
+      const pid    = params['proprieteId'];
+      const pnom   = params['proprieteLibelle'];
+      const powner = params['proprietaireNom'] ?? '';
+      if (pid && pnom) {
+        // Attendre que le composant soit rendu avant d'ouvrir le modal
+        setTimeout(() => {
+          this.ouvrirModalAvecPropriete({ id: pid, libelle: pnom, proprietaireNom: powner });
+        }, 150);
+      }
+    });
+  }
   ngOnDestroy() { this.detruireOverlay(); }
 
   load() {
@@ -144,8 +160,14 @@ export class ContratsGestionListComponent implements OnInit, OnDestroy {
   //  MODAL — construit et injecté dans <body>
   // ─────────────────────────────────────────────
   ouvrirModal() {
+    this.ouvrirModalAvecPropriete(null);
+  }
+
+  ouvrirModalAvecPropriete(prop: { id: string; libelle: string; proprietaireNom?: string } | null) {
     this.etape = 1;
-    this.propSel = null; this.propResultats = []; this.searchProp = '';
+    this.propSel = prop ?? null;
+    this.propResultats = [];
+    this.searchProp = prop ? prop.libelle : '';
     this.docIdentite = null; this.photosEdl = []; this.docAutorisation = null;
     this.step1 = { tauxCommission: '', periodicite:'Mensuel', dateDebut: new Date().toISOString().slice(0,10), dateFin:'', conditionsParticulieres:'' };
     this.detruireOverlay();

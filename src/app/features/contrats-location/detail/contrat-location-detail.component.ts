@@ -3,6 +3,7 @@ import { CommonModule, DecimalPipe } from '@angular/common';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { ContratsLocationService } from '../../../core/services/api.services';
 
+
 @Component({
   selector: 'kdi-contrat-location-detail',
   standalone: true,
