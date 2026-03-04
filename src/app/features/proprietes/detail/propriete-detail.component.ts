@@ -1,12 +1,15 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { RouterLink, ActivatedRoute } from '@angular/router';
-import { ProprietesService } from '../../../core/services/api.services';
+import { FormsModule } from '@angular/forms';
+import { map } from 'rxjs/operators';
+import { ProprietesService, PersonnelService, AuthService } from '../../../core/services/api.services';
+import { PersonnelListItemDto, CollecteurAffecteDto } from '../../../core/models/models';
 
 @Component({
   selector: 'kdi-propriete-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, DecimalPipe],
+  imports: [CommonModule, RouterLink, DecimalPipe, FormsModule],
   template: `
     <div class="page" *ngIf="p">
       <div class="page-header">
@@ -65,6 +68,68 @@ import { ProprietesService } from '../../../core/services/api.services';
         </div>
       </div>
 
+      <!-- ══════════════════════════════════════════════════ -->
+      <!-- SECTION COLLECTEUR                                 -->
+      <!-- ══════════════════════════════════════════════════ -->
+      <div class="dc mb" *ngIf="isDirection()">
+        <div class="section-header">
+          <h3 class="dc-title" style="margin:0;border:none;padding:0">👷 Collecteur affecté</h3>
+          <button
+            class="btn btn-sm btn-outline"
+            (click)="showAffectationForm = !showAffectationForm"
+            *ngIf="p.aContratGestion">
+            {{ showAffectationForm ? '✕ Annuler' : (p.collecteurActuel ? '🔄 Changer' : '＋ Affecter') }}
+          </button>
+        </div>
+
+        <!-- Pas de contrat de gestion -->
+        <div class="alert alert-warn" *ngIf="!p.aContratGestion">
+          ⚠ Un contrat de gestion actif est requis avant d'affecter un collecteur.
+        </div>
+
+        <!-- Collecteur actuel -->
+        <div class="collecteur-card" *ngIf="p.collecteurActuel && !showAffectationForm">
+          <div class="collecteur-avatar">{{ initiales(p.collecteurActuel.collecteurNom) }}</div>
+          <div class="collecteur-info">
+            <div class="collecteur-nom">{{ p.collecteurActuel.collecteurNom }}</div>
+            <div class="collecteur-meta">Depuis le {{ p.collecteurActuel.dateDebut | date:'dd/MM/yyyy' }}</div>
+          </div>
+          <span class="badge-statut loue">✓ Actif</span>
+        </div>
+
+        <!-- Aucun collecteur -->
+        <div class="empty-mini" *ngIf="!p.collecteurActuel && !showAffectationForm && p.aContratGestion">
+          👷 Aucun collecteur affecté —
+          <a class="link" (click)="showAffectationForm = true" style="cursor:pointer">Affecter maintenant →</a>
+        </div>
+
+        <!-- Formulaire d'affectation -->
+        <div class="affectation-form" *ngIf="showAffectationForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Collecteur <span class="required">*</span></label>
+              <select class="form-select" [(ngModel)]="affectation.collecteurId">
+                <option value="">— Sélectionner —</option>
+                <option *ngFor="let c of collecteurs()" [value]="c.id">{{ c.nomComplet }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="alert alert-info" *ngIf="p.collecteurActuel">
+            ℹ <strong>{{ p.collecteurActuel.collecteurNom }}</strong> sera automatiquement clôturé.
+          </div>
+
+          <div class="form-actions">
+            <button
+              class="btn btn-primary"
+              [disabled]="!affectation.collecteurId || saving()"
+              (click)="confirmerAffectation()">
+              {{ saving() ? '⏳ Enregistrement…' : '✔ Confirmer' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Produits -->
       <div class="sec-title">🏠 Produits locatifs ({{ p.produits?.length || 0 }})</div>
       <div class="produits-table" *ngIf="p.produits?.length; else noProduits">
@@ -96,16 +161,26 @@ import { ProprietesService } from '../../../core/services/api.services';
     .page-title{font-size:24px;font-weight:700;color:#0c1a35;margin:0 0 4px}
     .page-subtitle{font-size:14px;color:#64748b;margin:0}
     .ha{display:flex;gap:8px;flex-wrap:wrap}
-    .btn{padding:9px 18px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;border:none;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+    .btn{padding:9px 18px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;border:none;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
     .btn-primary{background:#0c1a35;color:#fff}
+    .btn-primary:hover{background:#1e3a5f}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed}
     .btn-sec{background:#fff;color:#334155;border:1px solid #e2e8f0}
     .btn-ghost{background:transparent;color:#64748b}
+    .btn-sm{padding:6px 12px;font-size:12px}
+    .btn-outline{background:#fff;border:1px solid #e2e8f0;color:#334155;border-radius:7px;cursor:pointer}
+    .btn-outline:hover{border-color:#0c1a35;color:#0c1a35}
     .mt{margin-top:16px}
+    .mb{margin-bottom:16px}
+
+    /* Stats */
     .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
     .sc{background:#fff;border-radius:12px;padding:20px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);border-top:3px solid transparent}
     .sc.navy{border-top-color:#0c1a35}.sc.green{border-top-color:#10b981}.sc.orange{border-top-color:#f59e0b}.sc.gold{border-top-color:#c8a96e}
     .sc-val{font-size:28px;font-weight:800;color:#0c1a35}.sc-lbl{font-size:12px;color:#64748b;margin-top:4px}
-    .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+
+    /* Cards */
+    .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
     .dc{background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
     .dc-title{font-size:15px;font-weight:600;color:#0c1a35;margin:0 0 16px;padding-bottom:10px;border-bottom:1px solid #f1f5f9}
     .il{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:14px;margin:0}
@@ -114,6 +189,33 @@ import { ProprietesService } from '../../../core/services/api.services';
     .gestion-status{margin-bottom:12px}
     .badge-big{display:inline-block;padding:8px 16px;border-radius:10px;font-size:14px;font-weight:500}
     .badge-big.ok{background:#d1fae5;color:#065f46}.badge-big.warn{background:#fef3c7;color:#92400e}
+
+    /* Section header collecteur */
+    .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #f1f5f9}
+
+    /* Collecteur card */
+    .collecteur-card{display:flex;align-items:center;gap:14px;padding:14px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0}
+    .collecteur-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#0c1a35,#2d5282);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .collecteur-nom{font-size:14px;font-weight:600;color:#0c1a35}
+    .collecteur-meta{font-size:12px;color:#64748b;margin-top:2px}
+    .collecteur-info{flex:1}
+
+    /* Alerts */
+    .alert{padding:10px 14px;border-radius:8px;font-size:13px;margin:12px 0}
+    .alert-warn{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+    .alert-info{background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe}
+
+    /* Formulaire affectation */
+    .affectation-form{padding-top:14px}
+    .form-row{display:grid;grid-template-columns:1fr;gap:14px;margin-bottom:14px}
+    .form-group{display:flex;flex-direction:column;gap:6px}
+    .form-label{font-size:12px;font-weight:600;color:#374151}
+    .required{color:#ef4444}
+    .form-select{padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#0c1a35;background:#fff;outline:none}
+    .form-select:focus{border-color:#2d5282;box-shadow:0 0 0 3px rgba(45,82,130,.1)}
+    .form-actions{display:flex;justify-content:flex-end;margin-top:12px}
+
+    /* Produits */
     .sec-title{font-size:16px;font-weight:600;color:#0c1a35;margin-bottom:12px}
     .produits-table{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
     .prod-row{display:grid;grid-template-columns:90px 1fr 150px 100px 40px;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #f1f5f9;font-size:14px}
@@ -135,8 +237,53 @@ import { ProprietesService } from '../../../core/services/api.services';
   `]
 })
 export class ProprieteDetailComponent implements OnInit {
-  private svc   = inject(ProprietesService);
-  private route = inject(ActivatedRoute);
+  private svc          = inject(ProprietesService);
+  private personnelSvc = inject(PersonnelService);
+  private auth         = inject(AuthService);
+  private route        = inject(ActivatedRoute);
+
   p: any = null;
-  ngOnInit() { this.svc.getById(this.route.snapshot.params['id']).subscribe(d => this.p = d); }
+  collecteurs   = signal<PersonnelListItemDto[]>([]);
+  saving        = signal(false);
+  showAffectationForm = false;
+
+  affectation = { collecteurId: '' };
+
+  ngOnInit() {
+    this.loadPropriete();
+    this.loadCollecteurs();
+  }
+
+  loadPropriete() {
+    this.svc.getById(this.route.snapshot.params['id']).subscribe(d => this.p = d);
+  }
+
+  loadCollecteurs() {
+    this.personnelSvc.getAll(1).subscribe(r => {
+      this.collecteurs.set(r.items.filter(p => p.typeLabel === 'Collecteur' && p.estActif));
+    });
+  }
+
+  confirmerAffectation() {
+    if (!this.affectation.collecteurId) return;
+    this.saving.set(true);
+    this.svc.affecterCollecteur(this.p.id, this.affectation.collecteurId).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.showAffectationForm = false;
+        this.affectation.collecteurId = '';
+        this.loadPropriete();
+      },
+      error: (err: any) => {
+        this.saving.set(false);
+        alert(err?.error?.message ?? 'Erreur lors de l\'affectation');
+      }
+    });
+  }
+
+  initiales(nom: string): string {
+    return nom.split(' ').map((p: string) => p[0]).join('').substring(0, 2).toUpperCase();
+  }
+
+  isDirection(): boolean { return this.auth.isDirection(); }
 }

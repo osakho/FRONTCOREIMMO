@@ -13,7 +13,8 @@ import {
   CollecteDto, RapportCollecteurDto,
   PersonnelListItemDto, DashboardDto,
   StatutContrat, StatutCollecte, TypeProduit, StatutProduit,
-  LoginRequest, LoginResponse
+  LoginRequest, LoginResponse,
+  DashboardProprietairesResult
 } from '../models/models';
 import { environment } from '../../../environments/environment';
 
@@ -64,34 +65,33 @@ export class ApiService {
 // ══════════════════════════════════════════════════════════════
 @Injectable({ providedIn: 'root' })
 export class AuthService extends ApiService {
-  // login(req: LoginRequest): Observable<LoginResponse> {
-  //   return this.http.post<LoginResponse>(`${this.base}/auth/login`, req);
-  // }
   login(req: LoginRequest): Observable<LoginResponse> {
     return this.http.post<any>(`${this.base}/auth/login`, req).pipe(
-      map(r => r.data)  // ← extraire .data
+      map(r => r.data)
     );
   }
+
   logout(): void {
     localStorage.removeItem('kdi_token');
     localStorage.removeItem('kdi_user');
   }
-  
-  getToken(): string | null     { return localStorage.getItem('kdi_token'); }
-  // getUser(): any                { const u = localStorage.getItem('kdi_user'); return u ? JSON.parse(u) : null; }
-  getUser(): any { 
-    const u = localStorage.getItem('kdi_user'); 
-    try { return u ? JSON.parse(u) : null; } 
+
+  getToken(): string | null { return localStorage.getItem('kdi_token'); }
+
+  getUser(): any {
+    const u = localStorage.getItem('kdi_user');
+    try { return u ? JSON.parse(u) : null; }
     catch { return null; }
   }
-  isLoggedIn(): boolean         { return !!this.getToken(); }
-  // isDirection(): boolean        { return ['Direction', 'Admin'].includes(this.getUser()?.role); }
-  // isComptable(): boolean        { return ['Comptable', 'Direction', 'Admin'].includes(this.getUser()?.role); }
-  // isCollecteur(): boolean       { return this.getUser()?.role === 'Collecteur'; }
-  isDirection(): boolean { return ['Direction', 'Admin'].includes(this.getUser()?.role ?? ''); }
-isComptable(): boolean { return ['Comptable', 'Direction', 'Admin'].includes(this.getUser()?.role ?? ''); }
-isCollecteur(): boolean { return this.getUser()?.role === 'Collecteur'; }
-  
+
+  isLoggedIn(): boolean  { return !!this.getToken(); }
+
+  // ── Rôles — Pdg hérite de tous les droits Direction ──────────
+  isPdg(): boolean       { return this.getUser()?.role === 'Pdg'; }
+  isDirection(): boolean { return ['Direction', 'Admin', 'Pdg'].includes(this.getUser()?.role ?? ''); }
+  isComptable(): boolean { return ['Comptable', 'Direction', 'Admin', 'Pdg'].includes(this.getUser()?.role ?? ''); }
+  isCollecteur(): boolean{ return this.getUser()?.role === 'Collecteur'; }
+
   saveSession(resp: LoginResponse): void {
     localStorage.setItem('kdi_token', resp.token);
     localStorage.setItem('kdi_user', JSON.stringify(resp.utilisateur));
@@ -105,7 +105,7 @@ isCollecteur(): boolean { return this.getUser()?.role === 'Collecteur'; }
 export class ProprietairesService extends ApiService {
   getAll(page = 1, pageSize = 20, search?: string, estActif?: boolean): Observable<PagedList<ProprietaireListItemDto>> {
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
-    if (search)              params = params.set('search', search);
+    if (search)                 params = params.set('search', search);
     if (estActif !== undefined) params = params.set('estActif', estActif);
     return this.get<PagedList<ProprietaireListItemDto>>('/proprietaires', params);
   }
@@ -126,13 +126,31 @@ export class ProprietairesService extends ApiService {
     return this.postForm<string>(`/proprietaires/${id}/documents`, data);
   }
 
+  getDashboard(opts: {
+    page?:         number;
+    pageSize?:     number;
+    search?:       string;
+    sortBy?:       string;
+    sortAsc?:      boolean;
+    collecteurId?: string;
+  } = {}): Observable<DashboardProprietairesResult> {
+    let params = new HttpParams()
+      .set('page',     opts.page     ?? 1)
+      .set('pageSize', opts.pageSize ?? 15)
+      .set('sortBy',   opts.sortBy   ?? 'nom')
+      .set('sortAsc',  opts.sortAsc  ?? true);
+    if (opts.search)       params = params.set('search', opts.search);
+    if (opts.collecteurId) params = params.set('collecteurId', opts.collecteurId);
+    return this.get<DashboardProprietairesResult>('/proprietaires/dashboard', params);
+  }
+
   buildFormData(req: any, photo?: File): FormData {
     const fd = new FormData();
     Object.entries(req).forEach(([k, v]) => {
       if (v !== undefined && v !== null && k !== 'photoIdentite' && k !== 'comptes' && k !== 'plateformes')
         fd.append(k, v as string);
     });
-    if (photo) fd.append('NouvellePhoto', photo);  // ← était 'photoIdentite', le backend attend 'NouvellePhoto'
+    if (photo) fd.append('NouvellePhoto', photo);
     (req.comptes ?? []).forEach((c: any, i: number) => {
       Object.entries(c).forEach(([k, v]) => fd.append(`Comptes[${i}].${k}`, v as string));
     });
@@ -150,8 +168,8 @@ export class ProprietairesService extends ApiService {
 export class ProprietesService extends ApiService {
   getAll(page = 1, pageSize = 20, search?: string, proprietaireId?: string): Observable<PagedList<ProprieteListItemDto>> {
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
-    if (search)          params = params.set('search', search);
-    if (proprietaireId)  params = params.set('proprietaireId', proprietaireId);
+    if (search)         params = params.set('search', search);
+    if (proprietaireId) params = params.set('proprietaireId', proprietaireId);
     return this.get<PagedList<ProprieteListItemDto>>('/proprietes', params);
   }
 
@@ -165,6 +183,11 @@ export class ProprietesService extends ApiService {
 
   update(id: string, data: any): Observable<void> {
     return this.http.put<void>(`${this.base}/proprietes/${id}`, data);
+  }
+
+  affecterCollecteur(proprieteId: string, collecteurId: string): Observable<void> {
+    return this.post<string>(`/proprietes/${proprieteId}/affecter-collecteur`, { collecteurId })
+      .pipe(map(() => void 0));
   }
 }
 
@@ -215,9 +238,6 @@ export class ContratsGestionService extends ApiService {
     return this.postForm<string>('/contrats-gestion', data);
   }
 
-  // activer(id: string): Observable<void> {
-  //   return this.http.post<void>(`${this.base}/contrats-gestion/${id}/activer`, {});
-  // }
   activer(id: string): Observable<void> {
     return this.post<string>(`/contrats-gestion/${id}/activer`, {}).pipe(map(() => void 0));
   }
@@ -230,7 +250,7 @@ export class ContratsGestionService extends ApiService {
 export class LocatairesService extends ApiService {
   getAll(page = 1, pageSize = 20, search?: string, estActif?: boolean): Observable<PagedList<LocataireListItemDto>> {
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
-    if (search)              params = params.set('search', search);
+    if (search)                 params = params.set('search', search);
     if (estActif !== undefined) params = params.set('estActif', estActif);
     return this.get<PagedList<LocataireListItemDto>>('/locataires', params);
   }
@@ -242,11 +262,10 @@ export class LocatairesService extends ApiService {
   create(data: FormData): Observable<string> {
     return this.postForm<string>('/locataires', data);
   }
-
+  
   supprimer(id: string): Observable<void> {
     return this.delete<void>(`/locataires/${id}`);
   }
-  
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -262,28 +281,31 @@ export class ContratsLocationService extends ApiService {
     if (opts.search)      params = params.set('search', opts.search);
     return this.get<PagedList<ContratLocationListItemDto>>('/contrats-location', params);
   }
-
+  
   create(data: FormData): Observable<string> {
     return this.postForm<string>('/contrats-location', data);
   }
-
+  
   activer(id: string): Observable<void> {
     return this.http.post<void>(`${this.base}/contrats-location/${id}/activer`, {});
   }
-
+  
   validerChecklistEntree(id: string, data: any): Observable<void> {
     return this.http.post<void>(`${this.base}/contrats-location/${id}/checklist-entree`, data);
   }
-
+  
   cloturer(id: string, data: any): Observable<void> {
     return this.http.post<void>(`${this.base}/contrats-location/${id}/cloturer`, data);
   }
-
+  
   resilier(id: string, motifResiliation: string, dateResiliation: Date): Observable<void> {
     return this.http.post<void>(`${this.base}/contrats-location/${id}/resilier`, {
       motifResiliation,
       dateResiliation: dateResiliation.toISOString()
     });
+  }
+  getById(id: string): Observable<ContratLocationListItemDto> {
+    return this.get<ContratLocationListItemDto>(`/contrats-location/${id}/resume`);
   }
 }
 
@@ -294,11 +316,11 @@ export class ContratsLocationService extends ApiService {
 export class CollectesService extends ApiService {
   getAll(opts: { page?: number; contratId?: string; collecteurId?: string; periodeMois?: string; statut?: StatutCollecte; semaine?: number } = {}): Observable<PagedList<CollecteDto>> {
     let params = new HttpParams().set('page', opts.page ?? 1).set('pageSize', 30);
-    if (opts.contratId)   params = params.set('contratId', opts.contratId);
-    if (opts.collecteurId)params = params.set('collecteurId', opts.collecteurId);
-    if (opts.periodeMois) params = params.set('periodeMois', opts.periodeMois);
-    if (opts.statut)      params = params.set('statut', opts.statut);
-    if (opts.semaine)     params = params.set('numeroSemaine', opts.semaine);
+    if (opts.contratId)    params = params.set('contratId', opts.contratId);
+    if (opts.collecteurId) params = params.set('collecteurId', opts.collecteurId);
+    if (opts.periodeMois)  params = params.set('periodeMois', opts.periodeMois);
+    if (opts.statut)       params = params.set('statut', opts.statut);
+    if (opts.semaine)      params = params.set('numeroSemaine', opts.semaine);
     return this.get<PagedList<CollecteDto>>('/collectes', params);
   }
 
@@ -357,13 +379,13 @@ export class PersonnelService extends ApiService {
 // export class DashboardService extends ApiService {
 //   getDashboard(periodeMois?: string): Observable<DashboardDto> {
 //     const params = periodeMois ? new HttpParams().set('periodeMois', periodeMois) : undefined;
-//     return super.get<DashboardDto>('/dashboard', params);
+//     return this.http.get<DashboardDto>(`${this.base}/dashboard`, { params });
 //   }
 // }
 @Injectable({ providedIn: 'root' })
 export class DashboardService extends ApiService {
   getDashboard(periodeMois?: string): Observable<DashboardDto> {
     const params = periodeMois ? new HttpParams().set('periodeMois', periodeMois) : undefined;
-    return this.http.get<DashboardDto>(`${this.base}/dashboard`, { params });
+    return this.get<DashboardDto>('/dashboard', params);
   }
 }

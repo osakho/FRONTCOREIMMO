@@ -221,6 +221,7 @@ export interface ProprieteDto {
   nombreProduitsLoues: number;
   aContratGestion:     boolean;
   produits:            ProduitResume[];
+  collecteurActuel?: CollecteurAffecteDto;
 }
 
 export interface ProduitResume {
@@ -470,10 +471,16 @@ export interface DashboardDto {
 }
 
 export interface StatCollecteur {
-  nom:                string;
-  nbCollectesSemaine: number;
-  montantSemaine:     number;
-  nbRetards:          number;
+  collecteurId:        string;
+  nom:                 string;
+  initiales:           string;
+  typeLabel:           string;
+  nbCollectesSemaine:  number;
+  montantSemaine:      number;
+  montantSemainePrec:  number;
+  tauxEncaissement:    number;
+  nbRetards:           number;
+  score:               number;
 }
 
 export interface DerniereActivite {
@@ -498,4 +505,79 @@ export interface UtilisateurInfo {
   email:      string;
   role:       string;
   photoUrl?:  string;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  À AJOUTER dans models.ts
+// ══════════════════════════════════════════════════════════════
+
+// ── Dashboard Propriétaires ───────────────────────────────────
+export interface DashboardProduitDto {
+  id:              string;
+  code:            string;
+  typeLabel:       string;
+  loyerReference:  number;
+  statutLabel:     string;
+  locataireNom?:   string;
+  contratNumero?:  string;
+}
+
+export interface DashboardProprieteDto {
+  id:                string;
+  libelle:           string;
+  adresse:           string;
+  quartier?:         string;
+  ville:             string;
+  aContratGestion:   boolean;
+  nombreProduits:    number;
+  produitsLoues:     number;
+  produitsLibres:    number;
+  totalLoyerMensuel: number;
+  produits:          DashboardProduitDto[];
+}
+
+export interface DashboardProprietaireDto {
+  id:                        string;
+  nomComplet:                string;
+  telephone:                 string;
+  email?:                    string;
+  initiales:                 string;
+  estActif:                  boolean;
+  // KPIs
+  nombreProprietes:          number;
+  totalProduits:             number;
+  produitsLoues:             number;
+  produitsLibres:            number;
+  totalLoyerMensuel:         number;
+  // Contrat
+  aContratGestion:           boolean;
+  statutContratLabel?:       string;
+  periodiciteVersementLabel?:string;
+  // Collecteur
+  collecteurId?:             string;
+  collecteurNom?:            string;
+  // Détail
+  proprietes:                DashboardProprieteDto[];
+}
+
+export interface StatsDashboardProprietairesDto {
+  totalProprietaires: number;
+  totalProprietes:    number;
+  totalProduits:      number;
+  totalLoues:         number;
+  totalLibres:        number;
+  tauxOccupation:     number;
+  totalLoyerMensuel:  number;
+  nbCollecteurs:      number;
+}
+
+export interface DashboardProprietairesResult {
+  items: PagedList<DashboardProprietaireDto>;
+  stats: StatsDashboardProprietairesDto;
+}
+
+export interface CollecteurAffecteDto {
+  collecteurId:  string;
+  collecteurNom: string;
+  dateDebut:     string;
 }

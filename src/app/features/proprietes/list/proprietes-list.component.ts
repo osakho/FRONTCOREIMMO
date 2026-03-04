@@ -1,8 +1,8 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { CommonModule, DecimalPipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { ProprietesService, ProprietairesService } from '../../../core/services/api.services';
+import { ProprietesService } from '../../../core/services/api.services';
 import { ProprieteListItemDto, PagedList } from '../../../core/models/models';
 
 @Component({
@@ -10,56 +10,171 @@ import { ProprieteListItemDto, PagedList } from '../../../core/models/models';
   standalone: true,
   imports: [CommonModule, RouterLink, FormsModule],
   template: `
-    <div class="page">
+    <div class="page-enter">
       <div class="page-header">
-        <div><h2 class="page-title">Propriétés</h2><p class="page-subtitle">Immeubles et bâtiments gérés</p></div>
-        <a routerLink="/proprietes/nouvelle" class="btn btn-primary">＋ Nouvelle propriété</a>
+        <div>
+          <h2 class="page-title"><span class="mi">apartment</span>Propriétés</h2>
+          <p class="page-subtitle" *ngIf="!proprietaireId">{{ liste().totalCount }} propriétés gérées</p>
+          <p class="page-subtitle" *ngIf="proprietaireId">
+            <a routerLink="/proprietaires" style="color:var(--t3)">Propriétaires</a>
+            <span style="color:var(--t4)"> › </span>
+            Propriétés du propriétaire
+          </p>
+        </div>
+        <div class="header-actions">
+          <a *ngIf="proprietaireId" routerLink="/proprietaires" class="btn btn-ghost">
+            <span class="mi">arrow_back</span>Retour
+          </a>
+          <a routerLink="/proprietes/nouvelle" class="btn btn-gold">
+            <span class="mi">add</span>Nouvelle propriété
+          </a>
+        </div>
       </div>
-      <div class="filters-bar">
-        <input type="text" class="search-input" placeholder="🔍 Rechercher (libellé, quartier…)"
-               [(ngModel)]="searchTerm" (ngModelChange)="onSearch()">
+
+      <div class="filter-bar">
+        <div class="search-inline">
+          <span class="mi">search</span>
+          <input placeholder="Libellé, quartier, ville…" [(ngModel)]="searchTerm" (ngModelChange)="onSearch()">
+        </div>
       </div>
-      <div class="cards-grid" *ngIf="liste().items.length; else empty">
+
+      <!-- Cards grid -->
+      <div class="prop-grid" *ngIf="liste().items.length; else empty">
         <div *ngFor="let p of liste().items" class="prop-card">
-          <div class="pc-header">
-            <div class="pc-icon">🏘️</div>
-            <div class="pc-info">
-              <div class="pc-title">{{ p.libelle }}</div>
-              <div class="pc-sub">{{ p.proprietaireNom }}</div>
+          <div class="prop-card-header">
+            <div class="prop-icon">
+              <span class="mi">apartment</span>
+            </div>
+            <div class="prop-info">
+              <div class="prop-name">{{ p.libelle }}</div>
+              <div class="prop-owner">{{ p.proprietaireNom }}</div>
             </div>
             <span class="badge" [class.badge-green]="p.aContratGestion" [class.badge-gray]="!p.aContratGestion">
-              {{ p.aContratGestion ? '✓ Géré' : 'Sans contrat' }}
+              {{ p.aContratGestion ? 'Géré' : 'Sans contrat' }}
             </span>
           </div>
-          <div class="pc-body">
-            <div class="pc-address">📍 {{ p.adresse }}<span *ngIf="p.quartier">, {{ p.quartier }}</span></div>
-            <div class="pc-stats">
-              <div class="pc-stat"><span class="ps-val">{{ p.nombreProduits }}</span><span class="ps-lbl">Total</span></div>
-              <div class="pc-stat"><span class="ps-val green">{{ p.nombreProduits - p.nombreLibres }}</span><span class="ps-lbl">Loués</span></div>
-              <div class="pc-stat"><span class="ps-val" [class.orange]="p.nombreLibres > 0">{{ p.nombreLibres }}</span><span class="ps-lbl">Libres</span></div>
+
+          <div class="prop-card-body">
+            <div class="prop-address">
+              <span class="mi mi-sm">place</span>
+              {{ p.adresse }}<span *ngIf="p.quartier">, {{ p.quartier }}</span>
+            </div>
+
+            <div class="prop-stats">
+              <div class="prop-stat">
+                <div class="ps-val">{{ p.nombreProduits }}</div>
+                <div class="ps-lbl">Total</div>
+              </div>
+              <div class="prop-stat">
+                <div class="ps-val" style="color:var(--ok)">{{ p.nombreProduits - p.nombreLibres }}</div>
+                <div class="ps-lbl">Loués</div>
+              </div>
+              <div class="prop-stat">
+                <div class="ps-val" [style.color]="p.nombreLibres > 0 ? 'var(--wa)' : 'var(--t3)'">{{ p.nombreLibres }}</div>
+                <div class="ps-lbl">Libres</div>
+              </div>
+              <div class="prop-stat" *ngIf="p.nombreProduits > 0">
+                <div class="ps-val" style="color:var(--in)">{{ occupationRate(p) }}%</div>
+                <div class="ps-lbl">Occup.</div>
+              </div>
+            </div>
+
+            <!-- Occupation bar -->
+            <div class="progress-bar mt-2" *ngIf="p.nombreProduits > 0">
+              <div class="progress-fill"
+                   [class.green]="occupationRate(p) >= 80"
+                   [style.width.%]="occupationRate(p)"></div>
             </div>
           </div>
-          <div class="pc-footer">
-            <span class="pc-date">{{ p.creeLe | date:'dd/MM/yyyy' }}</span>
+
+          <div class="prop-card-footer">
+            <span class="text-muted" style="font-size:.69rem">{{ p.creeLe | date:'dd/MM/yyyy' }}</span>
             <div class="row-actions">
-              <a [routerLink]="['/proprietes', p.id]" class="btn-icon" title="Voir">👁</a>
-              <a [routerLink]="['/produits']" [queryParams]="{proprieteId: p.id}" class="btn-icon" title="Produits">🏠</a>
+              <a [routerLink]="['/proprietes', p.id]" class="action-btn view" title="Voir">
+                <span class="mi">visibility</span>
+              </a>
+              <a [routerLink]="['/produits']" [queryParams]="{proprieteId: p.id}" class="action-btn" style="color:var(--gold)" title="Produits">
+                <span class="mi">meeting_room</span>
+              </a>
             </div>
           </div>
         </div>
       </div>
+
       <ng-template #empty>
-        <div class="empty-state"><span class="empty-icon">🏘️</span><p>Aucune propriété trouvée</p>
-          <a routerLink="/proprietes/nouvelle" class="btn btn-primary">Créer la première</a></div>
+        <div class="card">
+          <div class="empty-state">
+            <span class="mi">apartment</span>
+            <div class="empty-title">Aucune propriété trouvée</div>
+            <p class="empty-sub">Créez la première propriété</p>
+            <a routerLink="/proprietes/nouvelle" class="btn btn-gold mt-3">
+              <span class="mi">add</span>Nouvelle propriété
+            </a>
+          </div>
+        </div>
       </ng-template>
-      <div class="pagination" *ngIf="liste().totalPages > 1">
-        <button [disabled]="page===1" (click)="goPage(page-1)" class="page-btn">‹</button>
-        <span class="page-info">{{ page }} / {{ liste().totalPages }}</span>
-        <button [disabled]="!liste().hasNext" (click)="goPage(page+1)" class="page-btn">›</button>
+
+      <div class="flex items-center justify-between mt-4" *ngIf="liste().totalPages > 1">
+        <span class="pagination-info">Page {{ page }} / {{ liste().totalPages }}</span>
+        <div class="pagination-pages">
+          <button class="page-btn" [disabled]="page===1" (click)="goPage(page-1)"><span class="mi">chevron_left</span></button>
+          <button *ngFor="let p of pageRange()" class="page-btn" [class.active]="p===page" (click)="goPage(p)">{{ p }}</button>
+          <button class="page-btn" [disabled]="!liste().hasNext" (click)="goPage(page+1)"><span class="mi">chevron_right</span></button>
+        </div>
       </div>
-    </div>`,
+    </div>
+  `,
   styles: [`
-    .page{max-width:1200px;margin:0 auto}.page-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px}.page-title{font-size:24px;font-weight:700;color:#0c1a35;margin:0 0 4px}.page-subtitle{font-size:14px;color:#64748b;margin:0}.btn{padding:9px 18px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;border:none;text-decoration:none;display:inline-flex;align-items:center;gap:6px}.btn-primary{background:#0c1a35;color:#fff}.filters-bar{display:flex;gap:12px;margin-bottom:24px}.search-input{flex:1;padding:9px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px}.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}.prop-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);border:1px solid #f1f5f9;transition:box-shadow .2s}.prop-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.1)}.pc-header{display:flex;align-items:center;gap:12px;padding:16px;border-bottom:1px solid #f1f5f9}.pc-icon{font-size:28px;width:44px;height:44px;background:#f0f4ff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.pc-info{flex:1;min-width:0}.pc-title{font-size:15px;font-weight:600;color:#0c1a35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pc-sub{font-size:13px;color:#64748b}.badge{padding:3px 8px;border-radius:10px;font-size:11px;font-weight:500;white-space:nowrap}.badge-green{background:#d1fae5;color:#065f46}.badge-gray{background:#f1f5f9;color:#64748b}.pc-body{padding:14px 16px}.pc-address{font-size:13px;color:#64748b;margin-bottom:14px}.pc-stats{display:flex;gap:20px}.pc-stat{display:flex;flex-direction:column;align-items:center;gap:2px}.ps-val{font-size:22px;font-weight:700;color:#0c1a35}.ps-val.green{color:#059669}.ps-val.orange{color:#d97706}.ps-lbl{font-size:11px;color:#94a3b8}.pc-footer{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#f8fafc}.pc-date{font-size:12px;color:#94a3b8}.row-actions{display:flex;gap:6px}.btn-icon{background:none;border:none;cursor:pointer;font-size:16px;padding:4px;border-radius:6px;text-decoration:none}.btn-icon:hover{background:#e2e8f0}.empty-state{display:flex;flex-direction:column;align-items:center;padding:60px;gap:12px;color:#94a3b8}.empty-icon{font-size:48px}.pagination{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:16px}.page-btn{padding:6px 14px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;cursor:pointer}.page-btn:disabled{opacity:.4}.page-info{font-size:14px;color:#64748b}
+    .prop-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 14px;
+    }
+    .prop-card {
+      background: var(--wh);
+      border: 1px solid var(--bord);
+      border-radius: var(--r2);
+      overflow: hidden;
+      box-shadow: var(--s1);
+      transition: var(--tr-slow);
+    }
+    .prop-card:hover { box-shadow: var(--s2); transform: translateY(-2px); }
+
+    .prop-card-header {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 15px 15px 12px;
+      border-bottom: 1px solid var(--bord);
+    }
+    .prop-icon {
+      width: 40px; height: 40px;
+      background: var(--surf);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .prop-icon .mi { font-size: 20px; color: var(--gold); }
+    .prop-info { flex: 1; min-width: 0; }
+    .prop-name { font-weight: 600; font-size: .82rem; color: var(--t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .prop-owner { font-size: .69rem; color: var(--t3); margin-top: 1px; }
+
+    .prop-card-body { padding: 13px 15px; }
+    .prop-address { font-size: .74rem; color: var(--t3); display: flex; align-items: center; gap: 3px; margin-bottom: 13px; }
+
+    .prop-stats { display: flex; gap: 18px; }
+    .prop-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .ps-val { font-family: 'Syne', sans-serif; font-size: 1.15rem; font-weight: 800; color: var(--t1); line-height: 1; }
+    .ps-lbl { font-size: .62rem; color: var(--t3); text-transform: uppercase; letter-spacing: .04em; }
+
+    .prop-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 15px;
+      background: var(--surf);
+      border-top: 1px solid var(--bord);
+    }
   `]
 })
 export class ProprietesListComponent implements OnInit {
@@ -71,26 +186,19 @@ export class ProprietesListComponent implements OnInit {
   proprietaireId?: string;
 
   ngOnInit() {
-    // Lire le filtre propriétaire depuis l'URL
     this.proprietaireId = this.route.snapshot.queryParams['proprietaireId'] ?? undefined;
     this.load();
   }
 
   load() {
-    this.svc.getAll(this.page, 20, this.searchTerm || undefined, this.proprietaireId)
-      .subscribe(r => this.liste.set(r));
+    this.svc.getAll(this.page, 20, this.searchTerm || undefined, this.proprietaireId).subscribe(r => this.liste.set(r));
   }
-
-  onSearch() { clearTimeout(this.timer); this.timer = setTimeout(() => { this.page = 1; this.load(); }, 400); }
+  onSearch() { clearTimeout(this.timer); this.timer = setTimeout(() => { this.page = 1; this.load(); }, 380); }
   goPage(p: number) { this.page = p; this.load(); }
+  occupationRate(p: any) { return p.nombreProduits > 0 ? Math.round((p.nombreProduits - p.nombreLibres) / p.nombreProduits * 100) : 0; }
+  pageRange() {
+    const total = this.liste().totalPages, p = this.page, pages: number[] = [];
+    for (let i = Math.max(1,p-2); i <= Math.min(total,p+2); i++) pages.push(i);
+    return pages;
+  }
 }
-// export class ProprietesListComponent implements OnInit {
-//   private svc = inject(ProprietesService);
-//   private route = inject(ActivatedRoute);
-//   liste = signal<PagedList<ProprieteListItemDto>>({ items:[], totalCount:0, page:1, pageSize:20, totalPages:0, hasNext:false, hasPrevious:false });
-//   page = 1; searchTerm = ''; timer: any;
-//   ngOnInit() { this.load(); }
-//   load() { this.svc.getAll(this.page, 20, this.searchTerm||undefined).subscribe(r => this.liste.set(r)); }
-//   onSearch() { clearTimeout(this.timer); this.timer = setTimeout(()=>{ this.page=1; this.load(); },400); }
-//   goPage(p:number) { this.page=p; this.load(); }
-// }

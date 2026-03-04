@@ -1,498 +1,636 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+// ══════════════════════════════════════════════════════════════
+//  PROPRIÉTAIRES DASHBOARD COMPONENT
+//  Fichier : proprietaires-dashboard.component.ts
+// ══════════════════════════════════════════════════════════════
+import { Component, inject, OnInit, signal, computed, OnDestroy } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
-
-interface ProduitLocatif {
-  id: string; code: string; typeLabel: string; loyerReference: number;
-  statutLabel: string; locataireNom?: string;
-}
-interface ProprieteDetail {
-  id: string; libelle: string; adresse: string; quartier?: string;
-  nombreProduits: number; nombreLoues: number; nombreLibres: number;
-  aContratGestion: boolean; collecteurNom?: string; collecteurId?: string;
-  produits: ProduitLocatif[]; expandedProduits?: boolean;
-}
-interface ProprietaireDetail {
-  id: string; nomComplet: string; telephone: string; email?: string;
-  nombreProprietes: number; totalProduits: number; totalLoues: number;
-  montantMensuel: number; proprietes: ProprieteDetail[]; expanded?: boolean;
-}
-interface Collecteur {
-  id: string; nomComplet: string; nbProprietes: number;
-}
+import { FormsModule } from '@angular/forms';
+import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
+import { ProprietairesService, PersonnelService } from '../../../core/services/api.services';
+import {
+  DashboardProprietaireDto,
+  DashboardProprieteDto,
+  StatsDashboardProprietairesDto,
+  PagedList,
+  PersonnelListItemDto
+} from '../../../core/models/models';
 
 @Component({
   selector: 'kdi-proprietaires-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, DecimalPipe, RouterLink],
+  imports: [CommonModule, RouterLink, FormsModule, DecimalPipe],
   template: `
-<div class="dashboard">
+<div class="page">
 
-  <!-- ══ Header ══════════════════════════════════════════════ -->
-  <div class="dash-header">
-    <div class="dash-title-block">
-      <h1 class="dash-title">Portefeuille propriétaires</h1>
-      <p class="dash-sub">Vue consolidée — loyers, propriétés et produits locatifs</p>
+  <!-- ── HEADER ─────────────────────────────────────────── -->
+  <div class="page-header">
+    <div>
+      <h2 class="page-title">Propriétaires</h2>
+      <p class="page-subtitle">Vue consolidée · Propriétés · Produits locatifs</p>
     </div>
-    <div class="dash-stats">
-      <div class="kpi">
-        <span class="kpi-val">{{ proprietaires().length }}</span>
-        <span class="kpi-lbl">Propriétaires</span>
+    <a routerLink="/proprietaires/nouveau" class="btn btn-primary">＋ Nouveau propriétaire</a>
+  </div>
+
+  <!-- ── STATS ──────────────────────────────────────────── -->
+  <div class="stats-grid" *ngIf="stats()">
+    <div class="stat-card">
+      <div class="stat-icon navy">👤</div>
+      <div>
+        <div class="stat-value">{{ stats()!.totalProprietaires }}</div>
+        <div class="stat-label">Propriétaires</div>
       </div>
-      <div class="kpi">
-        <span class="kpi-val">{{ totalProprietes() }}</span>
-        <span class="kpi-lbl">Propriétés</span>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon emerald">🏢</div>
+      <div>
+        <div class="stat-value">{{ stats()!.totalProprietes }}</div>
+        <div class="stat-label">Propriétés</div>
       </div>
-      <div class="kpi kpi-gold">
-        <span class="kpi-val">{{ totalMensuel() | number:'1.0-0' }}</span>
-        <span class="kpi-lbl">MRU/mois</span>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon gold">🏠</div>
+      <div>
+        <div class="stat-value">{{ stats()!.totalProduits }}</div>
+        <div class="stat-label">Unités</div>
       </div>
-      <div class="kpi kpi-green">
-        <span class="kpi-val">{{ totalLoues() }}</span>
-        <span class="kpi-lbl">Loués</span>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon blue">📊</div>
+      <div>
+        <div class="stat-value">{{ stats()!.tauxOccupation | number:'1.0-1' }}%</div>
+        <div class="stat-label">Occupation</div>
       </div>
     </div>
   </div>
 
-  <!-- ══ Barre outils ═════════════════════════════════════════ -->
+  <!-- ── RECAP BAR ──────────────────────────────────────── -->
+  <div class="recap-bar" *ngIf="stats()">
+    <div class="recap-item">
+      <div class="recap-value">{{ stats()!.totalLoues }}</div>
+      <div class="recap-label">Unités louées</div>
+    </div>
+    <div class="recap-divider"></div>
+    <div class="recap-item">
+      <div class="recap-value">{{ stats()!.totalLibres }}</div>
+      <div class="recap-label">Unités libres</div>
+    </div>
+    <div class="recap-divider"></div>
+    <div class="recap-item">
+      <div class="recap-value">{{ stats()!.totalLoyerMensuel | number:'1.0-0' }}</div>
+      <div class="recap-label">MRU collectés/mois</div>
+    </div>
+    <div class="recap-divider"></div>
+    <div class="recap-item">
+      <div class="recap-value">{{ stats()!.nbCollecteurs }}</div>
+      <div class="recap-label">Collecteurs actifs</div>
+    </div>
+  </div>
+
+  <!-- ── TOOLBAR ────────────────────────────────────────── -->
   <div class="toolbar">
-    <div class="search-wrap">
+    <div class="search-box">
       <span class="search-icon">🔍</span>
-      <input class="search-input" type="text" placeholder="Propriétaire ou résidence…"
-             [(ngModel)]="recherche" (ngModelChange)="filtrer()">
-      <button *ngIf="recherche" class="search-clear" (click)="recherche=''; filtrer()">✕</button>
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="onSearch($event)"
+        placeholder="Rechercher propriétaire ou résidence…"
+        class="search-input" />
+      <button *ngIf="searchTerm" class="search-clear" (click)="clearSearch()">✕</button>
     </div>
-    <div class="toolbar-right">
-      <select class="tb-select" [(ngModel)]="triPar" (ngModelChange)="filtrer()">
-        <option value="nom">Trier par nom</option>
-        <option value="montant">Trier par loyer</option>
-        <option value="proprietes">Trier par nb propriétés</option>
-        <option value="loues">Trier par taux occupation</option>
-      </select>
-      <button class="tb-btn" (click)="toutDeplier()" title="Tout déplier">⊞ Tout</button>
-      <button class="tb-btn" (click)="toutReplier()" title="Tout replier">⊟ Tout</button>
+
+    <select class="filter-select" [(ngModel)]="selectedCollecteurId" (ngModelChange)="load()">
+      <option value="">Tous les collecteurs</option>
+      <option *ngFor="let c of collecteurs()" [value]="c.id">{{ c.nomComplet }}</option>
+    </select>
+
+    <div class="sort-group">
+      <button class="sort-btn" [class.active]="sortBy === 'nom'"      (click)="setSort('nom')">Nom</button>
+      <button class="sort-btn" [class.active]="sortBy === 'proprietes'" (click)="setSort('proprietes')">Propriétés</button>
+      <button class="sort-dir" (click)="toggleSortDir()">{{ sortAsc ? '↑' : '↓' }}</button>
     </div>
+
+    <button class="expand-btn" (click)="toggleAll()">
+      {{ allExpanded ? '⊟ Replier tout' : '⊞ Déplier tout' }}
+    </button>
   </div>
 
-  <!-- ══ Collecteurs sidebar résumé ══════════════════════════ -->
-  <div class="collecteurs-bar" *ngIf="collecteurs().length">
-    <span class="cb-label">Collecteurs :</span>
-    <div class="cb-chips">
-      <div *ngFor="let c of collecteurs()" class="cb-chip"
-           [class.active]="filtreCollecteur === c.id"
-           (click)="filtrerParCollecteur(c.id)">
-        <span class="cb-avatar">{{ c.nomComplet.charAt(0) }}</span>
-        {{ c.nomComplet }}
-        <span class="cb-count">{{ c.nbProprietes }}</span>
-      </div>
-      <div class="cb-chip cb-chip-all" [class.active]="!filtreCollecteur"
-           (click)="filtrerParCollecteur(null)">Tous</div>
+  <!-- ── LOADING ────────────────────────────────────────── -->
+  <div class="loading" *ngIf="loading()">
+    <div class="spinner"></div>
+    <span>Chargement…</span>
+  </div>
+
+  <!-- ── LISTE ──────────────────────────────────────────── -->
+  <div class="prop-list" *ngIf="!loading()">
+
+    <!-- EMPTY STATE -->
+    <div class="empty-state" *ngIf="!pagedData()?.items?.length">
+      <span>🔍</span>
+      <p>Aucun propriétaire trouvé</p>
+      <a routerLink="/proprietaires/nouveau" class="btn btn-primary">Créer le premier</a>
     </div>
-  </div>
 
-  <!-- ══ Liste vide ═══════════════════════════════════════════ -->
-  <div class="chargement" *ngIf="chargement()">
-    <div class="spinner-lg"></div><span>Chargement…</span>
-  </div>
+    <!-- CARDS -->
+    <div
+      class="prop-card"
+      *ngFor="let p of pagedData()?.items; trackBy: trackById"
+      [class.expanded]="isExpanded(p.id)">
 
-  <div class="empty-state" *ngIf="!chargement() && !filtres().length">
-    <span>🏘️</span><p>Aucun propriétaire trouvé</p>
-  </div>
+      <!-- ─ HEADER PROPRIÉTAIRE ─ -->
+      <div class="prop-header" (click)="toggle(p.id)">
+        <div class="prop-avatar">{{ p.initiales }}</div>
 
-  <!-- ══ Grille propriétaires ═════════════════════════════════ -->
-  <div class="prop-list" *ngIf="!chargement()">
-    <div class="prop-card" *ngFor="let p of filtres(); trackBy: trackById">
-
-      <!-- ── Ligne propriétaire ────────────────────────────── -->
-      <div class="prop-row" (click)="toggleProp(p)">
-        <div class="prop-avatar">{{ p.nomComplet.charAt(0) }}</div>
         <div class="prop-info">
-          <div class="prop-nom">{{ p.nomComplet }}</div>
+          <div class="prop-name" [innerHTML]="highlight(p.nomComplet)"></div>
           <div class="prop-meta">
-            📞 {{ p.telephone }}
-            <span *ngIf="p.email"> · {{ p.email }}</span>
+            <span>📞 {{ p.telephone }}</span>
+            <span *ngIf="p.email" class="email-meta">✉ {{ p.email }}</span>
+            <ng-container *ngIf="p.collecteurNom; else noCollecteur">
+              <span class="collecteur-badge">👷 {{ p.collecteurNom }}</span>
+            </ng-container>
+            <ng-template #noCollecteur>
+              <span class="badge-warn">⚠ Sans collecteur</span>
+            </ng-template>
           </div>
         </div>
+
         <div class="prop-kpis">
-          <div class="pk">
-            <span class="pk-val">{{ p.nombreProprietes }}</span>
-            <span class="pk-lbl">Propriétés</span>
+          <div class="kpi">
+            <div class="kpi-val">{{ p.nombreProprietes }}</div>
+            <div class="kpi-lbl">Propriétés</div>
           </div>
-          <div class="pk">
-            <span class="pk-val">{{ p.totalProduits }}</span>
-            <span class="pk-lbl">Produits</span>
+          <div class="kpi">
+            <div class="kpi-val">{{ p.totalProduits }}</div>
+            <div class="kpi-lbl">Unités</div>
           </div>
-          <div class="pk pk-green">
-            <span class="pk-val">{{ p.totalLoues }}</span>
-            <span class="pk-lbl">Loués</span>
+          <div class="kpi">
+            <div class="kpi-val">{{ p.produitsLoues }}/{{ p.totalProduits }}</div>
+            <div class="kpi-lbl">Louées</div>
           </div>
-          <div class="pk pk-gold">
-            <span class="pk-val">{{ p.montantMensuel | number:'1.0-0' }}</span>
-            <span class="pk-lbl">MRU/mois</span>
+          <div class="kpi">
+            <div class="kpi-val">{{ (p.totalLoyerMensuel / 1000) | number:'1.0-0' }}k</div>
+            <div class="kpi-lbl">MRU/mois</div>
           </div>
         </div>
+
+        <div class="prop-badges">
+          <span class="badge" [ngClass]="contratClass(p.statutContratLabel)">
+            {{ p.statutContratLabel ?? 'Sans contrat' }}
+          </span>
+          <span *ngIf="p.periodiciteVersementLabel" class="badge badge-period">
+            🔄 {{ p.periodiciteVersementLabel }}
+          </span>
+        </div>
+
         <div class="prop-actions" (click)="$event.stopPropagation()">
-          <a [routerLink]="['/proprietaires', p.id]" class="pa-btn" title="Fiche">👁</a>
-          <a [routerLink]="['/proprietaires', p.id, 'edit']" class="pa-btn" title="Modifier">✏️</a>
+          <a [routerLink]="['/proprietaires', p.id]" class="action-btn" title="Voir détail">👁</a>
+          <a [routerLink]="['/proprietaires', p.id, 'modifier']" class="action-btn" title="Modifier">✏️</a>
         </div>
-        <span class="expand-arrow">{{ p.expanded ? '▲' : '▼' }}</span>
+
+        <span class="chevron">▾</span>
       </div>
 
-      <!-- ── Propriétés du propriétaire ────────────────────── -->
-      <div class="proprietes-section" *ngIf="p.expanded">
-        <div class="propriete-item" *ngFor="let pr of p.proprietes; trackBy: trackById">
+      <!-- ─ BODY : PROPRIÉTÉS ─ -->
+      <div class="prop-body" *ngIf="isExpanded(p.id)">
+        <div class="prop-body-header">
+          <span class="section-title">🏢 {{ p.nombreProprietes }} propriété(s)</span>
+          <span class="section-sub">
+            {{ p.produitsLoues }} louées · {{ p.produitsLibres }} libres
+          </span>
+        </div>
 
-          <!-- Ligne propriété -->
-          <div class="pr-row" (click)="togglePropriete(pr)">
-            <div class="pr-icon">🏘️</div>
-            <div class="pr-info">
-              <div class="pr-nom">{{ pr.libelle }}</div>
-              <div class="pr-adresse">📍 {{ pr.adresse }}<span *ngIf="pr.quartier">, {{ pr.quartier }}</span></div>
+        <!-- PROPRIÉTÉ ROW -->
+        <div
+          class="propriete-row"
+          *ngFor="let pr of p.proprietes; trackBy: trackById"
+          [class.expanded]="isExpanded(pr.id)">
+
+          <div class="propriete-header" (click)="toggle(pr.id)">
+            <div class="propriete-icon">🏢</div>
+            <div class="propriete-info">
+              <div class="propriete-name" [innerHTML]="highlight(pr.libelle)"></div>
+              <div class="propriete-sub">{{ pr.quartier ? pr.quartier + ' · ' : '' }}{{ pr.ville }}</div>
             </div>
-            <div class="pr-stats">
-              <span class="pr-stat">
-                <span class="prs-val green">{{ pr.nombreLoues }}</span>/{{ pr.nombreProduits }} loués
-              </span>
-              <div class="taux-bar">
-                <div class="taux-fill"
-                     [style.width]="(pr.nombreProduits > 0 ? (pr.nombreLoues/pr.nombreProduits)*100 : 0) + '%'"
-                     [class.taux-low]="pr.nombreLoues/pr.nombreProduits < 0.5">
-                </div>
+            <div class="propriete-kpis">
+              <div class="pkpi">
+                <span class="pkpi-val">{{ pr.nombreProduits }}</span>
+                <span class="pkpi-lbl">Unités</span>
+              </div>
+              <div class="pkpi">
+                <span class="pkpi-val">{{ pr.produitsLoues }}/{{ pr.nombreProduits }}</span>
+                <span class="pkpi-lbl">Louées</span>
+              </div>
+              <div class="pkpi">
+                <span class="pkpi-val mono">{{ pr.totalLoyerMensuel | number:'1.0-0' }}</span>
+                <span class="pkpi-lbl">MRU/mois</span>
               </div>
             </div>
-            <div class="pr-collecteur" (click)="$event.stopPropagation()">
-              <div class="pc-label" *ngIf="pr.collecteurNom">
-                👤 {{ pr.collecteurNom }}
-              </div>
-              <button class="pc-btn" *ngIf="!pr.collecteurNom"
-                      (click)="ouvrirAffectation(pr, p)">
-                ＋ Affecter collecteur
-              </button>
-              <button class="pc-change" *ngIf="pr.collecteurNom"
-                      (click)="ouvrirAffectation(pr, p)">
-                ✏️
-              </button>
-            </div>
-            <div class="contrat-badge" [class.actif]="pr.aContratGestion" [class.inactif]="!pr.aContratGestion">
+            <span class="badge" [ngClass]="pr.aContratGestion ? 'badge-actif' : 'badge-warn-sm'">
               {{ pr.aContratGestion ? '✓ Géré' : 'Sans contrat' }}
+            </span>
+            <div class="propriete-actions" (click)="$event.stopPropagation()">
+              <a [routerLink]="['/proprietes', pr.id]" class="action-btn-sm" title="Voir">👁</a>
+              <a [routerLink]="['/produits/nouveau']" [queryParams]="{proprieteId: pr.id}" class="action-btn-sm" title="Ajouter unité">＋</a>
             </div>
-            <span class="expand-arrow-sm">{{ pr.expandedProduits ? '▲' : '▼' }}</span>
+            <span class="mini-chevron">▾</span>
           </div>
 
-          <!-- Produits locatifs -->
-          <div class="produits-section" *ngIf="pr.expandedProduits">
+          <!-- PRODUITS TABLE -->
+          <div class="produits-section" *ngIf="isExpanded(pr.id)">
             <table class="produits-table">
-              <thead><tr>
-                <th>Code</th><th>Type</th><th>Loyer</th><th>Statut</th><th>Locataire</th>
-              </tr></thead>
+              <thead>
+                <tr>
+                  <th>Réf.</th>
+                  <th>Type</th>
+                  <th class="text-right">Loyer</th>
+                  <th>Statut</th>
+                  <th>Locataire</th>
+                  <th>Contrat</th>
+                </tr>
+              </thead>
               <tbody>
-                <tr *ngFor="let prod of pr.produits" [class.loue]="prod.statutLabel === 'Loue'">
-                  <td><span class="code-chip">{{ prod.code }}</span></td>
-                  <td class="text-muted">{{ prod.typeLabel }}</td>
-                  <td class="loyer">{{ prod.loyerReference | number:'1.0-0' }} MRU</td>
+                <tr *ngFor="let pd of pr.produits">
+                  <td><span class="code-badge">{{ pd.code }}</span></td>
+                  <td>{{ pd.typeLabel }}</td>
+                  <td class="text-right mono">{{ pd.loyerReference | number:'1.0-0' }} MRU</td>
                   <td>
-                    <span class="statut-dot" [class.loue]="prod.statutLabel === 'Loue'"
-                          [class.libre]="prod.statutLabel === 'Libre'">
-                      {{ prod.statutLabel === 'Loue' ? '● Loué' : '○ Libre' }}
+                    <span class="status-dot" [ngClass]="statutProduitClass(pd.statutLabel)">
+                      {{ pd.statutLabel }}
                     </span>
                   </td>
-                  <td class="text-muted">{{ prod.locataireNom ?? '—' }}</td>
+                  <td class="text-muted">{{ pd.locataireNom ?? '—' }}</td>
+                  <td>
+                    <span *ngIf="pd.contratNumero" class="contrat-num">{{ pd.contratNumero }}</span>
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
+        <!-- /PROPRIÉTÉ ROW -->
+
       </div>
     </div>
+    <!-- /CARDS -->
+
   </div>
 
-  <!-- ══ Modal affectation collecteur ════════════════════════ -->
-  <div class="overlay" *ngIf="showAffectation" (click)="fermerAffectation()">
-    <div class="modal" (click)="$event.stopPropagation()">
-      <h3 class="modal-title">👤 Affecter un collecteur</h3>
-      <p class="modal-sub" *ngIf="proprieteSelectionnee">
-        {{ proprieteSelectionnee.libelle }}
-        <span *ngIf="proprieteSelectionnee.collecteurNom">
-          — actuellement : <strong>{{ proprieteSelectionnee.collecteurNom }}</strong>
-        </span>
-      </p>
-      <div class="form-group">
-        <label>Collecteur *</label>
-        <select class="fc" [(ngModel)]="collecteurSelectionne">
-          <option value="">-- Choisir un collecteur --</option>
-          <option *ngFor="let c of tousCollecteurs()" [value]="c.id">
-            {{ c.nomComplet }} ({{ c.nbProprietes }} propriété(s))
-          </option>
-        </select>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" (click)="fermerAffectation()">Annuler</button>
-        <button class="btn btn-primary" (click)="confirmerAffectation()"
-                [disabled]="!collecteurSelectionne || enCours()">
-          {{ enCours() ? '⏳…' : '✅ Affecter' }}
-        </button>
-      </div>
+  <!-- ── PAGINATION ──────────────────────────────────────── -->
+  <div class="pagination" *ngIf="pagedData() && pagedData()!.totalPages > 1">
+    <span class="page-info">
+      Page {{ currentPage }} / {{ pagedData()!.totalPages }}
+      · {{ pagedData()!.totalCount }} propriétaire(s)
+    </span>
+    <div class="page-btns">
+      <button class="page-btn" [disabled]="!pagedData()!.hasPrevious" (click)="changePage(-1)">‹</button>
+      <button
+        class="page-btn"
+        *ngFor="let n of pageNumbers()"
+        [class.active]="n === currentPage"
+        (click)="goToPage(n)">{{ n }}</button>
+      <button class="page-btn" [disabled]="!pagedData()!.hasNext" (click)="changePage(1)">›</button>
     </div>
   </div>
 
 </div>
   `,
   styles: [`
-    /* ── Layout ──────────────────────────────────────────── */
-    .dashboard { max-width: 1300px; margin: 0 auto; font-family: 'Segoe UI', system-ui, sans-serif; }
+    /* ── PAGE ─────────────────────────────────────────── */
+    .page { max-width: 1200px; margin: 0 auto; padding: 28px 20px; }
+    .page-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px; }
+    .page-title  { font-size:24px; font-weight:700; color:#0c1a35; margin:0 0 4px; }
+    .page-subtitle { font-size:13px; color:#64748b; margin:0; }
 
-    /* ── Header ──────────────────────────────────────────── */
-    .dash-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; }
-    .dash-title { font-size: 26px; font-weight: 800; color: #0c1a35; margin: 0 0 4px; }
-    .dash-sub { font-size: 14px; color: #64748b; margin: 0; }
-    .dash-stats { display: flex; gap: 12px; flex-wrap: wrap; }
-    .kpi { background: #fff; border-radius: 12px; padding: 12px 20px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.08); border-top: 3px solid #e2e8f0; min-width: 90px; }
-    .kpi-gold { border-top-color: #c8a96e; }
-    .kpi-green { border-top-color: #10b981; }
-    .kpi-val { display: block; font-size: 22px; font-weight: 800; color: #0c1a35; }
-    .kpi-lbl { display: block; font-size: 11px; color: #94a3b8; margin-top: 2px; text-transform: uppercase; letter-spacing: .5px; }
+    .btn { padding:9px 18px; border-radius:8px; font-size:13px; font-weight:600;
+           cursor:pointer; border:none; display:inline-flex; align-items:center; gap:6px;
+           text-decoration:none; transition:all .15s; }
+    .btn-primary { background:#0c1a35; color:#fff; }
+    .btn-primary:hover { background:#1e3a5f; }
 
-    /* ── Toolbar ─────────────────────────────────────────── */
-    .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
-    .search-wrap { flex: 1; min-width: 240px; display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0 12px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
-    .search-icon { font-size: 14px; color: #94a3b8; margin-right: 8px; }
-    .search-input { border: none; outline: none; font-size: 14px; flex: 1; padding: 10px 0; background: transparent; color: #334155; }
-    .search-clear { background: none; border: none; cursor: pointer; color: #94a3b8; font-size: 16px; padding: 4px; }
-    .toolbar-right { display: flex; gap: 8px; align-items: center; }
-    .tb-select { padding: 9px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: #fff; color: #334155; cursor: pointer; }
-    .tb-btn { padding: 8px 14px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; font-size: 13px; cursor: pointer; color: #475569; }
-    .tb-btn:hover { background: #f8fafc; }
+    /* ── STATS ───────────────────────────────────────── */
+    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:16px; }
+    .stat-card { background:#fff; border-radius:12px; padding:16px 18px; border:1px solid #e2e8f0;
+                 box-shadow:0 1px 3px rgba(0,0,0,.06); display:flex; align-items:center; gap:12px; }
+    .stat-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center;
+                 justify-content:center; font-size:18px; flex-shrink:0; }
+    .stat-icon.navy    { background:#e8edf5; }
+    .stat-icon.emerald { background:#d1fae5; }
+    .stat-icon.gold    { background:#fef3c7; }
+    .stat-icon.blue    { background:#dbeafe; }
+    .stat-value { font-size:20px; font-weight:700; color:#0c1a35; line-height:1; }
+    .stat-label { font-size:11px; color:#64748b; margin-top:3px; text-transform:uppercase; letter-spacing:.4px; }
 
-    /* ── Collecteurs bar ─────────────────────────────────── */
-    .collecteurs-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-    .cb-label { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; }
-    .cb-chips { display: flex; gap: 8px; flex-wrap: wrap; }
-    .cb-chip { display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px; background: #f1f5f9; color: #475569; font-size: 12px; cursor: pointer; border: 1px solid transparent; transition: all .15s; }
-    .cb-chip:hover { border-color: #0c1a35; }
-    .cb-chip.active { background: #0c1a35; color: #fff; }
-    .cb-chip-all { background: #e0e7ef; }
-    .cb-avatar { width: 18px; height: 18px; border-radius: 50%; background: #c8a96e; color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
-    .cb-count { background: rgba(255,255,255,.25); padding: 1px 6px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    /* ── RECAP BAR ───────────────────────────────────── */
+    .recap-bar { background:linear-gradient(135deg,#0c1a35,#1e3a5f); border-radius:12px;
+                 padding:16px 24px; display:flex; gap:28px; align-items:center; margin-bottom:18px; }
+    .recap-item { text-align:center; }
+    .recap-value { font-size:18px; font-weight:700; color:#fff; font-family:monospace; }
+    .recap-label { font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
+    .recap-divider { width:1px; background:rgba(255,255,255,.15); height:36px; }
 
-    /* ── État chargement ─────────────────────────────────── */
-    .chargement { display: flex; align-items: center; gap: 12px; justify-content: center; padding: 60px; color: #94a3b8; }
-    .spinner-lg { width: 28px; height: 28px; border: 3px solid #e2e8f0; border-top-color: #0c1a35; border-radius: 50%; animation: spin .7s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .empty-state { display: flex; flex-direction: column; align-items: center; padding: 60px; color: #94a3b8; gap: 8px; font-size: 15px; }
-    .empty-state span { font-size: 48px; }
+    /* ── TOOLBAR ─────────────────────────────────────── */
+    .toolbar { display:flex; gap:10px; margin-bottom:16px; align-items:center; flex-wrap:wrap; }
+    .search-box { position:relative; flex:1; min-width:260px; max-width:380px; }
+    .search-icon { position:absolute; left:11px; top:50%; transform:translateY(-50%); font-size:14px; }
+    .search-input { width:100%; padding:9px 36px; border:1px solid #e2e8f0; border-radius:8px;
+                    font-size:13px; color:#0c1a35; background:#fff; outline:none; transition:border-color .15s; }
+    .search-input:focus { border-color:#2d5282; box-shadow:0 0 0 3px rgba(45,82,130,.1); }
+    .search-clear { position:absolute; right:10px; top:50%; transform:translateY(-50%);
+                    background:none; border:none; cursor:pointer; color:#94a3b8; font-size:14px; }
+    .filter-select { padding:9px 12px; border:1px solid #e2e8f0; border-radius:8px;
+                     font-size:13px; background:#fff; color:#0c1a35; outline:none; cursor:pointer; }
+    .sort-group { display:flex; gap:0; }
+    .sort-btn { padding:9px 12px; border:1px solid #e2e8f0; background:#fff; font-size:12px;
+                font-weight:600; color:#64748b; cursor:pointer; transition:all .15s; }
+    .sort-btn:first-child { border-radius:8px 0 0 8px; }
+    .sort-btn.active { background:#0c1a35; color:#fff; border-color:#0c1a35; }
+    .sort-dir { padding:9px 10px; border:1px solid #e2e8f0; border-left:none;
+                border-radius:0 8px 8px 0; background:#fff; cursor:pointer; font-size:14px; color:#64748b; }
+    .expand-btn { margin-left:auto; padding:9px 14px; border:1px solid #e2e8f0; border-radius:8px;
+                  background:#fff; font-size:12px; color:#64748b; cursor:pointer; white-space:nowrap;
+                  transition:all .15s; }
+    .expand-btn:hover { border-color:#0c1a35; color:#0c1a35; }
 
-    /* ── Propriétaires liste ─────────────────────────────── */
-    .prop-list { display: flex; flex-direction: column; gap: 8px; }
-    .prop-card { background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.07); border: 1px solid #f1f5f9; transition: box-shadow .2s; }
-    .prop-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+    /* ── LOADING ─────────────────────────────────────── */
+    .loading { display:flex; align-items:center; justify-content:center; gap:12px;
+               padding:60px; color:#64748b; font-size:14px; }
+    .spinner { width:24px; height:24px; border:3px solid #e2e8f0; border-top-color:#0c1a35;
+               border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
 
-    /* Ligne propriétaire */
-    .prop-row { display: flex; align-items: center; gap: 14px; padding: 16px 20px; cursor: pointer; }
-    .prop-row:hover { background: #fafbfc; }
-    .prop-avatar { width: 44px; height: 44px; border-radius: 50%; background: #0c1a35; color: #c8a96e; font-size: 18px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .prop-info { flex: 1; min-width: 0; }
-    .prop-nom { font-size: 15px; font-weight: 700; color: #0c1a35; }
-    .prop-meta { font-size: 12px; color: #64748b; margin-top: 2px; }
-    .prop-kpis { display: flex; gap: 20px; }
-    .pk { display: flex; flex-direction: column; align-items: center; min-width: 52px; }
-    .pk-val { font-size: 18px; font-weight: 800; color: #0c1a35; }
-    .pk-lbl { font-size: 10px; color: #94a3b8; text-transform: uppercase; }
-    .pk-green .pk-val { color: #059669; }
-    .pk-gold .pk-val { color: #c8a96e; }
-    .prop-actions { display: flex; gap: 6px; }
-    .pa-btn { background: #f1f5f9; border: none; border-radius: 7px; cursor: pointer; font-size: 15px; padding: 6px 9px; text-decoration: none; }
-    .pa-btn:hover { background: #e2e8f0; }
-    .expand-arrow { color: #94a3b8; font-size: 11px; margin-left: 4px; }
+    /* ── PROP CARD ───────────────────────────────────── */
+    .prop-list  { display:flex; flex-direction:column; gap:10px; }
+    .prop-card  { background:#fff; border-radius:12px; border:1px solid #e2e8f0;
+                  box-shadow:0 1px 3px rgba(0,0,0,.06); overflow:hidden; transition:box-shadow .2s; }
+    .prop-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.1); }
+    .prop-card.expanded { border-color:#b8cceb; }
 
-    /* Propriétés section */
-    .proprietes-section { border-top: 2px solid #f0f2f5; padding: 12px 16px; background: #fafbfc; display: flex; flex-direction: column; gap: 8px; }
-    .propriete-item { background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; }
+    .prop-header { padding:14px 18px; display:flex; align-items:center; gap:14px;
+                   cursor:pointer; user-select:none; transition:background .15s; }
+    .prop-header:hover { background:#fafbfd; }
 
-    /* Ligne propriété */
-    .pr-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; }
-    .pr-row:hover { background: #f8fafc; }
-    .pr-icon { font-size: 20px; flex-shrink: 0; }
-    .pr-info { flex: 1; min-width: 0; }
-    .pr-nom { font-size: 14px; font-weight: 600; color: #0c1a35; }
-    .pr-adresse { font-size: 11px; color: #94a3b8; margin-top: 2px; }
-    .pr-stats { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 100px; }
-    .pr-stat { font-size: 12px; color: #475569; white-space: nowrap; }
-    .green { color: #059669; font-weight: 700; }
-    .taux-bar { width: 80px; height: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden; }
-    .taux-fill { height: 100%; background: #059669; border-radius: 2px; transition: width .3s; }
-    .taux-fill.taux-low { background: #f59e0b; }
-    .pr-collecteur { display: flex; align-items: center; gap: 6px; min-width: 140px; }
-    .pc-label { font-size: 12px; color: #475569; background: #f0f9ff; padding: 4px 8px; border-radius: 6px; }
-    .pc-btn { background: #dbeafe; color: #1d4ed8; border: none; cursor: pointer; font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 6px; white-space: nowrap; }
-    .pc-btn:hover { background: #bfdbfe; }
-    .pc-change { background: none; border: none; cursor: pointer; font-size: 13px; padding: 2px 6px; color: #64748b; }
-    .contrat-badge { padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
-    .contrat-badge.actif { background: #d1fae5; color: #065f46; }
-    .contrat-badge.inactif { background: #fef3c7; color: #92400e; }
-    .expand-arrow-sm { color: #94a3b8; font-size: 11px; }
-    
-    /* Produits table */
-    .produits-section { border-top: 1px solid #f1f5f9; background: #fafbfc; padding: 8px 12px; }
-    .produits-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .produits-table th { padding: 6px 10px; background: #f1f5f9; color: #64748b; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
-    .produits-table td { padding: 7px 10px; border-bottom: 1px solid #f8fafc; color: #334155; }
-    .produits-table tr:last-child td { border-bottom: none; }
-    .produits-table tr.loue td { background: rgba(5,150,105,.03); }
-    .code-chip { font-family: monospace; background: #e0e7ef; padding: 2px 7px; border-radius: 5px; font-size: 11px; color: #0c1a35; font-weight: 700; }
-    .loyer { font-weight: 700; color: #0c1a35; }
-    .text-muted { color: #94a3b8; }
-    .statut-dot { font-size: 11px; font-weight: 600; }
-    .statut-dot.loue { color: #059669; }
-    .statut-dot.libre { color: #94a3b8; }
+    .prop-avatar { width:40px; height:40px; border-radius:50%; flex-shrink:0;
+                   background:linear-gradient(135deg,#0c1a35,#2d5282);
+                   color:#fff; font-weight:700; font-size:14px;
+                   display:flex; align-items:center; justify-content:center; }
 
-    /* ── Modal ───────────────────────────────────────────── */
-    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 1000; display: flex; align-items: center; justify-content: center; }
-    .modal { background: #fff; border-radius: 16px; padding: 28px; width: 440px; max-width: 92vw; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
-    .modal-title { font-size: 18px; font-weight: 700; color: #0c1a35; margin: 0 0 4px; }
-    .modal-sub { font-size: 13px; color: #64748b; margin: 0 0 20px; }
-    .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px; }
-    label { font-size: 12px; font-weight: 500; color: #374151; }
-    .fc { padding: 9px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: inherit; }
-    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-    .btn { padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; }
-    .btn-primary { background: #0c1a35; color: #fff; }
-    .btn-ghost { background: #f1f5f9; color: #475569; }
-    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .prop-info  { flex:1; min-width:0; }
+    .prop-name  { font-size:14px; font-weight:600; color:#0c1a35; }
+    .prop-meta  { font-size:11px; color:#94a3b8; margin-top:3px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .email-meta { color:#94a3b8; }
+
+    .prop-kpis { display:flex; gap:18px; }
+    .kpi { text-align:right; }
+    .kpi-val { font-size:14px; font-weight:700; color:#0c1a35; font-family:monospace; }
+    .kpi-lbl { font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:.3px; }
+
+    .prop-badges { display:flex; gap:6px; flex-wrap:wrap; }
+    .badge       { padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600; }
+    .badge-actif    { background:#d1fae5; color:#065f46; }
+    .badge-brouillon{ background:#f1f5f9; color:#64748b; }
+    .badge-period   { background:#fef3c7; color:#92400e; }
+    .badge-warn     { background:#fee2e2; color:#991b1b; font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; }
+    .badge-warn-sm  { background:#fef3c7; color:#92400e; }
+
+    .prop-actions { display:flex; gap:4px; }
+    .action-btn { width:28px; height:28px; border-radius:6px; background:#f1f5f9; border:none;
+                  cursor:pointer; display:flex; align-items:center; justify-content:center;
+                  font-size:14px; text-decoration:none; transition:background .15s; }
+    .action-btn:hover { background:#e2e8f0; }
+
+    .chevron { color:#94a3b8; font-size:16px; transition:transform .25s; flex-shrink:0; }
+    .prop-card.expanded .prop-header .chevron { transform:rotate(180deg); }
+
+    .collecteur-badge { background:#fef3c7; color:#92400e; padding:2px 7px;
+                        border-radius:20px; font-size:10px; font-weight:600; }
+
+    /* ── PROP BODY ───────────────────────────────────── */
+    .prop-body { border-top:1px solid #e2e8f0; background:#fafbfd; }
+    .prop-body-header { padding:10px 18px; display:flex; justify-content:space-between;
+                        align-items:center; border-bottom:1px solid #e2e8f0; }
+    .section-title { font-size:11px; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:.5px; }
+    .section-sub   { font-size:11px; color:#94a3b8; }
+
+    /* ── PROPRIÉTÉ ROW ───────────────────────────────── */
+    .propriete-row { border-bottom:1px solid #f1f5f9; }
+    .propriete-row:last-child { border-bottom:none; }
+
+    .propriete-header { padding:11px 18px 11px 36px; display:flex; align-items:center;
+                        gap:12px; cursor:pointer; transition:background .15s; }
+    .propriete-header:hover { background:#f1f5f9; }
+
+    .propriete-icon { width:30px; height:30px; border-radius:7px; background:#e8edf5;
+                      display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+    .propriete-info { flex:1; min-width:0; }
+    .propriete-name { font-size:13px; font-weight:600; color:#0c1a35; }
+    .propriete-sub  { font-size:11px; color:#94a3b8; margin-top:1px; }
+
+    .propriete-kpis { display:flex; gap:14px; }
+    .pkpi { display:flex; flex-direction:column; align-items:flex-end; }
+    .pkpi-val { font-size:12px; font-weight:700; color:#0c1a35; }
+    .pkpi-lbl { font-size:9px; color:#94a3b8; text-transform:uppercase; }
+    .mono { font-family:monospace; }
+
+    .propriete-actions { display:flex; gap:4px; }
+    .action-btn-sm { width:24px; height:24px; border-radius:5px; background:#f1f5f9; border:none;
+                     cursor:pointer; display:flex; align-items:center; justify-content:center;
+                     font-size:12px; text-decoration:none; }
+    .action-btn-sm:hover { background:#e2e8f0; }
+
+    .mini-chevron { color:#94a3b8; font-size:13px; transition:transform .2s; flex-shrink:0; }
+    .propriete-row.expanded .mini-chevron { transform:rotate(180deg); }
+
+    /* ── PRODUITS TABLE ──────────────────────────────── */
+    .produits-section { background:#f8fafc; border-top:1px solid #f1f5f9; }
+    .produits-table { width:100%; border-collapse:collapse; }
+    .produits-table th { padding:7px 12px 7px 54px; font-size:10px; font-weight:600; color:#94a3b8;
+                         text-transform:uppercase; letter-spacing:.5px; text-align:left;
+                         border-bottom:1px solid #e2e8f0; background:#f1f5f9; }
+    .produits-table th:not(:first-child) { padding-left:12px; }
+    .produits-table td { padding:9px 12px 9px 54px; font-size:12px; color:#334155;
+                         border-bottom:1px solid #f8fafc; }
+    .produits-table td:not(:first-child) { padding-left:12px; }
+    .produits-table tr:last-child td { border-bottom:none; }
+    .produits-table tbody tr:hover { background:#eef2f8; }
+    .text-right { text-align:right; }
+    .text-muted { color:#94a3b8; }
+
+    .code-badge { font-family:monospace; background:#e8edf5; padding:2px 7px;
+                  border-radius:5px; font-size:11px; color:#0c1a35; font-weight:700; }
+    .contrat-num { font-family:monospace; background:#fef3c7; color:#92400e;
+                   padding:2px 7px; border-radius:5px; font-size:10px; font-weight:700; }
+
+    .status-dot { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; }
+    .status-dot::before { content:''; width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+    .status-dot.loue      { color:#065f46; }
+    .status-dot.loue::before    { background:#10b981; }
+    .status-dot.libre     { color:#d97706; }
+    .status-dot.libre::before   { background:#f59e0b; }
+    .status-dot.travaux   { color:#991b1b; }
+    .status-dot.travaux::before { background:#ef4444; }
+    .status-dot.reserve   { color:#2d5282; }
+    .status-dot.reserve::before { background:#3b82f6; }
+
+    /* ── PAGINATION ──────────────────────────────────── */
+    .pagination { display:flex; justify-content:space-between; align-items:center; margin-top:20px; }
+    .page-info  { font-size:13px; color:#64748b; }
+    .page-btns  { display:flex; gap:5px; }
+    .page-btn   { width:32px; height:32px; border-radius:7px; border:1px solid #e2e8f0;
+                  background:#fff; font-size:13px; cursor:pointer; display:flex;
+                  align-items:center; justify-content:center; color:#0c1a35; transition:all .15s; }
+    .page-btn:hover   { border-color:#0c1a35; }
+    .page-btn.active  { background:#0c1a35; color:#fff; border-color:#0c1a35; }
+    .page-btn:disabled { opacity:.35; cursor:not-allowed; }
+
+    /* ── EMPTY STATE ─────────────────────────────────── */
+    .empty-state { display:flex; flex-direction:column; align-items:center; padding:60px;
+                   gap:12px; color:#94a3b8; font-size:14px; }
+    .empty-state span { font-size:40px; }
+
+    /* ── HIGHLIGHT ───────────────────────────────────── */
+    :global(.hl) { background:#fef08a; border-radius:2px; padding:0 2px; }
   `]
 })
-export class ProprietairesDashboardComponent implements OnInit {
-  private http = inject(HttpClient);
+export class ProprietairesDashboardComponent implements OnInit, OnDestroy {
+  private svc         = inject(ProprietairesService);
+  private personnelSvc= inject(PersonnelService);
+  private destroy$    = new Subject<void>();
+  private search$     = new Subject<string>();
 
-  proprietaires = signal<ProprietaireDetail[]>([]);
-  filtres = signal<ProprietaireDetail[]>([]);
-  collecteurs = signal<Collecteur[]>([]);
-  tousCollecteurs = signal<Collecteur[]>([]);
-  chargement = signal(true);
-  enCours = signal(false);
+  // ── State ──────────────────────────────────────────────────
+  loading     = signal(false);
+  pagedData   = signal<PagedList<DashboardProprietaireDto> | null>(null);
+  stats       = signal<StatsDashboardProprietairesDto | null>(null);
+  collecteurs = signal<PersonnelListItemDto[]>([]);
 
-  recherche = '';
-  triPar = 'nom';
-  filtreCollecteur: string | null = null;
+  expandedIds = signal<Set<string>>(new Set());
+  allExpanded = false;
 
-  showAffectation = false;
-  proprieteSelectionnee: ProprieteDetail | null = null;
-  proprietaireParent: ProprietaireDetail | null = null;
-  collecteurSelectionne = '';
+  searchTerm          = '';
+  selectedCollecteurId= '';
+  sortBy              = 'nom';
+  sortAsc             = true;
+  currentPage         = 1;
 
-  totalProprietes = computed(() => this.proprietaires().reduce((s, p) => s + p.nombreProprietes, 0));
-  totalLoues = computed(() => this.proprietaires().reduce((s, p) => s + p.totalLoues, 0));
-  totalMensuel = computed(() => this.proprietaires().reduce((s, p) => s + p.montantMensuel, 0));
-
+  // ── Init ───────────────────────────────────────────────────
   ngOnInit() {
-    this.chargerDonnees();
-    this.chargerCollecteurs();
+    // debounce search
+    this.search$.pipe(
+      debounceTime(350),
+      distinctUntilChanged(),
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
+      this.currentPage = 1;
+      this.load();
+    });
+
+    this.loadCollecteurs();
+    this.load();
   }
 
-  chargerDonnees() {
-    this.chargement.set(true);
-    this.http.get<any>('/api/proprietaires/dashboard').subscribe({
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  // ── Load ───────────────────────────────────────────────────
+  load() {
+    this.loading.set(true);
+    this.svc.getDashboard({
+      page:         this.currentPage,
+      search:       this.searchTerm || undefined,
+      sortBy:       this.sortBy,
+      sortAsc:      this.sortAsc,
+      collecteurId: this.selectedCollecteurId || undefined
+    }).subscribe({
       next: r => {
-        const data = (r.data ?? r).map((p: any) => ({ ...p, expanded: false,
-          proprietes: (p.proprietes ?? []).map((pr: any) => ({ ...pr, expandedProduits: false })) }));
-        this.proprietaires.set(data);
-        this.filtrer();
-        this.chargement.set(false);
-        this.extraireCollecteurs(data);
+        this.pagedData.set(r.items);
+        this.stats.set(r.stats);
+        this.loading.set(false);
       },
-      error: () => this.chargement.set(false)
+      error: () => this.loading.set(false)
     });
   }
 
-  chargerCollecteurs() {
-    this.http.get<any>('/api/personnel?type=Collecteur&pageSize=100').subscribe({
-      next: r => {
-        const items = r.data?.items ?? r.items ?? [];
-        this.tousCollecteurs.set(items.map((c: any) => ({
-          id: c.id, nomComplet: c.nomComplet, nbProprietes: c.nbProprietes ?? 0
-        })));
-      }
+  loadCollecteurs() {
+    this.personnelSvc.getAll(1).subscribe(r => {
+      // Filtrer uniquement les collecteurs
+      this.collecteurs.set(r.items.filter(p => p.typeLabel === 'Collecteur'));
     });
   }
 
-  extraireCollecteurs(data: ProprietaireDetail[]) {
-    const map = new Map<string, Collecteur>();
-    data.forEach(p => p.proprietes.forEach(pr => {
-      if (pr.collecteurId && pr.collecteurNom && !map.has(pr.collecteurId))
-        map.set(pr.collecteurId, { id: pr.collecteurId, nomComplet: pr.collecteurNom,
-          nbProprietes: data.flatMap(x => x.proprietes).filter(x => x.collecteurId === pr.collecteurId).length });
-    }));
-    this.collecteurs.set(Array.from(map.values()));
+  // ── Search ─────────────────────────────────────────────────
+  onSearch(val: string) { this.search$.next(val); }
+  clearSearch() { this.searchTerm = ''; this.search$.next(''); }
+
+  // ── Sort ───────────────────────────────────────────────────
+  setSort(by: string) {
+    if (this.sortBy === by) { this.sortAsc = !this.sortAsc; }
+    else { this.sortBy = by; this.sortAsc = true; }
+    this.load();
+  }
+  toggleSortDir() { this.sortAsc = !this.sortAsc; this.load(); }
+
+  // ── Expand / collapse ──────────────────────────────────────
+  toggle(id: string) {
+    const s = new Set(this.expandedIds());
+    s.has(id) ? s.delete(id) : s.add(id);
+    this.expandedIds.set(s);
   }
 
-  filtrer() {
-    let liste = [...this.proprietaires()];
-    const q = this.recherche.toLowerCase().trim();
+  isExpanded(id: string) { return this.expandedIds().has(id); }
 
-    if (q) {
-      liste = liste.filter(p =>
-        p.nomComplet.toLowerCase().includes(q) ||
-        p.proprietes.some(pr => pr.libelle.toLowerCase().includes(q) || pr.adresse.toLowerCase().includes(q))
-      );
-      // Auto-déplier si recherche active
-      liste.forEach(p => { if (q) p.expanded = true; });
+  toggleAll() {
+    this.allExpanded = !this.allExpanded;
+    if (this.allExpanded) {
+      const all = new Set<string>();
+      this.pagedData()?.items.forEach(p => {
+        all.add(p.id);
+        p.proprietes.forEach(pr => all.add(pr.id));
+      });
+      this.expandedIds.set(all);
+    } else {
+      this.expandedIds.set(new Set());
     }
-
-    if (this.filtreCollecteur) {
-      liste = liste.filter(p => p.proprietes.some(pr => pr.collecteurId === this.filtreCollecteur));
-    }
-
-    liste.sort((a, b) => {
-      switch (this.triPar) {
-        case 'montant':    return b.montantMensuel - a.montantMensuel;
-        case 'proprietes': return b.nombreProprietes - a.nombreProprietes;
-        case 'loues':      return b.totalLoues - a.totalLoues;
-        default:           return a.nomComplet.localeCompare(b.nomComplet);
-      }
-    });
-
-    this.filtres.set(liste);
   }
 
-  filtrerParCollecteur(id: string | null) {
-    this.filtreCollecteur = this.filtreCollecteur === id ? null : id;
-    this.filtrer();
+  // ── Pagination ─────────────────────────────────────────────
+  changePage(delta: number) { this.goToPage(this.currentPage + delta); }
+  goToPage(n: number) {
+    this.currentPage = n;
+    this.expandedIds.set(new Set()); // replier à la pagination
+    this.load();
   }
 
-  toggleProp(p: ProprietaireDetail) { p.expanded = !p.expanded; }
-  togglePropriete(pr: ProprieteDetail) { pr.expandedProduits = !pr.expandedProduits; }
-
-  toutDeplier() {
-    this.filtres().forEach(p => { p.expanded = true; p.proprietes.forEach(pr => pr.expandedProduits = true); });
-    this.filtres.set([...this.filtres()]);
-  }
-  toutReplier() {
-    this.filtres().forEach(p => { p.expanded = false; p.proprietes.forEach(pr => pr.expandedProduits = false); });
-    this.filtres.set([...this.filtres()]);
+  pageNumbers(): number[] {
+    const total = this.pagedData()?.totalPages ?? 1;
+    return Array.from({ length: Math.min(total, 7) }, (_, i) => i + 1);
   }
 
-  ouvrirAffectation(pr: ProprieteDetail, p: ProprietaireDetail) {
-    this.proprieteSelectionnee = pr;
-    this.proprietaireParent = p;
-    this.collecteurSelectionne = pr.collecteurId ?? '';
-    this.showAffectation = true;
-  }
-  fermerAffectation() { this.showAffectation = false; }
+  // ── Helpers ────────────────────────────────────────────────
+  trackById(_: number, item: { id: string }) { return item.id; }
 
-  confirmerAffectation() {
-    if (!this.proprieteSelectionnee || !this.collecteurSelectionne) return;
-    this.enCours.set(true);
-    this.http.post(`/api/proprietes/${this.proprieteSelectionnee.id}/affecter-collecteur`,
-      { collecteurId: this.collecteurSelectionne }).subscribe({
-      next: () => {
-        this.enCours.set(false);
-        this.fermerAffectation();
-        this.chargerDonnees();
-      },
-      error: () => this.enCours.set(false)
-    });
+  highlight(text: string): string {
+    if (!this.searchTerm?.trim()) return text;
+    const re = new RegExp(`(${this.searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return text.replace(re, '<span class="hl">$1</span>');
   }
 
-  trackById = (_: number, item: any) => item.id;
+  contratClass(statut?: string): Record<string, boolean> {
+    return {
+      'badge-actif':     statut === 'Actif',
+      'badge-brouillon': statut === 'Brouillon' || !statut,
+    };
+  }
+
+  statutProduitClass(statut: string): Record<string, boolean> {
+    return {
+      'loue':    statut === 'Loue',
+      'libre':   statut === 'Libre',
+      'travaux': statut === 'EnTravaux',
+      'reserve': statut === 'Reserve',
+    };
+  }
 }

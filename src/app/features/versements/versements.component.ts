@@ -1,13 +1,21 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
-import { CommonModule, DecimalPipe } from '@angular/common';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
-interface LigneCollecte { produitCode: string; locataireNom: string; periodeMois: string; montant: number; }
+interface LigneCollecte {
+  produitCode: string; locataireNom: string; periodeMois: string; montant: number;
+}
 interface VersementPropriete {
   versementId: string; proprieteLibelle: string; proprieteAdresse: string;
-  periode: string; montantBrut: number; commission: number; retenueTravaux: number;
-  montantNet: number; statut: string; dateEffective?: string; collectes: LigneCollecte[];
+  quartier?: string; ville?: string;
+  periode: string; periodeLabel?: string;
+  montantBrut: number; commission: number; retenueTravaux: number;
+  montantNet: number; statut: string; dateEffective?: string;
+  datePrevue?: string; joursRetard?: number;
+  bordereau?: string;
+  collectes: LigneCollecte[];
 }
 interface RecapProprietaire {
   proprietaireId: string; proprietaireNom: string; telephone: string; email?: string;
@@ -18,427 +26,519 @@ interface RecapProprietaire {
 @Component({
   selector: 'kdi-versements',
   standalone: true,
-  imports: [CommonModule, FormsModule, DecimalPipe],
+  imports: [CommonModule, FormsModule],
   template: `
-    <div class="page">
+    <div class="page-enter">
+
+      <!-- ── PAGE HEADER ── -->
       <div class="page-header">
         <div>
-          <h2 class="page-title">💸 Versements propriétaires</h2>
-          <p class="page-subtitle">Reversement des loyers — vue groupée par propriétaire</p>
+          <div class="page-title">
+            <span class="mi">account_balance_wallet</span>
+            Versements propriétaires
+          </div>
         </div>
         <div class="header-actions">
-          <button class="btn btn-green" (click)="ouvrirPreparer()">
-            ⚙️ Préparer versements
-          </button>
-          <button class="btn btn-outline" (click)="ouvrirAlerteServiceFinancier()">
-            📊 Alerter service financier
-          </button>
-          <button class="btn btn-warning" (click)="ouvrirAlerteRetards()">
-            ⚠️ Alerter retards locataires
+          <button class="btn btn-gold" (click)="ouvrirPreparer()">
+            <span class="mi">auto_fix_high</span>
+            Générer {{ filtreMois }}
           </button>
         </div>
       </div>
 
-      <!-- Filtres -->
-      <div class="filters-bar">
-        <select class="filter-select" [(ngModel)]="filtreMois" (ngModelChange)="load()">
-          <option value="">Tous les mois</option>
-          <option *ngFor="let m of moisDisponibles" [value]="m.value">{{ m.label }}</option>
-        </select>
-        <select class="filter-select" [(ngModel)]="filtreStatut" (ngModelChange)="load()">
-          <option value="">Tous statuts</option>
-          <option value="1">Planifié</option>
-          <option value="3">Effectué</option>
-          <option value="4">En retard</option>
-        </select>
-        <div class="stats-bar" *ngIf="recaps().length">
-          <span class="stat-chip">{{ recaps().length }} propriétaire(s)</span>
-          <span class="stat-chip green">{{ totalNet() | number:'1.0-0' }} MRU net à verser</span>
-          <span class="stat-chip orange" *ngIf="nbEnAttente() > 0">{{ nbEnAttente() }} en attente</span>
+      <!-- ── ALERTES EN RETARD ── -->
+      <div *ngIf="versementsEnRetard().length > 0"
+           class="alert-box danger" style="margin-bottom:16px">
+        <div class="alert-title">
+          <span class="mi">warning</span>
+          {{ versementsEnRetard().length }} versement{{ versementsEnRetard().length > 1 ? 's' : '' }} en retard
         </div>
-      </div>
-
-      <!-- Liste propriétaires -->
-      <div class="chargement" *ngIf="chargement()">Chargement…</div>
-
-      <div class="recap-list" *ngIf="!chargement()">
-        <div class="recap-card" *ngFor="let r of recaps()">
-
-          <!-- ── Header propriétaire ── -->
-          <div class="recap-header" (click)="r.expanded = !r.expanded">
-            <div class="recap-info">
-              <div class="recap-nom">{{ r.proprietaireNom }}</div>
-              <div class="recap-meta">
-                📞 {{ r.telephone }}
-                <span *ngIf="r.email"> · 📧 {{ r.email }}</span>
-                · Périodicité : <strong>{{ periodiciteLabel(r.periodicite) }}</strong>
-              </div>
-            </div>
-            <div class="recap-totaux">
-              <div class="total-item">
-                <span class="total-label">Brut</span>
-                <span class="total-val">{{ r.totalBrut | number:'1.0-0' }}</span>
-              </div>
-              <div class="total-item">
-                <span class="total-label">Commission</span>
-                <span class="total-val text-red">-{{ r.totalCommission | number:'1.0-0' }}</span>
-              </div>
-              <div class="total-item highlight">
-                <span class="total-label">Net MRU</span>
-                <span class="total-val">{{ r.totalNet | number:'1.0-0' }}</span>
-              </div>
-              <span class="badge-attente" *ngIf="r.nbVersementsEnAttente > 0">
-                {{ r.nbVersementsEnAttente }} à verser
-              </span>
-            </div>
-            <div class="recap-actions" (click)="$event.stopPropagation()">
-              <button class="btn-icon-sm" title="Télécharger PDF" (click)="telechargerPdf(r)">📄</button>
-              <button class="btn-icon-sm" title="Envoyer au propriétaire" (click)="ouvrirNotifProp(r)">📣</button>
-            </div>
-            <span class="expand-icon">{{ r.expanded ? '▲' : '▼' }}</span>
+        <div *ngFor="let item of versementsEnRetard()" class="alert-item">
+          <div class="avatar" style="width:34px;height:34px;font-size:.68rem;flex-shrink:0"
+               [style.background]="avatarColor(item.recap.proprietaireNom)">
+            {{ initiales(item.recap.proprietaireNom) }}
           </div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:.82rem">
+              {{ item.recap.proprietaireNom }} · {{ item.prop.proprieteLibelle }}
+            </div>
+            <div class="cell-sub" style="color:var(--er)">
+              <span class="mi mi-xs">warning</span>
+              Urgent · {{ item.prop.joursRetard }} jours de retard ·
+              {{ item.prop.montantNet | number:'1.0-0' }} MRU
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" (click)="ouvrirEffectuer(item.prop, item.recap)">
+            <span class="mi">credit_card</span> Effectuer
+          </button>
+        </div>
+      </div>
 
-          <!-- ── Détail par propriété ── -->
-          <div class="recap-detail" *ngIf="r.expanded">
-            <div class="propriete-block" *ngFor="let p of r.proprietes">
-              <div class="propriete-header">
-                <div>
-                  <span class="propriete-nom">🏘 {{ p.proprieteLibelle }}</span>
-                  <span class="propriete-adresse">{{ p.proprieteAdresse }}</span>
-                </div>
-                <div class="propriete-actions">
-                  <span class="badge" [ngClass]="statutClass(p.statut)">{{ p.statut }}</span>
-                  <button *ngIf="p.statut !== 'Effectue'"
-                          class="btn-effectuer" (click)="ouvrirEffectuer(p, r)">
-                    💳 Effectuer
-                  </button>
-                  <span *ngIf="p.statut === 'Effectue'" class="text-ok">
-                    ✅ {{ p.dateEffective | date:'dd/MM/yyyy' }}
+      <!-- ── KPI ── -->
+      <div class="kpi-grid" style="margin-bottom:16px">
+        <div class="kpi-card kpi-gold">
+          <div class="kpi-icon"><span class="mi">schedule</span></div>
+          <div class="kpi-value">{{ stats().planifies }}</div>
+          <div class="kpi-label">Planifiés</div>
+          <div class="kpi-trend">
+            <span class="mi">payments</span>
+            {{ stats().montantPlanifie | number:'1.0-0' }} MRU
+          </div>
+        </div>
+        <div class="kpi-card kpi-green">
+          <div class="kpi-icon"><span class="mi">check_circle</span></div>
+          <div class="kpi-value">{{ stats().effectues }}</div>
+          <div class="kpi-label">Effectués</div>
+          <div class="kpi-trend trend-up">
+            <span class="mi">payments</span>
+            {{ stats().montantEffectue | number:'1.0-0' }} MRU
+          </div>
+        </div>
+        <div class="kpi-card kpi-red">
+          <div class="kpi-icon"><span class="mi">warning</span></div>
+          <div class="kpi-value">{{ stats().enRetard }}</div>
+          <div class="kpi-label">En retard</div>
+        </div>
+        <div class="kpi-card kpi-navy">
+          <div class="kpi-icon"><span class="mi">account_balance</span></div>
+          <div class="kpi-value">{{ stats().totalNet | number:'1.0-0' }}</div>
+          <div class="kpi-label">Total net (MRU)</div>
+        </div>
+      </div>
+
+      <!-- ── FILTER BAR ── -->
+      <div class="filter-bar">
+        <button class="filter-chip" [class.active]="filtreStatut === ''"        (click)="setFiltre('')">Tous</button>
+        <button class="filter-chip" [class.active]="filtreStatut === 'Planifie'" (click)="setFiltre('Planifie')">
+          <span class="mi mi-sm" style="color:var(--in)">calendar_month</span> Planifiés
+        </button>
+        <button class="filter-chip" [class.active]="filtreStatut === 'Effectue'" (click)="setFiltre('Effectue')">
+          <span class="mi mi-sm" style="color:var(--ok)">check</span> Effectués
+        </button>
+        <button class="filter-chip" [class.active]="filtreStatut === 'EnRetard'" (click)="setFiltre('EnRetard')">
+          <span class="mi mi-sm" style="color:var(--er)">warning</span> En retard
+        </button>
+
+        <div class="filter-spacer"></div>
+
+        <input type="month" class="form-control" style="width:160px;padding:5px 10px"
+               [(ngModel)]="filtreMois" (change)="load()">
+
+        <div class="search-inline">
+          <span class="mi">search</span>
+          <input placeholder="Propriétaire…" [(ngModel)]="recherche">
+        </div>
+      </div>
+
+      <!-- ── LOADING ── -->
+      <div *ngIf="chargement()" style="text-align:center;padding:48px;color:var(--t3)">
+        <span class="mi" style="font-size:32px;display:block;margin-bottom:8px">hourglass_empty</span>
+        Chargement…
+      </div>
+
+      <!-- ── LISTE VERSEMENTS ── -->
+      <div *ngIf="!chargement()" class="table-card">
+        <!-- Empty -->
+        <div *ngIf="lignesFiltrees().length === 0" class="empty-state">
+          <span class="mi">account_balance_wallet</span>
+          <div class="empty-title">Aucun versement</div>
+          <div class="empty-sub">Générez les versements du mois via le bouton "Générer"</div>
+        </div>
+
+        <!-- Table -->
+        <table *ngIf="lignesFiltrees().length > 0" class="data-table">
+          <thead>
+            <tr>
+              <th style="width:40px"></th>
+              <th>PROPRIÉTAIRE</th>
+              <th>PÉRIODE</th>
+              <th>MONTANTS</th>
+              <th>PRÉVU</th>
+              <th>STATUT</th>
+              <th style="text-align:right">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let item of lignesFiltrees()">
+              <!-- Ligne principale -->
+              <tr [class.highlighted]="item.prop.statut === 'EnRetard'"
+                  style="cursor:pointer"
+                  (click)="toggleDetail(item)">
+                <td>
+                  <span class="mi" style="font-size:16px;color:var(--t3);transition:transform .2s"
+                        [style.transform]="item.expanded ? 'rotate(90deg)' : ''">
+                    chevron_right
                   </span>
-                </div>
-              </div>
+                </td>
 
-              <!-- Collectes détail -->
-              <table class="collectes-table" *ngIf="p.collectes.length">
-                <thead><tr>
-                  <th>Produit</th><th>Locataire</th><th>Période</th>
-                  <th class="text-right">Montant (MRU)</th>
-                </tr></thead>
-                <tbody>
-                  <tr *ngFor="let c of p.collectes">
-                    <td><span class="code">{{ c.produitCode }}</span></td>
-                    <td>{{ c.locataireNom }}</td>
-                    <td class="text-muted">{{ c.periodeMois }}</td>
-                    <td class="text-right font-bold">{{ c.montant | number:'1.0-0' }}</td>
-                  </tr>
-                </tbody>
-              </table>
+                <!-- Propriétaire + Propriété -->
+                <td>
+                  <div class="cell-avatar">
+                    <div class="avatar" [style.background]="avatarColor(item.recap.proprietaireNom)">
+                      {{ initiales(item.recap.proprietaireNom) }}
+                    </div>
+                    <div>
+                      <div class="cell-name">{{ item.recap.proprietaireNom }}</div>
+                      <div class="cell-sub">
+                        {{ item.prop.proprieteLibelle }}
+                        <span *ngIf="item.prop.quartier"> · {{ item.prop.quartier }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </td>
 
-              <!-- Sous-total propriété -->
-              <div class="sous-total">
-                <span>Brut : {{ p.montantBrut | number:'1.0-0' }}</span>
-                <span class="text-red">Commission : -{{ p.commission | number:'1.0-0' }}</span>
-                <span *ngIf="p.retenueTravaux > 0" class="text-orange">
-                  Travaux : -{{ p.retenueTravaux | number:'1.0-0' }}
-                </span>
-                <span class="net-propriete">Net : {{ p.montantNet | number:'1.0-0' }} MRU</span>
-              </div>
+                <!-- Période -->
+                <td>
+                  <span class="tag">{{ item.prop.periode }}</span>
+                  <div class="cell-sub" *ngIf="item.prop.periodeLabel">{{ item.prop.periodeLabel }}</div>
+                </td>
+
+                <!-- Montants -->
+                <td>
+                  <div style="font-size:.71rem;color:var(--t3)">
+                    Brut : {{ item.prop.montantBrut | number:'1.0-0' }} MRU
+                    <span *ngIf="item.prop.retenueTravaux > 0" style="color:var(--wa)">
+                      · Travaux : -{{ item.prop.retenueTravaux | number:'1.0-0' }} MRU
+                    </span>
+                  </div>
+                  <div style="font-size:1.05rem;font-weight:800;color:var(--t1);font-family:'Syne',sans-serif">
+                    Net : {{ item.prop.montantNet | number:'1.0-0' }}<span style="font-size:.7rem;font-weight:500"> MRU</span>
+                  </div>
+                </td>
+
+                <!-- Date prévue -->
+                <td>
+                  <div style="font-size:.8rem;color:var(--t2)">Prévu :</div>
+                  <div style="font-weight:600;font-size:.82rem"
+                       [style.color]="item.prop.statut === 'EnRetard' ? 'var(--er)' : 'var(--t1)'">
+                    {{ item.prop.datePrevue | date:'dd/MM/yyyy' }}
+                  </div>
+                  <div *ngIf="item.prop.statut === 'Effectue'" class="cell-sub" style="color:var(--ok)">
+                    Effectué {{ item.prop.dateEffective | date:'dd/MM' }}
+                  </div>
+                  <div *ngIf="item.prop.statut === 'EnRetard' && item.prop.joursRetard" class="cell-sub" style="color:var(--er)">
+                    {{ item.prop.joursRetard }} jours retard
+                  </div>
+                </td>
+
+                <!-- Statut -->
+                <td>
+                  <span class="badge"
+                    [class.badge-blue]="item.prop.statut === 'Planifie'"
+                    [class.badge-green]="item.prop.statut === 'Effectue'"
+                    [class.badge-amber]="item.prop.statut === 'EnRetard'">
+                    <span class="mi" style="font-size:11px">
+                      {{ item.prop.statut === 'Effectue' ? 'check_circle' : item.prop.statut === 'EnRetard' ? 'warning' : 'calendar_month' }}
+                    </span>
+                    {{ statutLabel(item.prop.statut) }}
+                  </span>
+                </td>
+
+                <!-- Actions -->
+                <td (click)="$event.stopPropagation()">
+                  <div class="row-actions">
+                    <!-- Bordereau si effectué -->
+                    <button *ngIf="item.prop.statut === 'Effectue' && item.prop.bordereau"
+                            class="action-btn view" title="Bordereau"
+                            (click)="voirBordereau(item.prop)">
+                      <span class="mi">receipt</span>
+                    </button>
+                    <span *ngIf="item.prop.statut === 'Effectue' && !item.prop.bordereau"
+                          class="action-btn" style="cursor:default;color:var(--t3)" title="Bordereau">
+                      <span class="mi">receipt</span>
+                    </span>
+                    <!-- Effectuer -->
+                    <button *ngIf="item.prop.statut !== 'Effectue'"
+                            class="btn btn-primary btn-sm"
+                            (click)="ouvrirEffectuer(item.prop, item.recap)">
+                      <span class="mi">credit_card</span> Effectuer
+                    </button>
+                    <span *ngIf="item.prop.statut === 'Effectue'"
+                          class="badge badge-green" style="white-space:nowrap">
+                      <span class="mi" style="font-size:11px">check_circle</span> Bordereau
+                    </span>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Ligne de détail expandable -->
+              <tr *ngIf="item.expanded">
+                <td colspan="7" style="padding:0;background:var(--surf)">
+                  <div style="padding:14px 20px 14px 72px">
+                    <div style="font-size:.67rem;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:8px;font-weight:500">
+                      Détail des collectes
+                    </div>
+                    <table class="data-table" style="background:var(--wh);border-radius:var(--r);overflow:hidden;box-shadow:var(--s1)">
+                      <thead>
+                        <tr>
+                          <th>PRODUIT</th>
+                          <th>LOCATAIRE</th>
+                          <th>PÉRIODE</th>
+                          <th style="text-align:right">MONTANT</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let c of item.prop.collectes">
+                          <td><span style="font-family:monospace;background:var(--surf2);padding:2px 7px;border-radius:5px;font-size:.72rem;font-weight:700">{{ c.produitCode }}</span></td>
+                          <td style="font-size:.79rem">{{ c.locataireNom }}</td>
+                          <td><span class="tag">{{ c.periodeMois }}</span></td>
+                          <td style="text-align:right;font-weight:600">{{ c.montant | number:'1.0-0' }} MRU</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <!-- Sous-total -->
+                    <div style="display:flex;gap:20px;align-items:center;padding:10px 14px;background:var(--wh);border-radius:var(--r);margin-top:8px;box-shadow:var(--s0)">
+                      <span style="font-size:.78rem;color:var(--t3)">Brut : <strong style="color:var(--t1)">{{ item.prop.montantBrut | number:'1.0-0' }}</strong></span>
+                      <span style="font-size:.78rem;color:var(--er)">Commission : <strong>-{{ item.prop.commission | number:'1.0-0' }}</strong></span>
+                      <span *ngIf="item.prop.retenueTravaux > 0" style="font-size:.78rem;color:var(--wa)">Travaux : <strong>-{{ item.prop.retenueTravaux | number:'1.0-0' }}</strong></span>
+                      <span style="margin-left:auto;font-weight:700;color:var(--ok);font-size:.9rem">Net : {{ item.prop.montantNet | number:'1.0-0' }} MRU</span>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </ng-container>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ MODAL EFFECTUER ══════════════════════════════════════ -->
+    <div class="modal-overlay" [class.open]="showEffectuer">
+      <div class="modal" style="width:500px">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span class="mi">credit_card</span>
+            Effectuer le versement
+          </div>
+          <button class="modal-close" (click)="fermerEffectuer()"><span class="mi">close</span></button>
+        </div>
+        <div class="modal-body" *ngIf="proprieteSelectionnee">
+          <!-- Résumé -->
+          <div style="background:var(--surf);border-radius:8px;padding:12px 14px;margin-bottom:16px">
+            <div style="font-weight:600;font-size:.85rem;margin-bottom:4px">
+              {{ recapSelectionne?.proprietaireNom }} · {{ proprieteSelectionnee.proprieteLibelle }}
+            </div>
+            <div style="font-size:.78rem;color:var(--t2)">
+              Montant net : <strong style="color:var(--ok);font-size:.95rem">{{ proprieteSelectionnee.montantNet | number:'1.0-0' }} MRU</strong>
             </div>
           </div>
-        </div>
 
-        <div class="empty" *ngIf="!recaps().length">
-          <span>💸</span><p>Aucun versement trouvé</p>
-        </div>
-      </div>
-
-      <!-- ── Modal : Effectuer versement ── -->
-      <div class="overlay" *ngIf="showEffectuer" (click)="fermerEffectuer()">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <h3 class="modal-title">💳 Effectuer le versement</h3>
-          <p class="modal-sub" *ngIf="proprieteSelectionnee">
-            {{ proprieteSelectionnee.proprieteLibelle }} —
-            <strong>{{ proprieteSelectionnee.montantNet | number:'1.0-0' }} MRU net</strong>
-          </p>
-          <div class="form-grid">
-            <div class="fg"><label>Date effective *</label>
-              <input type="date" class="fc" [(ngModel)]="formEff.dateEffective"></div>
-            <div class="fg"><label>Mode *</label>
-              <select class="fc" [(ngModel)]="formEff.mode">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Date effective *</label>
+              <input type="date" class="form-control" [(ngModel)]="formEff.dateEffective">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Mode *</label>
+              <select class="form-control" [(ngModel)]="formEff.mode">
                 <option value="">Choisir…</option>
-                <option *ngFor="let m of modes" [value]="m.v">{{ m.l }}</option>
-              </select></div>
-            <div class="fg"><label>Référence</label>
-              <input type="text" class="fc" [(ngModel)]="formEff.reference" placeholder="N° transaction"></div>
-            <div class="fg"><label>Retenue travaux (MRU)</label>
-              <input type="number" class="fc" [(ngModel)]="formEff.retenueTravaux"></div>
-          </div>
-          <div class="fg"><label>📎 Bordereau bancaire</label>
-            <input type="file" class="fc" accept=".pdf,.jpg,.png" (change)="onBordereau($event)"></div>
-          <div class="notif-box">
-            <div class="notif-title">📣 Notifier le propriétaire</div>
-            <div class="notif-opts">
-              <label class="notif-opt"><input type="checkbox" [(ngModel)]="formEff.email"> 📧 Email</label>
-              <label class="notif-opt"><input type="checkbox" [(ngModel)]="formEff.whatsapp"> 💬 WhatsApp</label>
-              <label class="notif-opt"><input type="checkbox" [(ngModel)]="formEff.sms"> 📱 SMS</label>
+                <option value="Especes">Espèces</option>
+                <option value="Bankily">Bankily</option>
+                <option value="Masrvi">Masrvi</option>
+                <option value="Bimbank">Bimbank</option>
+                <option value="Click">Click</option>
+                <option value="VirementBancaire">Virement bancaire</option>
+                <option value="Cheque">Chèque</option>
+              </select>
             </div>
           </div>
-          <div class="modal-actions">
-            <button class="btn btn-ghost" (click)="fermerEffectuer()">Annuler</button>
-            <button class="btn btn-primary" (click)="confirmerEffectuer()"
-                    [disabled]="!formEff.dateEffective || !formEff.mode || enCours()">
-              {{ enCours() ? '⏳…' : '✅ Confirmer' }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── Modal : Notifier propriétaire ── -->
-      <div class="overlay" *ngIf="showNotifProp" (click)="fermerNotifProp()">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <h3 class="modal-title">📣 Envoyer récap au propriétaire</h3>
-          <p class="modal-sub" *ngIf="recapSelectionne">
-            {{ recapSelectionne.proprietaireNom }} — Total net :
-            <strong>{{ recapSelectionne.totalNet | number:'1.0-0' }} MRU</strong>
-          </p>
-          <div class="fg"><label>Mois (YYYY-MM)</label>
-            <input type="month" class="fc" [(ngModel)]="formNotifProp.mois"></div>
-          <div class="notif-box">
-            <div class="notif-opts">
-              <label class="notif-opt"><input type="checkbox" [(ngModel)]="formNotifProp.email"> 📧 Email + PDF joint</label>
-              <label class="notif-opt"><input type="checkbox" [(ngModel)]="formNotifProp.whatsapp"> 💬 WhatsApp</label>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Référence / N° transaction</label>
+              <input type="text" class="form-control" [(ngModel)]="formEff.reference" placeholder="TXN-…">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Retenue travaux (MRU)</label>
+              <input type="number" class="form-control" [(ngModel)]="formEff.retenueTravaux">
             </div>
           </div>
-          <div class="modal-actions">
-            <button class="btn btn-ghost" (click)="fermerNotifProp()">Annuler</button>
-            <button class="btn btn-primary" (click)="confirmerNotifProp()" [disabled]="enCours()">
-              {{ enCours() ? '⏳…' : '📣 Envoyer' }}
-            </button>
+          <div class="form-group" style="margin-bottom:14px">
+            <label class="form-label">Bordereau bancaire (PDF / image)</label>
+            <input type="file" class="form-control" accept=".pdf,.jpg,.png" (change)="onBordereau($event)"
+                   style="padding:5px">
           </div>
-        </div>
-      </div>
 
-      <!-- ── Modal : Alertes retards ── -->
-      <div class="overlay" *ngIf="showAlerteRetards" (click)="fermerAlerteRetards()">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <h3 class="modal-title">⚠️ Alerter les locataires en retard</h3>
-          <p class="modal-sub">Envoie un rappel à tous les locataires dont le loyer du mois courant n'est pas payé.</p>
-          <div class="notif-box">
-            <div class="notif-opts">
-              <label class="notif-opt"><input type="checkbox" [(ngModel)]="formRetards.email"> 📧 Email</label>
-              <label class="notif-opt"><input type="checkbox" [(ngModel)]="formRetards.whatsapp"> 💬 WhatsApp</label>
-              <label class="notif-opt"><input type="checkbox" [(ngModel)]="formRetards.sms"> 📱 SMS</label>
+          <!-- Notifications -->
+          <div style="background:var(--surf);border-radius:8px;padding:12px;margin-bottom:0">
+            <div style="font-size:.72rem;font-weight:600;color:var(--t2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">
+              Notifier le propriétaire
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <label style="display:flex;align-items:center;gap:6px;background:var(--wh);padding:6px 12px;border-radius:7px;border:1px solid var(--bord);cursor:pointer;font-size:.78rem">
+                <input type="checkbox" [(ngModel)]="formEff.email"> Email
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;background:var(--wh);padding:6px 12px;border-radius:7px;border:1px solid var(--bord);cursor:pointer;font-size:.78rem">
+                <input type="checkbox" [(ngModel)]="formEff.whatsapp"> WhatsApp
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;background:var(--wh);padding:6px 12px;border-radius:7px;border:1px solid var(--bord);cursor:pointer;font-size:.78rem">
+                <input type="checkbox" [(ngModel)]="formEff.sms"> SMS
+              </label>
             </div>
           </div>
-          <div class="resultat" *ngIf="resultatRetards">
-            <div class="res-ok">✅ {{ resultatRetards.nbLocatairesNotifies }} notifiés</div>
-            <div class="res-err" *ngIf="resultatRetards.nbEchecs">❌ {{ resultatRetards.nbEchecs }} échecs</div>
-            <div class="res-detail" *ngFor="let d of resultatRetards.details">{{ d }}</div>
-          </div>
-          <div class="modal-actions">
-            <button class="btn btn-ghost" (click)="fermerAlerteRetards()">Fermer</button>
-            <button class="btn btn-warning" (click)="envoyerAlerteRetards()" [disabled]="enCours()">
-              {{ enCours() ? '⏳…' : '📣 Lancer' }}
-            </button>
-          </div>
         </div>
-      </div>
-
-      <!-- ── Modal : Préparer versements ── -->
-      <div class="overlay" *ngIf="showPreparer" (click)="fermerPreparer()">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <h3 class="modal-title">⚙️ Préparer les versements</h3>
-          <p class="modal-sub">Génère les versements à partir des collectes validées non encore versées.</p>
-          <div class="fg"><label>Période (YYYY-MM) *</label>
-            <input type="month" class="fc" [(ngModel)]="formPreparer.periode"></div>
-          <div class="fg"><label>Date prévue de versement *</label>
-            <input type="date" class="fc" [(ngModel)]="formPreparer.datePrevue"></div>
-          <div class="resultat" *ngIf="resultatPreparer">
-            <div class="res-ok" *ngIf="resultatPreparer.nbCreees > 0">✅ {{ resultatPreparer.nbCreees }} versement(s) préparé(s)</div>
-            <div class="res-err" *ngIf="resultatPreparer.nbEchecs > 0">⚠️ {{ resultatPreparer.nbEchecs }} échec(s)</div>
-            <div class="res-detail" *ngFor="let d of resultatPreparer.details">{{ d }}</div>
-          </div>
-          <div class="modal-actions">
-            <button class="btn btn-ghost" (click)="fermerPreparer()">Fermer</button>
-            <button class="btn btn-primary" (click)="confirmerPreparer()" [disabled]="!formPreparer.periode || !formPreparer.datePrevue || enCours()">
-              {{ enCours() ? '⏳…' : '⚙️ Préparer' }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── Modal : Alerter service financier ── -->
-      <div class="overlay" *ngIf="showAlerteFinancier" (click)="fermerAlerteFinancier()">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <h3 class="modal-title">📊 Alerter le service financier</h3>
-          <p class="modal-sub">Notifie les comptables et la direction des versements à effectuer ce mois.</p>
-          <div class="notif-box">
-            <div class="notif-opts">
-              <label class="notif-opt"><input type="checkbox" [(ngModel)]="formFinancier.email"> 📧 Email</label>
-              <label class="notif-opt"><input type="checkbox" [(ngModel)]="formFinancier.whatsapp"> 💬 WhatsApp</label>
-            </div>
-          </div>
-          <div class="resultat" *ngIf="resultatFinancier">
-            <div class="res-ok">✅ {{ resultatFinancier.nbProprietairesEnAttente }} propriétaires —
-              {{ resultatFinancier.totalAVerser | number:'1.0-0' }} MRU</div>
-            <div class="res-detail" *ngFor="let d of resultatFinancier.details">{{ d }}</div>
-          </div>
-          <div class="modal-actions">
-            <button class="btn btn-ghost" (click)="fermerAlerteFinancier()">Fermer</button>
-            <button class="btn btn-outline" (click)="envoyerAlerteFinancier()" [disabled]="enCours()">
-              {{ enCours() ? '⏳…' : '📊 Envoyer alerte' }}
-            </button>
-          </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="fermerEffectuer()">Annuler</button>
+          <button class="btn btn-primary"
+                  [disabled]="!formEff.dateEffective || !formEff.mode || enCours()"
+                  (click)="confirmerEffectuer()">
+            <span class="mi">check_circle</span>
+            {{ enCours() ? 'En cours…' : 'Confirmer' }}
+          </button>
         </div>
       </div>
     </div>
-  `,
-  styles: [`
-    .page{max-width:1300px;margin:0 auto}
-    .page-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px}
-    .page-title{font-size:24px;font-weight:700;color:#0c1a35;margin:0 0 4px}
-    .page-subtitle{font-size:14px;color:#64748b;margin:0}
-    .header-actions{display:flex;gap:10px;flex-wrap:wrap}
-    .btn{padding:9px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:6px}
-    .btn-primary{background:#0c1a35;color:#fff}.btn-ghost{background:#f1f5f9;color:#475569}
-    .btn-warning{background:#f59e0b;color:#fff}.btn-outline{background:#fff;color:#0c1a35;border:1px solid #0c1a35}
-    .btn:disabled{opacity:.4;cursor:not-allowed}
-    .btn-green{background:#059669;color:#fff}
-    .filters-bar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
-    .filter-select{padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px}
-    .stats-bar{display:flex;gap:8px;margin-left:auto}
-    .stat-chip{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;background:#f1f5f9;color:#475569}
-    .stat-chip.green{background:#d1fae5;color:#065f46}.stat-chip.orange{background:#fef3c7;color:#92400e}
-    .chargement{padding:40px;text-align:center;color:#94a3b8}
-    /* Recap cards */
-    .recap-list{display:flex;flex-direction:column;gap:12px}
-    .recap-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08)}
-    .recap-header{display:flex;align-items:center;gap:16px;padding:16px 20px;cursor:pointer;border-bottom:1px solid #f1f5f9}
-    .recap-header:hover{background:#fafbfc}
-    .recap-info{flex:1}
-    .recap-nom{font-size:16px;font-weight:700;color:#0c1a35}
-    .recap-meta{font-size:12px;color:#64748b;margin-top:2px}
-    .recap-totaux{display:flex;align-items:center;gap:16px}
-    .total-item{display:flex;flex-direction:column;align-items:flex-end}
-    .total-label{font-size:10px;color:#94a3b8;text-transform:uppercase}
-    .total-val{font-size:14px;font-weight:600;color:#0c1a35}
-    .total-item.highlight{background:#0c1a35;padding:6px 12px;border-radius:8px}
-    .total-item.highlight .total-label{color:#94a3b8}
-    .total-item.highlight .total-val{color:#c8a96e;font-size:16px}
-    .badge-attente{background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600}
-    .recap-actions{display:flex;gap:6px}
-    .btn-icon-sm{background:#f1f5f9;border:none;cursor:pointer;padding:6px 10px;border-radius:6px;font-size:16px}
-    .btn-icon-sm:hover{background:#e2e8f0}
-    .expand-icon{color:#94a3b8;font-size:12px}
-    .text-red{color:#ef4444}.text-orange{color:#f59e0b}
-    /* Detail */
-    .recap-detail{padding:16px 20px;border-top:2px solid #f0f2f5;background:#fafbfc}
-    .propriete-block{margin-bottom:20px;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0}
-    .propriete-header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0}
-    .propriete-nom{font-weight:600;color:#0c1a35;font-size:13px}
-    .propriete-adresse{color:#94a3b8;font-size:11px;margin-left:8px}
-    .propriete-actions{display:flex;align-items:center;gap:8px}
-    .btn-effectuer{background:#dbeafe;color:#1d4ed8;border:none;cursor:pointer;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600}
-    .btn-effectuer:hover{background:#bfdbfe}
-    .text-ok{color:#059669;font-size:12px}
-    .collectes-table{width:100%;border-collapse:collapse;font-size:12px}
-    .collectes-table th{padding:6px 10px;background:#f1f5f9;color:#64748b;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase}
-    .collectes-table td{padding:6px 10px;border-bottom:1px solid #f8fafc;color:#334155}
-    .collectes-table tr:last-child td{border-bottom:none}
-    .code{font-family:monospace;background:#e0e7ef;padding:2px 6px;border-radius:4px;font-size:11px}
-    .text-right{text-align:right}.text-muted{color:#94a3b8}.font-bold{font-weight:600}
-    .sous-total{display:flex;gap:16px;align-items:center;padding:8px 14px;background:#f0f9ff;font-size:12px;color:#475569}
-    .net-propriete{margin-left:auto;font-weight:700;color:#059669;font-size:13px}
-    .badge{padding:3px 8px;border-radius:10px;font-size:11px;font-weight:500}
-    .badge-Planifie{background:#dbeafe;color:#1d4ed8}
-    .badge-Effectue{background:#d1fae5;color:#065f46}
-    .badge-EnRetard{background:#fee2e2;color:#991b1b}
-    .empty{display:flex;flex-direction:column;align-items:center;padding:60px;color:#94a3b8;font-size:14px;gap:8px}
-    /* Modal */
-    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;display:flex;align-items:center;justify-content:center}
-    .modal{background:#fff;border-radius:16px;padding:28px;width:500px;max-width:92vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
-    .modal-title{font-size:18px;font-weight:700;color:#0c1a35;margin:0 0 4px}
-    .modal-sub{font-size:13px;color:#64748b;margin:0 0 20px}
-    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
-    .fg{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
-    label{font-size:12px;font-weight:500;color:#374151}
-    .fc{padding:8px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;font-family:inherit}
-    .notif-box{background:#f8fafc;border-radius:10px;padding:12px;margin:12px 0}
-    .notif-title{font-size:12px;font-weight:600;color:#374151;margin-bottom:8px}
-    .notif-opts{display:flex;gap:10px;flex-wrap:wrap}
-    .notif-opt{display:flex;align-items:center;gap:6px;background:#fff;padding:7px 12px;border-radius:7px;border:1px solid #e2e8f0;cursor:pointer;font-size:12px}
-    .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
-    .resultat{background:#f0fdf4;border-radius:8px;padding:12px;margin-top:12px;max-height:160px;overflow-y:auto}
-    .res-ok{color:#065f46;font-weight:600;font-size:13px}.res-err{color:#991b1b;font-weight:600;font-size:13px}
-    .res-detail{font-size:11px;color:#374151;padding:2px 0;border-bottom:1px solid #dcfce7}
-  `]
+
+    <!-- ══ MODAL GÉNÉRER ════════════════════════════════════════ -->
+    <div class="modal-overlay" [class.open]="showPreparer">
+      <div class="modal" style="width:420px">
+        <div class="modal-header">
+          <div class="modal-title"><span class="mi">auto_fix_high</span> Générer les versements</div>
+          <button class="modal-close" (click)="fermerPreparer()"><span class="mi">close</span></button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:.8rem;color:var(--t2);margin-bottom:16px">
+            Génère les versements à partir des collectes validées non encore versées.
+          </p>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Période *</label>
+              <input type="month" class="form-control" [(ngModel)]="formPreparer.periode">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Date prévue *</label>
+              <input type="date" class="form-control" [(ngModel)]="formPreparer.datePrevue">
+            </div>
+          </div>
+          <div *ngIf="resultatPreparer" class="alert-box info" style="margin-top:12px;margin-bottom:0">
+            <div class="alert-title"><span class="mi">info</span> Résultat</div>
+            <p style="font-size:.8rem">
+              <strong>{{ resultatPreparer.nbCreees }}</strong> versement(s) préparé(s)
+              <span *ngIf="resultatPreparer.nbEchecs > 0" style="color:var(--er)">
+                · {{ resultatPreparer.nbEchecs }} échec(s)
+              </span>
+            </p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="fermerPreparer()">Fermer</button>
+          <button class="btn btn-gold"
+                  [disabled]="!formPreparer.periode || !formPreparer.datePrevue || enCours()"
+                  (click)="confirmerPreparer()">
+            <span class="mi">auto_fix_high</span>
+            {{ enCours() ? 'Génération…' : 'Générer' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  `
 })
 export class VersementsComponent implements OnInit {
   private http = inject(HttpClient);
+  private base = environment.apiUrl;
 
-  recaps = signal<RecapProprietaire[]>([]);
+  recaps     = signal<RecapProprietaire[]>([]);
   chargement = signal(false);
-  enCours = signal(false);
+  enCours    = signal(false);
 
-  filtreMois = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  filtreMois   = new Date().toISOString().slice(0, 7);
   filtreStatut = '';
+  recherche    = '';
 
-  showEffectuer = false;
-  showNotifProp = false;
-  showAlerteRetards = false;
-  showAlerteFinancier = false;
-
+  // Modal effectuer
+  showEffectuer        = false;
   proprieteSelectionnee: VersementPropriete | null = null;
-  recapSelectionne: RecapProprietaire | null = null;
-  bordereauFichier: File | null = null;
-  resultatRetards: any = null;
-  resultatFinancier: any = null;
-  showPreparer = false;
+  recapSelectionne:     RecapProprietaire | null = null;
+  bordereauFichier:     File | null = null;
+  formEff = { dateEffective: new Date().toISOString().slice(0, 10), mode: '', reference: '', retenueTravaux: 0, email: true, whatsapp: true, sms: false };
+
+  // Modal générer
+  showPreparer    = false;
   resultatPreparer: any = null;
   formPreparer = {
-    periode: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
+    periode:   new Date().toISOString().slice(0, 7),
     datePrevue: new Date(new Date().getFullYear(), new Date().getMonth(), 25).toISOString().slice(0, 10)
   };
 
-  formEff = { dateEffective: new Date().toISOString().slice(0, 10), mode: '', reference: '', retenueTravaux: 0, email: true, whatsapp: true, sms: false };
-  formNotifProp = { mois: this.filtreMois, email: true, whatsapp: true };
-  formRetards = { email: true, whatsapp: true, sms: false };
-  formFinancier = { email: true, whatsapp: true };
+  // ── Computed ──
 
-  modes = [
-    { v: '1', l: 'Espèces' }, { v: '2', l: 'Bankily' }, { v: '3', l: 'Masrvi' },
-    { v: '4', l: 'Bimbank' }, { v: '5', l: 'Click' }, { v: '6', l: 'Virement bancaire' }, { v: '7', l: 'Chèque' }
-  ];
-
-  moisDisponibles = Array.from({ length: 12 }, (_, i) => {
-    const d = new Date(); d.setMonth(d.getMonth() - i);
-    return { value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, label: d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) };
+  /** Toutes les lignes à plat (une propriété = une ligne) */
+  toutesLignes = computed(() => {
+    const lignes: { recap: RecapProprietaire; prop: VersementPropriete; expanded: boolean }[] = [];
+    this.recaps().forEach(r => {
+      r.proprietes.forEach(p => lignes.push({ recap: r, prop: p, expanded: false }));
+    });
+    return lignes;
   });
 
-  totalNet = () => this.recaps().reduce((s, r) => s + r.totalNet, 0);
-  nbEnAttente = () => this.recaps().reduce((s, r) => s + r.nbVersementsEnAttente, 0);
+  lignesFiltrees = computed(() => {
+    let list = this.toutesLignes();
+    if (this.filtreStatut) list = list.filter(l => l.prop.statut === this.filtreStatut);
+    if (this.recherche.trim()) {
+      const q = this.recherche.toLowerCase();
+      list = list.filter(l =>
+        l.recap.proprietaireNom.toLowerCase().includes(q) ||
+        l.prop.proprieteLibelle.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  });
 
+  versementsEnRetard = computed(() =>
+    this.toutesLignes().filter(l => l.prop.statut === 'EnRetard')
+  );
+
+  stats = computed(() => {
+    const all = this.toutesLignes();
+    return {
+      planifies:      all.filter(l => l.prop.statut === 'Planifie').length,
+      effectues:      all.filter(l => l.prop.statut === 'Effectue').length,
+      enRetard:       all.filter(l => l.prop.statut === 'EnRetard').length,
+      montantPlanifie: all.filter(l => l.prop.statut === 'Planifie').reduce((s, l) => s + l.prop.montantNet, 0),
+      montantEffectue: all.filter(l => l.prop.statut === 'Effectue').reduce((s, l) => s + l.prop.montantNet, 0),
+      totalNet:        all.reduce((s, l) => s + l.prop.montantNet, 0),
+    };
+  });
+
+  // ── Lifecycle ──
   ngOnInit() { this.load(); }
 
   load() {
     this.chargement.set(true);
     const params: any = {};
     if (this.filtreMois) params.mois = this.filtreMois;
-    if (this.filtreStatut) params.statut = this.filtreStatut;
 
-    this.http.get<any>('/api/versements/par-proprietaire', { params }).subscribe({
-      next: r => { this.recaps.set((r.data ?? r).map((x: any) => ({ ...x, expanded: false }))); this.chargement.set(false); },
+    this.http.get<any>(`${this.base}/versements/par-proprietaire`, { params }).subscribe({
+      next: r => {
+        const data = r.data ?? r;
+        this.recaps.set(Array.isArray(data) ? data.map((x: any) => ({ ...x, expanded: false })) : []);
+        this.chargement.set(false);
+      },
       error: () => this.chargement.set(false)
     });
   }
 
-  ouvrirEffectuer(p: VersementPropriete, r: RecapProprietaire) {
-    this.proprieteSelectionnee = p; this.recapSelectionne = r;
-    this.formEff = { dateEffective: new Date().toISOString().slice(0, 10), mode: '', reference: '', retenueTravaux: 0, email: true, whatsapp: true, sms: false };
-    this.bordereauFichier = null; this.showEffectuer = true;
+  setFiltre(statut: string) {
+    this.filtreStatut = statut;
   }
+
+  toggleDetail(item: { expanded: boolean }) {
+    item.expanded = !item.expanded;
+  }
+
+  // ── Modal effectuer ──
+  ouvrirEffectuer(p: VersementPropriete, r: RecapProprietaire) {
+    this.proprieteSelectionnee = p;
+    this.recapSelectionne = r;
+    this.formEff = { dateEffective: new Date().toISOString().slice(0, 10), mode: '', reference: '', retenueTravaux: 0, email: true, whatsapp: true, sms: false };
+    this.bordereauFichier = null;
+    this.showEffectuer = true;
+  }
+
   fermerEffectuer() { this.showEffectuer = false; }
-  onBordereau(e: Event) { this.bordereauFichier = (e.target as HTMLInputElement).files?.[0] ?? null; }
+
+  onBordereau(e: Event) {
+    this.bordereauFichier = (e.target as HTMLInputElement).files?.[0] ?? null;
+  }
 
   confirmerEffectuer() {
     if (!this.proprieteSelectionnee || !this.formEff.dateEffective || !this.formEff.mode) return;
@@ -452,57 +552,26 @@ export class VersementsComponent implements OnInit {
     fd.append('NotifierWhatsApp', String(this.formEff.whatsapp));
     fd.append('NotifierSms', String(this.formEff.sms));
     if (this.bordereauFichier) fd.append('BordereauBanque', this.bordereauFichier);
-    this.http.post(`/api/versements/${this.proprieteSelectionnee.versementId}/effectuer`, fd).subscribe({
+
+    this.http.post(`${this.base}/versements/${this.proprieteSelectionnee.versementId}/effectuer`, fd).subscribe({
       next: () => { this.enCours.set(false); this.fermerEffectuer(); this.load(); },
-      error: (e) => { this.enCours.set(false); alert(e?.error?.message ?? 'Erreur'); }
+      error: (e) => { this.enCours.set(false); console.error(e); }
     });
   }
 
-  ouvrirNotifProp(r: RecapProprietaire) { this.recapSelectionne = r; this.showNotifProp = true; }
-  fermerNotifProp() { this.showNotifProp = false; }
-  confirmerNotifProp() {
-    if (!this.recapSelectionne) return;
-    this.enCours.set(true);
-    this.http.post(`/api/versements/par-proprietaire/${this.recapSelectionne.proprietaireId}/notifier`, {
-      mois: this.formNotifProp.mois, notifierEmail: this.formNotifProp.email, notifierWhatsApp: this.formNotifProp.whatsapp
-    }).subscribe({
-      next: () => { this.enCours.set(false); this.fermerNotifProp(); alert('✅ Propriétaire notifié !'); },
-      error: (e) => { this.enCours.set(false); alert(e?.error?.message ?? 'Erreur'); }
-    });
+  voirBordereau(p: VersementPropriete) {
+    if (p.bordereau) window.open(p.bordereau, '_blank');
   }
 
-  telechargerPdf(r: RecapProprietaire) {
-    const url = `/api/versements/par-proprietaire/${r.proprietaireId}/pdf?mois=${this.filtreMois}`;
-    window.open(url, '_blank');
-  }
-
-  ouvrirAlerteRetards() { this.resultatRetards = null; this.showAlerteRetards = true; }
-  fermerAlerteRetards() { this.showAlerteRetards = false; }
-  envoyerAlerteRetards() {
-    this.enCours.set(true);
-    this.http.post<any>('/api/versements/alerter-retards', { notifierEmail: this.formRetards.email, notifierWhatsApp: this.formRetards.whatsapp, notifierSms: this.formRetards.sms }).subscribe({
-      next: r => { this.enCours.set(false); this.resultatRetards = r.data ?? r; },
-      error: (e) => { this.enCours.set(false); alert(e?.error?.message ?? 'Erreur'); }
-    });
-  }
-
-  ouvrirAlerteServiceFinancier() { this.resultatFinancier = null; this.showAlerteFinancier = true; }
-  fermerAlerteFinancier() { this.showAlerteFinancier = false; }
-  envoyerAlerteFinancier() {
-    this.enCours.set(true);
-    this.http.post<any>('/api/versements/alerter-service-financier', { notifierEmail: this.formFinancier.email, notifierWhatsApp: this.formFinancier.whatsapp }).subscribe({
-      next: r => { this.enCours.set(false); this.resultatFinancier = r.data ?? r; },
-      error: (e) => { this.enCours.set(false); alert(e?.error?.message ?? 'Erreur'); }
-    });
-  }
-
+  // ── Modal générer ──
   ouvrirPreparer() { this.resultatPreparer = null; this.showPreparer = true; }
   fermerPreparer() { this.showPreparer = false; this.load(); }
+
   confirmerPreparer() {
     if (!this.formPreparer.periode || !this.formPreparer.datePrevue) return;
     this.enCours.set(true);
-    this.http.post<any>('/api/versements/preparer-tous', {
-      periode: this.formPreparer.periode,
+    this.http.post<any>(`${this.base}/versements/preparer-tous`, {
+      periode:    this.formPreparer.periode,
       datePrevue: this.formPreparer.datePrevue
     }).subscribe({
       next: r => { this.enCours.set(false); this.resultatPreparer = r.data ?? r; },
@@ -510,11 +579,19 @@ export class VersementsComponent implements OnInit {
     });
   }
 
-  periodiciteLabel(p: string) {
-    return p === '1' ? 'Mensuel' : p === '2' ? 'Bimensuel' : 'Trimestriel';
+  // ── Helpers ──
+  statutLabel(s: string) {
+    return s === 'Effectue' ? 'Effectué' : s === 'EnRetard' ? 'En retard' : 'Planifié';
   }
 
-  statutClass(s: string) {
-    return { 'badge-Planifie': s === 'Planifie', 'badge-Effectue': s === 'Effectue', 'badge-EnRetard': s === 'EnRetard' };
+  initiales(nom: string) {
+    return nom.split(' ').slice(0, 2).map(n => n[0] ?? '').join('').toUpperCase();
+  }
+
+  avatarColor(nom: string) {
+    const colors = ['#2057c8', '#0d9f5a', '#d07a0c', '#0e1c38', '#7b3fa8', '#c9263e'];
+    let hash = 0;
+    for (const ch of nom) hash = ch.charCodeAt(0) + ((hash << 5) - hash);
+    return colors[Math.abs(hash) % colors.length];
   }
 }
