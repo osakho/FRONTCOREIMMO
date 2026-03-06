@@ -581,3 +581,25 @@ export interface CollecteurAffecteDto {
   collecteurNom: string;
   dateDebut:     string;
 }
+
+
+// ══════════════════════════════════════════════════════════════
+//  RECOUVREMENT
+// ══════════════════════════════════════════════════════════════
+export type EtapeRecouvrement = 'Relance1' | 'Relance2' | 'Relance3' | 'Contentieux';
+
+export interface DossierRecouvrementDto {
+  contratId:        string;
+  contratNumero:    string;
+  locataireId:      string;
+  locataireNom:     string;
+  locataireTel:     string;
+  produitCode:      string;
+  proprieteLibelle: string;
+  loyer:            number;
+  montantDu:        number;
+  joursRetard:      number;
+  derniereRelance?: string;
+  etape:            EtapeRecouvrement;
+  loading?:         boolean;
+}

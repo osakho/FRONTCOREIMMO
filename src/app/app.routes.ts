@@ -1,4 +1,5 @@
-import { Routes } from '@angular/router';
+import { Routes, PreloadAllModules } from '@angular/router';
+export const preloadingStrategy = PreloadAllModules;
 import { authGuard, directionGuard } from './core/guards/auth.guard';
 import { VersementsComponent } from './features/versements/versements.component';
 
@@ -18,7 +19,7 @@ export const routes: Routes = [
       { path: 'proprietaires/nouveau', loadComponent: () => import('./features/proprietaires/form/proprietaire-form.component').then(m => m.ProprietaireFormComponent) },
       { path: 'proprietaires/dashboard', loadComponent: () => import('./features/proprietaires/dashboard/proprietaires-dashboard.component').then(m => m.ProprietairesDashboardComponent) },
       { path: 'proprietaires/:id',     loadComponent: () => import('./features/proprietaires/detail/proprietaire-detail.component').then(m => m.ProprietaireDetailComponent) },
-      { path: 'proprietaires/:id/edit',loadComponent: () => import('./features/proprietaires/form/proprietaire-form.component').then(m => m.ProprietaireFormComponent) },
+      { path: 'proprietaires/:id/edit', redirectTo: '/proprietaires/:id', pathMatch: 'full' },
       { path: 'proprietaires/nouveau', redirectTo: '/proprietaires', pathMatch: 'full' },
       
       // Propriétés
@@ -60,11 +61,15 @@ export const routes: Routes = [
       { path: 'collectes/rapport',   loadComponent: () => import('./features/collectes/rapport/rapport-collecteur.component').then(m => m.RapportCollecteurComponent) },
 
       // Personnel
-      { path: 'personnel',         loadComponent: () => import('./features/personnel/list/personnel-list.component').then(m => m.PersonnelListComponent), canActivate: [directionGuard] },
+      { path: 'personnel',         loadComponent: () => import('./features/personnel/list/personnel-list.component').then(m => m.PersonnelListComponent), canActivate: [directionGuard], data: { preload: true } },
       { path: 'personnel/nouveau', loadComponent: () => import('./features/personnel/form/personnel-form.component').then(m => m.PersonnelFormComponent), canActivate: [directionGuard] },
       
       //Verements
       {path: 'versements', component:VersementsComponent},
+
+      // Recouvrement
+      { path: 'contentieux', loadComponent: () => import('./features/recouvrement/contentieux.component').then(m => m.ContentieuxComponent) },
+      { path: 'recouvrement', loadComponent: () => import('./features/recouvrement/recouvrement.component').then(m => m.RecouvrementComponent) },
 
       // Dashboard propriétaires (remplace ou complète la liste simple)
       { path: 'proprietaires/dashboard', loadComponent: () => import('./features/proprietaires/dashboard/proprietaires-dashboard.component').then(m => m.ProprietairesDashboardComponent),
@@ -72,6 +77,6 @@ export const routes: Routes = [
       },
     ]
   },
-  
+
   { path: '**', redirectTo: 'dashboard' }
 ];

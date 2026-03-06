@@ -14,7 +14,8 @@ import {
   PersonnelListItemDto, DashboardDto,
   StatutContrat, StatutCollecte, TypeProduit, StatutProduit,
   LoginRequest, LoginResponse,
-  DashboardProprietairesResult
+  DashboardProprietairesResult,
+  DossierRecouvrementDto, EtapeRecouvrement
 } from '../models/models';
 import { environment } from '../../../environments/environment';
 
@@ -233,14 +234,18 @@ export class ContratsGestionService extends ApiService {
     if (statut)      params = params.set('statut', statut);
     return this.get<PagedList<ContratGestionDto>>('/contrats-gestion', params);
   }
-
+  
   create(data: FormData): Observable<string> {
     return this.postForm<string>('/contrats-gestion', data);
   }
-
+  
   activer(id: string): Observable<void> {
     return this.post<string>(`/contrats-gestion/${id}/activer`, {}).pipe(map(() => void 0));
   }
+  creerAvenant(id: string, data: FormData): Observable<void> {
+    return this.postForm<void>(`/contrats-gestion/${id}/avenant`, data);
+  }
+  
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -388,12 +393,38 @@ export class DashboardService extends ApiService {
     const params = periodeMois ? new HttpParams().set('periodeMois', periodeMois) : undefined;
     return this.get<DashboardDto>('/dashboard', params);
   }
+}
 
-  // Ajouter dans DashboardService
-  getRapportSemaineCourante(semaine: number, annee: number): Observable<RapportCollecteurDto[]> {
-    const params = new HttpParams()
-      .set('semaine', semaine)
-      .set('annee', annee);
-    return this.get<RapportCollecteurDto[]>('/collectes/rapport-global', params);
+// ══════════════════════════════════════════════════════════════
+//  RECOUVREMENT SERVICE
+//  Construit les dossiers impayés à partir de contrats-location
+//  actifs (estEnRetard) + collectes pour calculer montants dus
+// ══════════════════════════════════════════════════════════════
+@Injectable({ providedIn: 'root' })
+export class RecouvrementService extends ApiService {
+
+  /** Récupère tous les dossiers impayés */
+  getDossiers(): Observable<DossierRecouvrementDto[]> {
+    return this.get<DossierRecouvrementDto[]>('/recouvrement/dossiers');
+  }
+
+  /** Envoie une relance (email/SMS) pour un contrat */
+  envoyerRelance(contratId: string, message?: string): Observable<void> {
+    return this.post<void>(`/recouvrement/${contratId}/relancer`, { message: message ?? '' });
+  }
+
+  /** Relance en masse */
+  relancerMasse(contratIds: string[]): Observable<void> {
+    return this.post<void>('/recouvrement/relancer-masse', { contratIds });
+  }
+
+  /** Enregistre un encaissement (crée une collecte) */
+  encaisser(contratId: string, data: { montant: number; mode: string; reference?: string }): Observable<void> {
+    return this.post<void>(`/recouvrement/${contratId}/encaisser`, data);
+  }
+
+  /** Export Excel */
+  exportExcel(): Observable<Blob> {
+    return this.http.get(`${this.base}/recouvrement/export`, { responseType: 'blob' });
   }
 }

@@ -1,7 +1,7 @@
 import { Component, inject, signal, HostListener } from '@angular/core';
 import { CommonModule }   from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
-import { AuthService }    from '../../core/services/api.services';
+import { AuthService, RecouvrementService }    from '../../core/services/api.services';
 import { filter }         from 'rxjs/operators';
 
 @Component({
@@ -20,126 +20,210 @@ import { filter }         from 'rxjs/operators';
 ══════════════════════════════════════════════ -->
 <aside class="sidebar" [class.open]="sidebarOpen()">
 
-  <!-- ── Marque ─────────────────────────────── -->
+  <!-- ── Logo ── -->
   <div class="sb-brand">
-    <div class="sb-logo">
-      <div class="sb-emblem">🏛️</div>
-      <div style="flex:1;min-width:0;">
-        <div class="sb-name">Khalifat Djické</div>
-        <div class="sb-sub">Gestion Immobilière</div>
+    <div class="sb-logo-wrap">
+      <div class="sb-logo-icon">KDI</div>
+      <div class="sb-logo-text">
+        <div class="sb-logo-name">Khalifat Djické</div>
+        <div class="sb-logo-sub">Gestion Immobilière</div>
       </div>
     </div>
   </div>
 
-  <!-- ── Navigation ─────────────────────────── -->
+  <!-- ── Nav ── -->
   <nav class="sb-nav">
 
-    <!-- Principal -->
-    <div class="nav-section">Principal</div>
+    <!-- PRINCIPAL -->
+    <div class="nav-group">
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-item" (click)="closeSidebarMobile()">
+        <span class="ni">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+            <rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/>
+            <rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/>
+          </svg>
+        </span>
+        <span class="nl">Tableau de bord</span>
+      </a>
+    </div>
 
-    <a routerLink="/dashboard" routerLinkActive="active" class="nav-item"
-       (click)="closeSidebarMobile()">
-      <span class="nav-icon">📊</span>
-      <span>Tableau de bord</span>
-    </a>
+    <!-- PATRIMOINE -->
+    <div class="nav-section-label">Patrimoine</div>
+    <div class="nav-group">
+      <a routerLink="/proprietaires" routerLinkActive="active" class="nav-item" (click)="closeSidebarMobile()">
+        <span class="ni">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+            <circle cx="10" cy="7" r="3.5"/><path d="M3 17c0-3.3 3.1-6 7-6s7 2.7 7 6"/>
+          </svg>
+        </span>
+        <span class="nl">Propriétaires</span>
+      </a>
+      <a *ngIf="isDirection()" routerLink="/proprietaires/dashboard" routerLinkActive="active" class="nav-item sub" (click)="closeSidebarMobile()">
+        <span class="ni">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+            <polyline points="2,14 7,9 11,13 18,6"/><polyline points="14,6 18,6 18,10"/>
+          </svg>
+        </span>
+        <span class="nl">Dashboard propriétaires</span>
+      </a>
+      <a routerLink="/proprietes" routerLinkActive="active" class="nav-item" (click)="closeSidebarMobile()">
+        <span class="ni">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M3 9.5L10 3l7 6.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M7 18V12h6v6"/>
+          </svg>
+        </span>
+        <span class="nl">Propriétés</span>
+      </a>
+      <a routerLink="/produits" routerLinkActive="active" class="nav-item" (click)="closeSidebarMobile()">
+        <span class="ni">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+            <rect x="3" y="3" width="14" height="14" rx="2"/><circle cx="10" cy="10" r="2.5"/>
+            <path d="M10 3v3M10 14v3M3 10h3M14 10h3"/>
+          </svg>
+        </span>
+        <span class="nl">Produits locatifs</span>
+      </a>
+    </div>
 
-    <!-- Patrimoine -->
-    <div class="nav-section">Patrimoine</div>
+    <!-- GESTION LOCATIVE -->
+    <div class="nav-section-label">Gestion locative</div>
+    <div class="nav-group">
+      <a routerLink="/locataires" routerLinkActive="active" class="nav-item" (click)="closeSidebarMobile()">
+        <span class="ni">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+            <circle cx="7" cy="7" r="3"/><circle cx="13" cy="7" r="3"/>
+            <path d="M1 17c0-2.8 2.7-5 6-5M19 17c0-2.8-2.7-5-6-5M7 12c1.3 1 3.3 1 6 0"/>
+          </svg>
+        </span>
+        <span class="nl">Locataires</span>
+      </a>
+      <a routerLink="/contrats-location" routerLinkActive="active" class="nav-item" (click)="closeSidebarMobile()">
+        <span class="ni">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+            <rect x="4" y="2" width="12" height="16" rx="1.5"/>
+            <line x1="7" y1="7" x2="13" y2="7"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="7" y1="13" x2="10" y2="13"/>
+          </svg>
+        </span>
+        <span class="nl">Contrats de location</span>
+      </a>
+      <a *ngIf="isDirection()" routerLink="/contrats-gestion" routerLinkActive="active" class="nav-item" (click)="closeSidebarMobile()">
+        <span class="ni">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+            <rect x="4" y="2" width="12" height="16" rx="1.5"/>
+            <line x1="7" y1="7" x2="13" y2="7"/><line x1="7" y1="10" x2="13" y2="10"/>
+            <path d="M7 13l1.5 1.5L13 11"/>
+          </svg>
+        </span>
+        <span class="nl">Contrats de gestion</span>
+      </a>
+    </div>
 
-    <a routerLink="/proprietaires" routerLinkActive="active" class="nav-item"
-       (click)="closeSidebarMobile()">
-      <span class="nav-icon">👤</span>
-      <span>Propriétaires</span>
-    </a>
+    <!-- COLLECTES & FINANCE -->
+    <div class="nav-section-label">Collectes &amp; Finance</div>
+    <div class="nav-group">
+      <a routerLink="/collectes" routerLinkActive="active" class="nav-item" (click)="closeSidebarMobile()">
+        <span class="ni">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+            <circle cx="10" cy="10" r="7.5"/><path d="M10 6v1.5m0 5V14m-2.5-5.5h4a1 1 0 110 2H8a1 1 0 100 2h4"/>
+          </svg>
+        </span>
+        <span class="nl">Collectes</span>
+      </a>
+      <a *ngIf="isDirection()" routerLink="/collectes/validation" routerLinkActive="active" class="nav-item sub" (click)="closeSidebarMobile()">
+        <span class="ni">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+            <rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 10l2.5 2.5L13 7"/>
+          </svg>
+        </span>
+        <span class="nl">Validation collectes</span>
+      </a>
+      <a routerLink="/collectes/rapport" routerLinkActive="active" class="nav-item sub" (click)="closeSidebarMobile()">
+        <span class="ni">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+            <rect x="3" y="2" width="14" height="16" rx="1.5"/>
+            <line x1="7" y1="6" x2="13" y2="6"/><line x1="7" y1="9" x2="13" y2="9"/>
+            <polyline points="7,13 9,11 11,13 14,10"/>
+          </svg>
+        </span>
+        <span class="nl">Rapport collecteur</span>
+      </a>
+      <a routerLink="/collectes/bordereau" routerLinkActive="active" class="nav-item sub" (click)="closeSidebarMobile()">
+        <span class="ni">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M4 2h8l4 4v12a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/>
+            <polyline points="12,2 12,6 16,6"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="7" y1="13" x2="10" y2="13"/>
+          </svg>
+        </span>
+        <span class="nl">Bordereau</span>
+      </a>
+      <a routerLink="/versements" routerLinkActive="active" class="nav-item" (click)="closeSidebarMobile()">
+        <span class="ni">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+            <rect x="2" y="6" width="16" height="11" rx="1.5"/>
+            <path d="M6 6V4.5a4 4 0 018 0V6"/><circle cx="10" cy="12" r="1.8"/>
+          </svg>
+        </span>
+        <span class="nl">Versements</span>
+      </a>
+      <a routerLink="/contentieux" routerLinkActive="active" class="nav-item" (click)="closeSidebarMobile()">
+        <span class="ni">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+            <circle cx="10" cy="10" r="7.5"/>
+            <path d="M7 7.5h3.5a1.5 1.5 0 010 3H8.5m0 0H7m1.5 0V14"/>
+          </svg>
+        </span>
+        <span class="nl">Contentieux</span>
+        <span class="nb" *ngIf="nbContentieux()>0">{{ nbContentieux() }}</span>
+      </a>
+      <a routerLink="/recouvrement" routerLinkActive="active" class="nav-item" (click)="closeSidebarMobile()">
+        <span class="ni">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+            <circle cx="10" cy="10" r="7.5"/><line x1="10" y1="6" x2="10" y2="11"/>
+            <circle cx="10" cy="13.5" r=".8" fill="currentColor" stroke="none"/>
+          </svg>
+        </span>
+        <span class="nl">Recouvrement</span>
+        <span class="nb" *ngIf="nbImpayes()>0">{{ nbImpayes() }}</span>
+      </a>
+    </div>
 
-    <a *ngIf="isDirection()" routerLink="/proprietaires/dashboard"
-       routerLinkActive="active" class="nav-item"
-       (click)="closeSidebarMobile()">
-      <span class="nav-icon">📋</span>
-      <span>Dashboard propriétaires</span>
-    </a>
-
-    <a routerLink="/proprietes" routerLinkActive="active" class="nav-item"
-       (click)="closeSidebarMobile()">
-      <span class="nav-icon">🏢</span>
-      <span>Propriétés</span>
-    </a>
-
-    <a routerLink="/produits" routerLinkActive="active" class="nav-item"
-       (click)="closeSidebarMobile()">
-      <span class="nav-icon">🔑</span>
-      <span>Produits locatifs</span>
-    </a>
-
-    <!-- Gestion locative -->
-    <div class="nav-section">Gestion locative</div>
-
-    <a routerLink="/locataires" routerLinkActive="active" class="nav-item"
-       (click)="closeSidebarMobile()">
-      <span class="nav-icon">👥</span>
-      <span>Locataires</span>
-    </a>
-
-    <a routerLink="/contrats-location" routerLinkActive="active" class="nav-item"
-       (click)="closeSidebarMobile()">
-      <span class="nav-icon">📄</span>
-      <span>Contrats de location</span>
-    </a>
-
-    <a *ngIf="isDirection()" routerLink="/contrats-gestion"
-       routerLinkActive="active" class="nav-item"
-       (click)="closeSidebarMobile()">
-      <span class="nav-icon">📑</span>
-      <span>Contrats de gestion</span>
-    </a>
-
-    <!-- Collectes & Finance -->
-    <div class="nav-section">Collectes &amp; Finance</div>
-
-    <a routerLink="/collectes" routerLinkActive="active" class="nav-item"
-       (click)="closeSidebarMobile()">
-      <span class="nav-icon">💰</span>
-      <span>Collectes</span>
-    </a>
-
-    <a *ngIf="isDirection()" routerLink="/collectes/validation"
-       routerLinkActive="active" class="nav-item"
-       (click)="closeSidebarMobile()">
-      <span class="nav-icon">✅</span>
-      <span>Validation collectes</span>
-    </a>
-
-    <a routerLink="/collectes/rapport" routerLinkActive="active" class="nav-item"
-       (click)="closeSidebarMobile()">
-      <span class="nav-icon">📊</span>
-      <span>Rapport collecteur</span>
-    </a>
-
-    <a routerLink="/collectes/bordereau" routerLinkActive="active" class="nav-item"
-       (click)="closeSidebarMobile()">
-      <span class="nav-icon">🧾</span>
-      <span>Bordereau</span>
-    </a>
-
-    <a routerLink="/versements" routerLinkActive="active" class="nav-item"
-       (click)="closeSidebarMobile()">
-      <span class="nav-icon">🏦</span>
-      <span>Versements</span>
-    </a>
-
-    <!-- Administration -->
-    <div class="nav-section" *ngIf="isDirection()">Administration</div>
-
-    <a *ngIf="isDirection()" routerLink="/personnel"
-       routerLinkActive="active" class="nav-item"
-       (click)="closeSidebarMobile()">
-      <span class="nav-icon">👷</span>
-      <span>Personnel</span>
-    </a>
+    <!-- ADMINISTRATION -->
+    <ng-container *ngIf="isDirection()">
+      <div class="nav-section-label">Administration</div>
+      <div class="nav-group">
+        <a routerLink="/personnel" routerLinkActive="active" class="nav-item" (click)="closeSidebarMobile()">
+          <span class="ni">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+              <circle cx="10" cy="6.5" r="2.8"/><path d="M4 17c0-3 2.7-5.5 6-5.5s6 2.5 6 5.5"/>
+              <path d="M14.5 9.5l1.5 1.5m0 0l1.5-1.5m-1.5 1.5V8"/>
+            </svg>
+          </span>
+          <span class="nl">Personnel</span>
+        </a>
+        <a *ngIf="isDirection()" routerLink="/rapports" routerLinkActive="active" class="nav-item" (click)="closeSidebarMobile()">
+          <span class="ni">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+              <rect x="3" y="2" width="14" height="16" rx="1.5"/>
+              <polyline points="7,8 9,10.5 12,8 14,11"/><line x1="7" y1="14" x2="13" y2="14"/>
+            </svg>
+          </span>
+          <span class="nl">Rapports</span>
+        </a>
+        <a *ngIf="isDirection()" routerLink="/parametres" routerLinkActive="active" class="nav-item" (click)="closeSidebarMobile()">
+          <span class="ni">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+              <circle cx="10" cy="10" r="2.5"/>
+              <path d="M10 2v2m0 12v2M2 10h2m12 0h2M4.2 4.2l1.4 1.4m8.8 8.8l1.4 1.4M4.2 15.8l1.4-1.4m8.8-8.8l1.4-1.4"/>
+            </svg>
+          </span>
+          <span class="nl">Paramètres</span>
+        </a>
+      </div>
+    </ng-container>
 
   </nav>
 
-  <!-- ── Pied : utilisateur connecté ───────── -->
+  <!-- ── Footer utilisateur ── -->
   <div class="sb-footer">
     <div class="sb-avatar">{{ userInitiales() }}</div>
     <div class="sb-user-info">
@@ -147,7 +231,10 @@ import { filter }         from 'rxjs/operators';
       <div class="sb-user-role">{{ userRole() }}</div>
     </div>
     <button class="sb-logout-btn" (click)="logout()" title="Se déconnecter">
-      ⏻
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" width="16" height="16">
+        <path d="M7 3H4a1 1 0 00-1 1v12a1 1 0 001 1h3"/>
+        <polyline points="13,7 17,10 13,13"/><line x1="17" y1="10" x2="7" y2="10"/>
+      </svg>
     </button>
   </div>
 
@@ -243,126 +330,154 @@ import { filter }         from 'rxjs/operators';
     ══════════════════════════════════════════════ */
     .sidebar {
       width: var(--sidebar-w);
-      background: var(--ink-mid);
+      background: linear-gradient(180deg, #0D1321 0%, #111827 100%);
       display: flex;
       flex-direction: column;
       position: fixed;
       top: 0; left: 0;
       height: 100vh;
       z-index: 200;
-      transition: transform .28s ease;
+      transition: transform .28s cubic-bezier(.4,0,.2,1);
       overflow: hidden;
+      border-right: 1px solid rgba(255,255,255,.04);
     }
 
-    /* ── Marque ── */
+    /* ── Logo ── */
     .sb-brand {
-      padding: 24px 20px 18px;
-      border-bottom: 1px solid rgba(201,168,76,.2);
+      padding: 18px 16px 16px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
       flex-shrink: 0;
     }
-    .sb-logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: nowrap;
+    .sb-logo-wrap {
+      display: flex; align-items: center; gap: 11px;
     }
-    .sb-emblem {
-      width: 40px; height: 40px;
-      background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-      border-radius: 10px;
+    .sb-logo-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: linear-gradient(135deg, #8B6914, #C9A84C);
       display: flex; align-items: center; justify-content: center;
-      font-size: 18px; flex-shrink: 0;
-    }
-    .sb-name {
+      font-size: 12px; font-weight: 900; color: #fff;
+      letter-spacing: .5px; flex-shrink: 0;
       font-family: 'Playfair Display', Georgia, serif;
-      font-size: 14.5px; color: var(--gold-light);
-      font-weight: 700; line-height: 1.25;
-      white-space: nowrap;
-      display: block;
+      box-shadow: 0 2px 8px rgba(201,168,76,.35);
     }
-    .sb-sub {
-      font-size: 9.5px; color: var(--muted);
-      letter-spacing: 1.8px; text-transform: uppercase;
-      margin-top: 2px;
-      white-space: nowrap;
-      display: block;
+    .sb-logo-name {
+      font-size: 14px; font-weight: 700; color: #fff;
+      font-family: 'Playfair Display', Georgia, serif; line-height: 1.2;
+    }
+    .sb-logo-sub {
+      font-size: 10px; color: rgba(255,255,255,.3);
+      text-transform: uppercase; letter-spacing: 1px; margin-top: 2px;
     }
 
     /* ── Nav ── */
     .sb-nav {
       flex: 1;
-      padding: 14px 0;
+      padding: 10px 0 6px;
       overflow-y: auto;
     }
     .sb-nav::-webkit-scrollbar { width: 3px; }
-    .sb-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
+    .sb-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 4px; }
 
-    .nav-section {
-      padding: 10px 20px 4px;
-      font-size: 9px; letter-spacing: 2px;
+    .nav-section-label {
+      padding: 14px 18px 5px;
+      font-size: 9.5px; letter-spacing: 1.8px;
       text-transform: uppercase;
-      color: var(--muted); font-weight: 700;
-      margin-top: 6px;
+      color: rgba(255,255,255,.2); font-weight: 700;
+    }
+
+    .nav-group {
+      padding: 0 10px;
+      margin-bottom: 4px;
     }
 
     .nav-item {
-      display: flex; align-items: center; gap: 11px;
-      padding: 10px 20px;
-      color: rgba(255,255,255,.58);
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 10px;
+      color: rgba(255,255,255,.48);
       text-decoration: none;
-      font-size: 13.5px;
-      border-left: 3px solid transparent;
-      transition: all .16s;
+      font-size: 13px; font-weight: 500;
+      border-radius: 9px;
+      transition: all .15s ease;
       cursor: pointer;
+      position: relative;
       white-space: nowrap;
+      margin-bottom: 1px;
     }
     .nav-item:hover {
-      background: rgba(201,168,76,.08);
-      color: rgba(255,255,255,.88);
-      border-left-color: rgba(201,168,76,.35);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.85);
     }
     .nav-item.active {
-      background: rgba(201,168,76,.13);
-      color: var(--gold-light);
-      border-left-color: var(--gold);
+      background: rgba(201,168,76,.14);
+      color: #E8C96A;
       font-weight: 600;
     }
-    .nav-icon {
-      font-size: 16px; width: 20px;
-      text-align: center; flex-shrink: 0;
+    .nav-item.active::before {
+      content: '';
+      position: absolute; left: 0; top: 50%;
+      transform: translateY(-50%);
+      width: 3px; height: 60%;
+      background: #C9A84C; border-radius: 0 3px 3px 0;
+    }
+    .nav-item.sub {
+      padding-left: 18px;
+      font-size: 12.5px;
+    }
+    .nav-item.sub .ni svg { width: 15px; height: 15px; }
+
+    /* Icône nav */
+    .ni {
+      width: 20px; height: 20px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ni svg { width: 17px; height: 17px; }
+    .nav-item.active .ni { color: #C9A84C; }
+
+    /* Label */
+    .nl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Badge impayés */
+    .nb {
+      margin-left: auto; flex-shrink: 0;
+      background: #C0392B; color: #fff;
+      font-size: 10px; font-weight: 800;
+      padding: 2px 6px; border-radius: 10px;
+      min-width: 18px; text-align: center;
+      box-shadow: 0 1px 4px rgba(192,57,43,.5);
     }
 
-    /* ── Pied sidebar ── */
+    /* ── Footer ── */
     .sb-footer {
-      padding: 14px 18px;
-      border-top: 1px solid rgba(255,255,255,.07);
+      padding: 12px 14px;
+      border-top: 1px solid rgba(255,255,255,.06);
       display: flex; align-items: center; gap: 10px;
       flex-shrink: 0;
+      background: rgba(0,0,0,.15);
     }
     .sb-avatar {
       width: 34px; height: 34px;
       background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-      border-radius: 8px;
+      border-radius: 9px;
       display: flex; align-items: center; justify-content: center;
       font-size: 13px; color: #fff; font-weight: 700;
       font-family: 'Playfair Display', serif;
-      flex-shrink: 0; cursor: pointer;
+      flex-shrink: 0;
     }
     .sb-user-info { flex: 1; min-width: 0; }
     .sb-user-name {
-      font-size: 12.5px; color: rgba(255,255,255,.85);
-      font-weight: 600; white-space: nowrap;
+      font-size: 12.5px; color: rgba(255,255,255,.82);
+      font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .sb-user-role { font-size: 10px; color: var(--muted); margin-top: 1px; }
+    .sb-user-role { font-size: 10px; color: rgba(255,255,255,.28); margin-top: 1px; }
     .sb-logout-btn {
       background: none; border: none; cursor: pointer;
-      color: rgba(255,255,255,.35); font-size: 16px;
-      padding: 4px; border-radius: 6px; transition: all .2s;
-      flex-shrink: 0;
+      color: rgba(255,255,255,.25); padding: 6px; border-radius: 7px;
+      transition: all .18s; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
     }
-    .sb-logout-btn:hover { color: var(--danger); background: rgba(192,57,43,.15); }
+    .sb-logout-btn:hover { color: #C0392B; background: rgba(192,57,43,.12); }
 
-    /* ══════════════════════════════════════════════
+        /* ══════════════════════════════════════════════
        MAIN WRAPPER
     ══════════════════════════════════════════════ */
     .main-wrapper {
@@ -553,10 +668,13 @@ export class ShellComponent {
 
   private auth   = inject(AuthService);
   private router = inject(Router);
+  private recSvc = inject(RecouvrementService);
 
   // ── États réactifs ───────────────────────────────
   sidebarOpen  = signal(false);
   userMenuOpen = signal(false);
+  nbImpayes    = signal(0);
+  nbContentieux = signal(0);
 
   // ── Titre dynamique selon la route ──────────────
   private readonly PAGE_MAP: Record<string, { emoji: string; title: string }> = {
@@ -573,6 +691,7 @@ export class ShellComponent {
     'collectes/rapport':        { emoji: '📊', title: 'Rapport collecteur' },
     'collectes/bordereau':      { emoji: '🧾', title: 'Bordereau' },
     'collectes/saisir':         { emoji: '✏️', title: 'Saisie collecte' },
+    'recouvrement':             { emoji: '🔴', title: 'Recouvrement' },
     'versements':               { emoji: '🏦', title: 'Versements' },
     'personnel':                { emoji: '👷', title: 'Personnel' },
   };
@@ -595,6 +714,17 @@ export class ShellComponent {
       });
 
     // Ferme le menu user si clic en dehors
+
+    // Charge le badge impayés en différé pour ne pas bloquer le rendu initial
+    setTimeout(() => {
+      this.recSvc.getDossiers().subscribe({
+        next: d => {
+          this.nbImpayes.set(d.length);
+          this.nbContentieux.set(d.filter((x: any) => x.etape === 'Contentieux').length);
+        },
+        error: () => {}
+      });
+    }, 2000);
   }
 
   // ── Infos utilisateur ────────────────────────────
@@ -632,11 +762,11 @@ export class ShellComponent {
   closeSidebarMobile(): void {
     if (window.innerWidth < 900) this.sidebarOpen.set(false);
   }
-  
+
   toggleUserMenu(): void {
     this.userMenuOpen.update(v => !v);
   }
-  
+
   // Ferme le menu user si clic ailleurs
   @HostListener('document:click', ['$event'])
   onDocClick(e: Event): void {
