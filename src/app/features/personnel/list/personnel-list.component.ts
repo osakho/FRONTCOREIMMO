@@ -451,7 +451,7 @@ import { PersonnelListItemDto, ProprieteListItemDto, PagedList } from '../../../
     :host{--gold:#C9A84C;--gold-l:#E8C96A;--gold-d:#8B6914;--ink:#0D0D0D;--ink-mid:#1A1A2E;--ink-soft:#2D2D4A;--cream:#F8F4ED;--cream-dk:#EDE8DF;--muted:#8A8899;--ok:#1A7A4A;--ok-bg:#E6F5EE;--warn:#D4850A;--warn-bg:#FEF3E2;--danger:#C0392B;--danger-bg:#FDECEA;--blue:#1D4ED8;--r:14px}
 
     /* ── HERO ── */
-    .hero{background:linear-gradient(135deg,#0D1B2A 0%,#1C1810 55%,#0D1B2A 100%);border-radius:var(--r);margin-bottom:22px;position:relative;overflow:hidden}
+    .hero{background:linear-gradient(135deg,#0c1a35 0%,#1e3a5f 55%,#0D1B2A 100%);border-radius:var(--r);margin-bottom:22px;position:relative;overflow:hidden}
     .hero-glow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 15% 60%,rgba(201,168,76,.12) 0%,transparent 50%)}
     .hero-inner{position:relative;display:flex;align-items:center;justify-content:space-between;padding:24px 32px;gap:16px;flex-wrap:wrap}
     .hero-left{display:flex;align-items:center;gap:16px}
