@@ -433,6 +433,8 @@ export class ShellComponent implements OnInit {
           { label: 'Locataires',           route: '/locataires',        icon: this.svg(ICONS.users) },
           { label: 'Contrats de location', route: '/contrats-location', icon: this.svg(ICONS.filePlus) },
           { label: 'Contrats de gestion',  route: '/contrats-gestion',  icon: this.svg(ICONS.fileCheck) },
+          { label: 'Contrats de gestion',  route: '/contrats-gestion',  icon: this.svg(ICONS.fileCheck) },
+          { label: 'Suivi des loyers',     route: '/suivi-loyers',      icon: this.svg(ICONS.payments)  },
         ]
       },
       {
@@ -482,6 +484,7 @@ export class ShellComponent implements OnInit {
     '/locataires':            'Locataires',
     '/contrats-location':     'Contrats de location',
     '/contrats-gestion':      'Contrats de gestion',
+    '/suivi-loyers':          'Suivi des loyers',
     '/collectes':             'Collectes',
     '/collectes/validation':  'Validation collectes',
     '/collectes/rapport':     'Rapport collecteur',
@@ -536,4 +539,5 @@ const ICONS = {
   pieChart:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>`,
   settings:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
   arrowDown:   `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`,
+  payments:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/><line x1="14" y1="15" x2="18" y2="15"/></svg>`,
 };

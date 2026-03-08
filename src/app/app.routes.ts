@@ -82,6 +82,7 @@ export const routes: Routes = [
       { path: 'proprietaires/dashboard', loadComponent: () => import('./features/proprietaires/dashboard/proprietaires-dashboard.component').then(m => m.ProprietairesDashboardComponent),
         canActivate: [directionGuard]
       },
+      { path: 'suivi-loyers', loadComponent: () => import('./features/suivi-loyers/suivi-loyers.component').then(m => m.SuiviLoyersComponent) },
     ]
   },
 

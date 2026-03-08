@@ -15,9 +15,13 @@ import {
   StatutContrat, StatutCollecte, TypeProduit, StatutProduit,
   LoginRequest, LoginResponse,
   DashboardProprietairesResult,
-  DossierRecouvrementDto, EtapeRecouvrement
+  DossierRecouvrementDto, EtapeRecouvrement,
+   MoisLoyerDto,
+  RecapFinancierContratDto,
+  SuiviLoyersGlobalDto
 } from '../models/models';
 import { environment } from '../../../environments/environment';
+
 
 // ── Base Service ─────────────────────────────────────────────
 @Injectable({ providedIn: 'root' })
@@ -500,4 +504,14 @@ export class AgendaService extends ApiService {
   create(dto: EvenementCreateDto): Observable<EvenementAgendaDto>  { return this.post<EvenementAgendaDto>('/agenda', dto); }
   update(id: string, dto: EvenementCreateDto): Observable<EvenementAgendaDto> { return this.put<EvenementAgendaDto>(`/agenda/${id}`, dto); }
   supprimer(id: string): Observable<any>                           { return this.http.delete<any>(`${this.base}/agenda/${id}`); }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SUIVI LOYERS SERVICE
+// ══════════════════════════════════════════════════════════════
+@Injectable({ providedIn: 'root' })
+export class SuiviLoyersService extends ApiService {
+  getSuivi(): Observable<SuiviLoyersGlobalDto> {
+    return this.get<SuiviLoyersGlobalDto>('/contrats-location/suivi-loyers');
+  }
 }

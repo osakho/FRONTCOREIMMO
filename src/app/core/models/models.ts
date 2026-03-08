@@ -783,6 +783,48 @@ export interface EvenementCreateDto {
   notes?:       string;
 }
 
+// ── Suivi Loyers ─────────────────────────────────────────────
+export interface MoisLoyerDto {
+  periode:     string;
+  label:       string;
+  montant:     number;
+  montantPaye: number;
+  statut:      'Paye' | 'Partiel' | 'Impaye' | 'Futur' | 'Avance';
+}
+
+export interface RecapFinancierContratDto {
+  contratId:         string;
+  locataireNom:      string;
+  produitCode:       string;
+  loyer:             number;
+  caution:           number;
+  cautionReglee:     boolean;
+  avanceLoyer:       number;
+  avanceLoyerReglee: boolean;
+  moisDepuisEntree:  number;
+  moisPayes:         number;
+  moisEnAvance:      number;
+  moisEnRetard:      number;
+  montantDu:         number;
+  montantPaye:       number;
+  solde:             number;
+  statutLoyer:       'AJour' | 'EnRetard' | 'Credit' | 'NonCommence';
+  statutLoyerLabel:  string;
+  dernierPaiement?:  string;
+  dateEntree:        string;
+  mois:              MoisLoyerDto[];
+}
+
+export interface SuiviLoyersGlobalDto {
+  totalDu:       number;
+  totalPaye:     number;
+  totalSolde:    number;
+  nbAJour:       number;
+  nbEnRetard:    number;
+  nbCredit:      number;
+  nbNonCommence: number;
+  contrats:      RecapFinancierContratDto[];
+}
 
 
 
