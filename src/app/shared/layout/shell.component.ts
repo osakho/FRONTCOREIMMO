@@ -1,523 +1,539 @@
-import { Component, inject, signal, HostListener } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
-import { AuthService } from '../../core/services/api.services';
-import { filter } from 'rxjs/operators';
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { CommonModule }                        from '@angular/common';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
+import { FormsModule }                         from '@angular/forms';
+import { DomSanitizer, SafeHtml }              from '@angular/platform-browser';
+import { AuthService }                         from '../../core/services/api.services';
+import { filter }                              from 'rxjs/operators';
+
+interface NavItem {
+  label:       string;
+  route:       string;
+  badge?:      string;
+  badgeColor?: 'gold' | 'blue' | 'red';
+  icon:        SafeHtml;
+}
+
+interface NavSection {
+  label:     string;
+  key:       string;
+  items:     NavItem[];
+  collapsed: boolean;
+}
 
 @Component({
   selector: 'kdi-shell',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, FormsModule],
   template: `
+<div class="shell">
 
-<div class="app-shell">
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar" [class.collapsed]="sidebarCollapsed()">
 
-  <!-- ══════════════════════════════════════
-       SIDEBAR — navy dark, exactement comme le prototype
-  ══════════════════════════════════════ -->
-  <aside class="sb" [class.sb-open]="sidebarOpen()">
-
-    <!-- Brand -->
-    <div class="sb-brand">
-      <div class="sb-logo"><span class="mi">home_work</span></div>
-      <div>
-        <div class="sb-name">Khalifat Djické</div>
-        <div class="sb-tag">Immobilier · Mauritanie</div>
+    <!-- Logo / Profil -->
+    <div class="logo-block">
+      <div class="logo-icon">KD</div>
+      <div class="logo-info" *ngIf="!sidebarCollapsed()">
+        <div class="logo-name">{{ user?.nom ?? 'Khalifat Djické' }}</div>
+        <div class="logo-role">{{ user?.role ?? 'Direction' }}</div>
       </div>
+      <button class="logout-btn" (click)="logout()" title="Déconnexion" *ngIf="!sidebarCollapsed()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+      </button>
     </div>
 
-    <!-- Nav -->
-    <nav class="sb-nav">
+    <!-- Navigation -->
+    <nav class="nav">
+      <div class="nav-section" *ngFor="let section of sections; let last = last">
 
-      <div class="sec">Principal</div>
-      <a routerLink="/dashboard" routerLinkActive="ni-act" class="ni" (click)="closeMobile()">
-        <span class="mi">dashboard</span>Tableau de bord
-      </a>
+        <!-- Section header (uppercase via CSS) -->
+        <div class="section-label" (click)="toggleSection(section)"
+             [class.is-collapsed]="section.collapsed"
+             [title]="sidebarCollapsed() ? section.label : ''">
+          <span *ngIf="!sidebarCollapsed()">{{ section.label }}</span>
+          <span class="chevron" *ngIf="!sidebarCollapsed()" [class.rotated]="section.collapsed">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </span>
+        </div>
 
-      <div class="sec">Patrimoine</div>
-      <a routerLink="/proprietaires" routerLinkActive="ni-act" class="ni" (click)="closeMobile()">
-        <span class="mi">person</span>Propriétaires
-      </a>
-      <a *ngIf="isDirection()" routerLink="/proprietaires/dashboard" routerLinkActive="ni-act" class="ni ni-sub" (click)="closeMobile()">
-        <span class="mi">bar_chart</span>Dashboard propriétaires
-      </a>
-      <a routerLink="/proprietes" routerLinkActive="ni-act" class="ni" (click)="closeMobile()">
-        <span class="mi">apartment</span>Propriétés
-      </a>
-      <a routerLink="/produits" routerLinkActive="ni-act" class="ni" (click)="closeMobile()">
-        <span class="mi">door_front</span>Produits locatifs
-      </a>
+        <!-- Items -->
+        <div class="section-items" [class.hidden]="section.collapsed && !sidebarCollapsed()">
+          <a *ngFor="let item of section.items"
+             [routerLink]="item.route"
+             routerLinkActive="active"
+             class="nav-item"
+             [title]="sidebarCollapsed() ? item.label : ''">
+            <!-- icon via SafeHtml -->
+            <span class="nav-icon" [innerHTML]="item.icon"></span>
+            <span class="nav-label-text" *ngIf="!sidebarCollapsed()">{{ item.label }}</span>
+            <span class="nav-badge" *ngIf="item.badge && !sidebarCollapsed()"
+              [ngClass]="'badge-' + (item.badgeColor ?? 'gold')">{{ item.badge }}</span>
+          </a>
+        </div>
 
-      <div class="sec">Gestion locative</div>
-      <a routerLink="/locataires" routerLinkActive="ni-act" class="ni" (click)="closeMobile()">
-        <span class="mi">groups</span>Locataires
-      </a>
-      <a routerLink="/contrats-location" routerLinkActive="ni-act" class="ni" (click)="closeMobile()">
-        <span class="mi">description</span>Contrats de location
-      </a>
-      <a *ngIf="isDirection()" routerLink="/contrats-gestion" routerLinkActive="ni-act" class="ni" (click)="closeMobile()">
-        <span class="mi">fact_check</span>Contrats de gestion
-      </a>
+        <!-- Séparateur -->
+        <div class="nav-sep" *ngIf="!last && !sidebarCollapsed()"></div>
 
-      <div class="sec">Collectes & Finance</div>
-      <a routerLink="/collectes" routerLinkActive="ni-act" class="ni" (click)="closeMobile()">
-        <span class="mi">payments</span>Collectes
-      </a>
-      <a *ngIf="isDirection()" routerLink="/collectes/validation" routerLinkActive="ni-act" class="ni ni-sub" (click)="closeMobile()">
-        <span class="mi">rule</span>Validation collectes
-        <span class="nb">7</span>
-      </a>
-      <a routerLink="/collectes/rapport" routerLinkActive="ni-act" class="ni ni-sub" (click)="closeMobile()">
-        <span class="mi">summarize</span>Rapport collecteur
-      </a>
-      <a routerLink="/collectes/bordereau" routerLinkActive="ni-act" class="ni ni-sub" (click)="closeMobile()">
-        <span class="mi">receipt_long</span>Bordereau
-      </a>
-      <a routerLink="/versements" routerLinkActive="ni-act" class="ni" (click)="closeMobile()">
-        <span class="mi">account_balance_wallet</span>Versements
-      </a>
-      <a routerLink="/contentieux" routerLinkActive="ni-act" class="ni" (click)="closeMobile()">
-        <span class="mi">gavel</span>Contentieux
-      </a>
-      <a routerLink="/recouvrement" routerLinkActive="ni-act" class="ni" (click)="closeMobile()">
-        <span class="mi">warning_amber</span>Recouvrement
-      </a>
-
-      <div class="sec" *ngIf="isDirection()">Administration</div>
-      <a *ngIf="isDirection()" routerLink="/personnel" routerLinkActive="ni-act" class="ni" (click)="closeMobile()">
-        <span class="mi">badge</span>Personnel
-      </a>
-      <a *ngIf="isDirection()" routerLink="/rapports" routerLinkActive="ni-act" class="ni" (click)="closeMobile()">
-        <span class="mi">bar_chart</span>Rapports
-      </a>
-      <a *ngIf="isDirection()" routerLink="/parametres" routerLinkActive="ni-act" class="ni" (click)="closeMobile()">
-        <span class="mi">settings</span>Paramètres
-      </a>
-
+      </div>
     </nav>
 
-    <!-- Footer utilisateur -->
-    <div class="sb-foot">
-      <div class="u-row" (click)="toggleUserMenu()">
-        <div class="uav">{{ userInitiales() }}</div>
-        <div>
-          <div class="u-name">{{ userName() }}</div>
-          <div class="u-role">{{ userRole() }}</div>
-        </div>
-        <span class="mi" style="color:rgba(255,255,255,.25);font-size:16px;margin-left:auto">more_vert</span>
-      </div>
-
-      <!-- Dropdown utilisateur -->
-      <div class="user-drop" [class.open]="userMenuOpen()">
-        <button class="ud-item" (click)="logout()">
-          <span class="mi">logout</span> Se déconnecter
-        </button>
-      </div>
+    <!-- Toggle sidebar -->
+    <div class="sidebar-footer">
+      <button class="toggle-btn" (click)="toggleSidebar()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline *ngIf="!sidebarCollapsed()" points="15 18 9 12 15 6"/>
+          <polyline *ngIf="sidebarCollapsed()"  points="9 18 15 12 9 6"/>
+        </svg>
+        <span *ngIf="!sidebarCollapsed()">Réduire</span>
+      </button>
     </div>
 
   </aside>
 
-  <!-- Overlay mobile -->
-  <div class="sb-veil" [class.on]="sidebarOpen()" (click)="sidebarOpen.set(false)"></div>
-
-  <!-- ══════════════════════════════════════
-       ZONE PRINCIPALE
-  ══════════════════════════════════════ -->
-  <div class="main">
+  <!-- ── MAIN ── -->
+  <div class="main-wrapper">
 
     <!-- Topbar -->
-    <div class="topbar">
-      <button class="hamburger" (click)="sidebarOpen.set(!sidebarOpen())">
-        <span class="mi">menu</span>
-      </button>
-      <div class="tb-t">{{ currentTitle() }}</div>
-      <div class="srch">
-        <span class="mi">search</span>
-        <input placeholder="Rechercher locataire, contrat, propriété…">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-breadcrumb">
+          <span class="breadcrumb-app">KDI</span>
+          <span class="breadcrumb-sep">›</span>
+          <span class="breadcrumb-page">{{ pageTitle }}</span>
+        </div>
       </div>
-      <a routerLink="/collectes/saisir" class="btn b-g b-sm">
-        <span class="mi">add</span>Collecte
-      </a>
-      <button class="ib">
-        <span class="mi">notifications</span>
-        <span class="ndot"></span>
-      </button>
-      <div class="uav uav-top" style="cursor:pointer" (click)="toggleUserMenu()">{{ userInitiales() }}</div>
-    </div>
+      <div class="topbar-right">
+        <div class="search-box">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Rechercher…" [(ngModel)]="searchQuery" class="search-input">
+        </div>
+        <div class="notif-btn" (click)="showNotifs = !showNotifs">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span class="notif-badge" *ngIf="nbNotifs > 0">{{ nbNotifs }}</span>
+        </div>
+        <div class="avatar-btn" (click)="showUserMenu = !showUserMenu">
+          <span>{{ initiales }}</span>
+        </div>
+        <div class="user-menu" *ngIf="showUserMenu" (click)="$event.stopPropagation()">
+          <div class="um-header">
+            <div class="um-name">{{ user?.nom }}</div>
+            <div class="um-role">{{ user?.role }}</div>
+          </div>
+          <div class="um-divider"></div>
+          <button class="um-item" routerLink="/personnel">👤 Mon profil</button>
+          <button class="um-item" routerLink="/parametres">⚙️ Paramètres</button>
+          <div class="um-divider"></div>
+          <button class="um-item um-logout" (click)="logout()">↩ Déconnexion</button>
+        </div>
+      </div>
+    </header>
 
-    <!-- Contenu des pages -->
-    <div class="content">
+    <!-- Contenu -->
+    <main class="page-content" (click)="closeMenus()">
       <router-outlet />
-    </div>
+    </main>
 
   </div>
-
 </div>
   `,
   styles: [`
-    /* ══════════════════════════════════════════════════
-       TOKENS — fidèles au prototype
-    ══════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; }
+
     :host {
-      --navy:   #0e1c38;
-      --navy2:  #162845;
-      --navy3:  #1e3560;
-      --gold:   #c9a96e;
-      --gold2:  #dfc28e;
-      --surf:   #f2f5fa;
-      --surf2:  #e8edf5;
-      --wh:     #ffffff;
-      --t1:     #0e1c38;
-      --t2:     #4a5878;
-      --t3:     #8a97b0;
-      --t4:     #b8c2d4;
-      --bord:   #e3e8f0;
-      --ok:     #0d9f5a;
-      --er:     #d42b2b;
-      --wa:     #d07a0c;
-      --in:     #2057c8;
-      --sb:     252px;
-      --topbar: 56px;
-      --r:      10px;
-      --s1:     0 1px 4px rgba(14,28,56,.06);
-      --s2:     0 4px 20px rgba(14,28,56,.1);
-      --s3:     0 12px 48px rgba(14,28,56,.15);
-      display: block;
+      --gold:      #C9A84C;
+      --gold-dim:  rgba(201,168,76,0.10);
+      --sb-bg:     #0D1117;
+      --sb-hover:  #161C2A;
+      --sb-border: rgba(255,255,255,0.04);
+      --sb-section:#3D4A6A;
+      --sb-item:   #6878A0;
+      --sb-active: #C9A84C;
+      --sb-width:  210px;
+      --sb-mini:   54px;
+      --top-h:     54px;
+      --page-bg:   #F1F4F8;
+      --danger:    #E05C5C;
     }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    .mi {
-      font-family: 'Material Icons Round';
-      font-style: normal; font-weight: normal;
-      font-size: 20px; line-height: 1;
-      letter-spacing: normal; text-transform: none;
-      display: inline-block; white-space: nowrap;
-      direction: ltr; -webkit-font-smoothing: antialiased;
-      vertical-align: middle; user-select: none;
+    .shell {
+      display: flex; height: 100vh; overflow: hidden;
+      font-family: 'DM Sans', 'Inter', sans-serif;
+      background: var(--page-bg);
     }
 
-    /* ══════════════════════════════════════════════════
-       LAYOUT
-    ══════════════════════════════════════════════════ */
-    .app-shell {
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
-      background: var(--surf);
-      font-family: 'Instrument Sans', 'DM Sans', sans-serif;
-    }
-
-    /* ══════════════════════════════════════════════════
-       SIDEBAR
-    ══════════════════════════════════════════════════ */
-    .sb {
-      width: var(--sb);
-      background: var(--navy);
+    /* ═══ SIDEBAR ═══ */
+    .sidebar {
+      width: var(--sb-width);
+      background: var(--sb-bg);
+      border-right: 1px solid rgba(201,168,76,0.13);
       display: flex; flex-direction: column;
-      height: 100vh;
-      flex-shrink: 0;
-      z-index: 100;
-      position: relative;
-      overflow: hidden;
+      height: 100vh; flex-shrink: 0;
+      transition: width .25s ease; overflow: hidden;
     }
+    .sidebar.collapsed { width: var(--sb-mini); }
 
-    /* Texture subtile */
-    .sb::before {
-      content: '';
-      position: absolute; inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-      pointer-events: none; opacity: .4;
+    /* Logo */
+    .logo-block {
+      padding: 13px 11px;
+      border-bottom: 1px solid var(--sb-border);
+      display: flex; align-items: center; gap: 9px;
+      flex-shrink: 0; min-height: 62px;
     }
-
-    /* Brand */
-    .sb-brand {
-      padding: 18px 15px 15px;
-      border-bottom: 1px solid rgba(255,255,255,.07);
-      display: flex; align-items: center; gap: 10px;
-      flex-shrink: 0; position: relative; z-index: 1;
+    .logo-icon {
+      width: 33px; height: 33px;
+      background: linear-gradient(135deg, #C9A84C, #7A4F0D);
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 12px; color: #fff;
+      flex-shrink: 0; letter-spacing: -0.5px;
     }
-    .sb-logo {
-      width: 36px; height: 36px;
-      background: linear-gradient(135deg, var(--gold), var(--gold2));
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; box-shadow: 0 2px 8px rgba(201,169,110,.3);
+    .logo-info { flex: 1; min-width: 0; }
+    .logo-name {
+      font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; color: #E2E8F0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3;
     }
-    .sb-logo .mi { color: var(--navy); font-size: 18px; }
-    .sb-name {
-      font-family: 'Syne', sans-serif;
-      font-weight: 800; font-size: .82rem; color: #fff; line-height: 1.2;
+    .logo-role { font-size: 10px; color: #4A5570; margin-top: 1px; }
+    .logout-btn {
+      width: 25px; height: 25px; border-radius: 6px; background: none; border: none;
+      cursor: pointer; color: #4A5570; display: flex; align-items: center; justify-content: center;
+      transition: background .2s, color .2s; flex-shrink: 0;
     }
-    .sb-tag { font-size: .58rem; letter-spacing: .1em; text-transform: uppercase; color: var(--gold); margin-top: 1px; }
+    .logout-btn:hover { background: rgba(224,92,92,.12); color: var(--danger); }
 
     /* Nav */
-    .sb-nav {
-      flex: 1; overflow-y: auto;
-      padding: 10px 0; scrollbar-width: none;
-      position: relative; z-index: 1;
-    }
-    .sb-nav::-webkit-scrollbar { display: none; }
+    .nav { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 8px 0 12px; }
+    .nav::-webkit-scrollbar { width: 2px; }
+    .nav::-webkit-scrollbar-thumb { background: rgba(201,168,76,.15); border-radius: 1px; }
 
-    .sec {
-      font-size: .58rem; letter-spacing: .12em; text-transform: uppercase;
-      color: rgba(255,255,255,.2); padding: 11px 15px 4px; font-weight: 500;
+    /* Section header — uppercase, petit, discret */
+    .nav-section { padding: 0 6px; }
+    .section-label {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 6px 4px;
+      font-size: 9px; font-weight: 700; letter-spacing: 1.3px;
+      text-transform: uppercase;
+      color: var(--sb-section); cursor: pointer; user-select: none;
+      transition: color .15s; white-space: nowrap;
+    }
+    .section-label:hover { color: #5A6A8A; }
+    .chevron { display: flex; align-items: center; opacity: .5; transition: transform .22s ease; flex-shrink: 0; }
+    .chevron.rotated { transform: rotate(-90deg); }
+
+    /* Items container */
+    .section-items {
+      overflow: hidden; max-height: 500px;
+      transition: max-height .28s ease, opacity .22s ease; opacity: 1;
+    }
+    .section-items.hidden { max-height: 0; opacity: 0; }
+
+    /* Nav item — minuscule, compact */
+    .nav-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 7px; border-radius: 6px;
+      font-size: 12px !important;
+      font-weight: 500;
+      color: var(--sb-item);
+      text-transform: none !important;
+      letter-spacing: normal !important;
+      text-decoration: none; cursor: pointer;
+      transition: background .14s, color .14s;
+      position: relative; margin-bottom: 1px; white-space: nowrap;
+    }
+    .nav-item:hover { background: var(--sb-hover); color: #B0BEDD; }
+    .nav-item.active { background: var(--gold-dim); color: var(--sb-active); }
+    .nav-item.active::before {
+      content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+      width: 2.5px; height: 50%; background: var(--gold); border-radius: 0 2px 2px 0;
     }
 
-    .ni {
-      display: flex; align-items: center; gap: 9px;
-      padding: 8px 15px;
-      cursor: pointer; color: rgba(255,255,255,.46);
-      font-size: .8rem; font-weight: 400;
-      border-left: 3px solid transparent;
-      transition: all .14s; user-select: none;
-      text-decoration: none;
+    /* Label text — forcer minuscule */
+    .nav-label-text {
+      flex: 1;
+      text-transform: none !important;
+      letter-spacing: normal !important;
+      font-size: 12px !important;
     }
-    .ni:hover { background: rgba(255,255,255,.05); color: rgba(255,255,255,.8); }
-    .ni-act, .ni.ni-act {
-      background: rgba(201,169,110,.12) !important;
-      color: var(--gold2) !important;
-      border-left-color: var(--gold) !important;
-      font-weight: 500 !important;
-    }
-    .ni .mi { font-size: 17px; flex-shrink: 0; }
-    .ni-sub { padding-left: 24px; font-size: .76rem; }
-    .ni-sub .mi { font-size: 15px; }
 
-    .nb {
-      margin-left: auto;
-      background: var(--er); color: #fff;
-      font-size: .58rem; font-weight: 700;
-      padding: 1px 6px; border-radius: 10px; line-height: 1.5;
+    /* Icon container — le SVG est injecté via innerHTML/SafeHtml */
+    .nav-icon {
+      width: 16px; height: 16px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      opacity: .55; transition: opacity .14s;
+      color: currentColor;
     }
-    .nb.g { background: var(--gold); color: var(--navy); }
+    .nav-item:hover .nav-icon,
+    .nav-item.active .nav-icon { opacity: 1; }
+
+    /* Force SVG size inside nav-icon */
+    .nav-icon svg {
+      width: 14px !important;
+      height: 14px !important;
+      display: block;
+      stroke: currentColor;
+      fill: none;
+    }
+
+    /* Badge */
+    .nav-badge {
+      margin-left: auto; flex-shrink: 0;
+      font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 8px; line-height: 1.6;
+    }
+    .badge-gold { background: #C9A84C; color: #000; }
+    .badge-blue { background: #3B82F6; color: #fff; }
+    .badge-red  { background: #E05C5C; color: #fff; }
+
+    /* Separator */
+    .nav-sep { height: 1px; background: var(--sb-border); margin: 5px 4px; }
 
     /* Footer */
-    .sb-foot {
-      padding: 12px 15px;
-      border-top: 1px solid rgba(255,255,255,.07);
-      flex-shrink: 0; position: relative; z-index: 1;
+    .sidebar-footer { padding: 6px; border-top: 1px solid var(--sb-border); flex-shrink: 0; }
+    .toggle-btn {
+      width: 100%; border-radius: 6px; background: #161C2A;
+      border: 1px solid rgba(255,255,255,0.05); color: #3D4A6A; cursor: pointer;
+      padding: 7px 10px; display: flex; align-items: center; justify-content: center;
+      gap: 6px; font-size: 11px; font-family: 'DM Sans', sans-serif;
+      transition: background .2s, color .2s; text-transform: none;
     }
-    .u-row {
-      display: flex; align-items: center; gap: 8px;
-      cursor: pointer; padding: 4px 0;
-    }
-    .uav {
-      width: 32px; height: 32px; border-radius: 50%;
-      background: linear-gradient(135deg, var(--gold), #a8792d);
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'Syne', sans-serif; font-weight: 800;
-      font-size: .73rem; color: var(--navy); flex-shrink: 0;
-    }
-    .u-name { font-size: .77rem; font-weight: 500; color: #fff; }
-    .u-role { font-size: .58rem; color: var(--gold); }
+    .toggle-btn:hover { background: #1C2336; color: #6878A0; }
 
-    /* Dropdown logout */
-    .user-drop {
-      background: var(--navy2); border-radius: 8px;
-      margin-top: 6px; overflow: hidden;
-      max-height: 0; transition: max-height .2s ease;
-      border: 1px solid rgba(255,255,255,.08);
-    }
-    .user-drop.open { max-height: 80px; }
-    .ud-item {
-      display: flex; align-items: center; gap: 8px;
-      width: 100%; padding: 10px 14px;
-      background: none; border: none; color: rgba(255,255,255,.6);
-      font-size: .79rem; cursor: pointer; font-family: inherit;
-      transition: background .12s;
-    }
-    .ud-item:hover { background: rgba(212,43,43,.15); color: var(--er); }
-    .ud-item .mi { font-size: 15px; }
+    /* Collapsed */
+    .sidebar.collapsed .nav-item { justify-content: center; padding: 8px; }
+    .sidebar.collapsed .section-label { justify-content: center; padding: 6px; }
+    .sidebar.collapsed .nav-icon { width: 18px; height: 18px; opacity: .65; }
+    .sidebar.collapsed .nav-icon svg { width: 16px !important; height: 16px !important; }
+    .sidebar.collapsed .nav-item.active::before { display: none; }
+    .sidebar.collapsed .toggle-btn { padding: 8px; }
 
-    /* Veil mobile */
-    .sb-veil {
-      display: none; position: fixed; inset: 0;
-      background: rgba(14,28,56,.5); z-index: 90;
-      backdrop-filter: blur(2px);
-      opacity: 0; transition: opacity .25s;
-      pointer-events: none;
-    }
-    .sb-veil.on { opacity: 1; pointer-events: all; }
+    /* ═══ MAIN ═══ */
+    .main-wrapper { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
 
-    /* ══════════════════════════════════════════════════
-       MAIN
-    ══════════════════════════════════════════════════ */
-    .main {
-      flex: 1; display: flex; flex-direction: column;
-      overflow: hidden; min-width: 0;
-    }
-
-    /* Topbar */
     .topbar {
-      height: var(--topbar);
-      background: var(--wh);
-      border-bottom: 1px solid var(--bord);
-      display: flex; align-items: center;
-      padding: 0 20px; gap: 11px;
-      flex-shrink: 0; box-shadow: var(--s1);
-      z-index: 10;
+      height: var(--top-h); background: #ffffff; border-bottom: 1px solid #E2E8F0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; gap: 16px; flex-shrink: 0; position: relative;
+      box-shadow: 0 1px 3px rgba(0,0,0,.04);
     }
-    .hamburger {
-      display: none; background: none; border: none;
-      cursor: pointer; padding: 4px; color: var(--t2);
-    }
-    .hamburger .mi { font-size: 22px; }
-    .tb-t {
-      font-family: 'Syne', sans-serif; font-weight: 700;
-      font-size: .98rem; color: var(--t1); flex: 1;
-    }
-    .srch {
-      display: flex; align-items: center; gap: 6px;
-      background: #ffffff; border: 1px solid var(--bord);
-      border-radius: 7px; padding: 5px 10px; width: 210px;
-      transition: all .15s;
-    }
-    .srch:focus-within {
-      border-color: var(--gold); background: #fff;
-      box-shadow: 0 0 0 3px rgba(201,169,110,.1); width: 250px;
-    }
-    .srch .mi { font-size: 16px; color: var(--t3); flex-shrink: 0; }
-    .srch input {
-      border: none; background: none; outline: none;
-      font-family: inherit; font-size: .78rem; color: var(--t1); width: 100%;
-    }
-    .srch input::placeholder { color: var(--t4); }
+    .topbar-left { display: flex; align-items: center; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
 
-    /* Boutons topbar */
-    .btn {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 7px 14px; border-radius: 7px;
-      font-family: inherit; font-size: .79rem; font-weight: 500;
-      cursor: pointer; border: none; transition: all .14s; white-space: nowrap;
-      text-decoration: none;
-    }
-    .btn .mi { font-size: 14px; }
-    .b-g {
-      background: linear-gradient(135deg, var(--gold), var(--gold2));
-      color: var(--navy); font-weight: 600;
-    }
-    .b-g:hover { box-shadow: 0 4px 12px rgba(201,169,110,.35); transform: translateY(-1px); }
-    .b-sm { padding: 5px 11px; font-size: .74rem; }
+    .topbar-breadcrumb { display: flex; align-items: center; gap: 6px; }
+    .breadcrumb-app { font-size: 12px; color: #94A3B8; }
+    .breadcrumb-sep { color: #CBD5E1; font-size: 13px; }
+    .breadcrumb-page { font-size: 14px; font-weight: 600; color: #0F172A; font-family: 'Syne', sans-serif; }
 
-    .ib {
-      width: 33px; height: 33px; border: none;
-      background: #ffffff; border-radius: 7px; cursor: pointer;
+    .search-box {
+      display: flex; align-items: center; gap: 8px;
+      background: #F8FAFC; border: 1px solid #E2E8F0;
+      border-radius: 8px; padding: 6px 12px; transition: border-color .2s;
+    }
+    .search-box:focus-within { border-color: #C9A84C; }
+    .search-box svg { color: #94A3B8; flex-shrink: 0; }
+    .search-input {
+      background: none; border: none; outline: none;
+      font-size: 13px; color: #0F172A; font-family: inherit; width: 160px;
+    }
+    .search-input::placeholder { color: #94A3B8; }
+
+    .notif-btn {
+      width: 34px; height: 34px; border-radius: 8px;
+      background: #F8FAFC; border: 1px solid #E2E8F0;
       display: flex; align-items: center; justify-content: center;
-      color: var(--t2); transition: all .13s; position: relative;
+      cursor: pointer; color: #64748B; position: relative; transition: background .2s, color .2s;
     }
-    .ib:hover { background: var(--bord); }
-    .ib .mi { font-size: 17px; }
-    .ndot {
-      position: absolute; top: 5px; right: 5px;
-      width: 6px; height: 6px;
-      background: var(--er); border-radius: 50%;
-      border: 2px solid var(--wh);
-    }
-    .uav-top {
-      width: 33px; height: 33px; border-radius: 50%;
-      font-size: .72rem;
+    .notif-btn:hover { background: #F1F5F9; color: #0F172A; }
+    .notif-badge {
+      position: absolute; top: -4px; right: -4px; width: 15px; height: 15px; border-radius: 50%;
+      background: var(--danger); color: #fff; font-size: 9px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
     }
 
-    /* Contenu */
-    .content {
-      flex: 1; overflow-y: auto;
-      padding: 22px;
-      scrollbar-width: thin;
-      scrollbar-color: var(--bord) transparent;
-      background: var(--surf);
+    .avatar-btn {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: linear-gradient(135deg, #C9A84C, #7A4F0D);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: #fff; cursor: pointer; flex-shrink: 0;
+      font-family: 'Syne', sans-serif;
     }
-    .content::-webkit-scrollbar { width: 5px; }
-    .content::-webkit-scrollbar-track { background: transparent; }
-    .content::-webkit-scrollbar-thumb { background: var(--bord); border-radius: 3px; }
 
-    /* ══════════════════════════════════════════════════
-       RESPONSIVE
-    ══════════════════════════════════════════════════ */
-    @media (max-width: 900px) {
-      .sb {
-        position: fixed; top: 0; left: 0; z-index: 200;
-        transform: translateX(-100%);
-        transition: transform .28s cubic-bezier(.4,0,.2,1);
-      }
-      .sb.sb-open { transform: translateX(0); box-shadow: 8px 0 32px rgba(14,28,56,.3); }
-      .sb-veil { display: block; }
-      .hamburger { display: flex; }
-      .srch { width: 160px; }
+    .user-menu {
+      position: absolute; top: calc(var(--top-h) + 4px); right: 16px;
+      background: #ffffff; border: 1px solid #E2E8F0; border-radius: 12px; width: 196px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.10); z-index: 500; overflow: hidden;
+      animation: popIn .15s ease;
     }
-    @media (max-width: 520px) {
-      .srch { display: none; }
-      .topbar { padding: 0 14px; gap: 8px; }
-      .content { padding: 14px; }
+    @keyframes popIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+    .um-header { padding: 13px 15px; }
+    .um-name { font-size: 13px; font-weight: 600; color: #0F172A; }
+    .um-role { font-size: 11px; color: #64748B; margin-top: 2px; }
+    .um-divider { height: 1px; background: #F1F5F9; }
+    .um-item {
+      width: 100%; text-align: left; background: none; border: none;
+      padding: 9px 15px; font-size: 13px; color: #475569; cursor: pointer; display: block;
+      transition: background .14s, color .14s; font-family: inherit; text-transform: none;
     }
+    .um-item:hover { background: #F8FAFC; color: #0F172A; }
+    .um-logout { color: var(--danger); }
+    .um-logout:hover { background: #FEF2F2; }
+
+    .page-content { flex: 1; overflow-y: auto; padding: 28px; background: var(--page-bg); }
+    .page-content::-webkit-scrollbar { width: 5px; }
+    .page-content::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+    .page-content::-webkit-scrollbar-track { background: transparent; }
   `]
 })
-export class ShellComponent {
-  private auth   = inject(AuthService);
-  private router = inject(Router);
+export class ShellComponent implements OnInit {
+  private auth      = inject(AuthService);
+  private router    = inject(Router);
+  private sanitizer = inject(DomSanitizer);
 
-  sidebarOpen  = signal(false);
-  userMenuOpen = signal(false);
+  sidebarCollapsed = signal(false);
+  showUserMenu     = false;
+  showNotifs       = false;
+  searchQuery      = '';
+  pageTitle        = 'Tableau de bord';
+  nbNotifs         = 3;
 
-  private readonly PAGE_MAP: Record<string, string> = {
-    'dashboard':               'Tableau de bord',
-    'proprietaires':           'Propriétaires',
-    'proprietaires/dashboard': 'Dashboard propriétaires',
-    'proprietes':              'Propriétés',
-    'produits':                'Produits locatifs',
-    'locataires':              'Locataires',
-    'contrats-location':       'Contrats de location',
-    'contrats-gestion':        'Contrats de gestion',
-    'collectes':               'Collectes',
-    'collectes/validation':    'Validation des collectes',
-    'collectes/rapport':       'Rapport collecteur',
-    'collectes/bordereau':     'Bordereau',
-    'collectes/saisir':        'Saisie collecte',
-    'recouvrement':            'Recouvrement',
-    'contentieux':             'Contentieux',
-    'versements':              'Versements',
-    'personnel':               'Personnel',
-    'rapports':                'Rapports',
-    'parametres':              'Paramètres',
+  get user()      { return this.auth.getUser(); }
+  get initiales() {
+    const n = this.user?.nom ?? 'KD';
+    return n.split(' ').map((p: string) => p[0]).join('').substring(0, 2).toUpperCase();
+  }
+
+  /** Sanitize raw SVG string so Angular renders it via [innerHTML] */
+  private svg(raw: string): SafeHtml {
+    return this.sanitizer.bypassSecurityTrustHtml(raw);
+  }
+
+  sections: NavSection[] = [];
+
+  ngOnInit() {
+    // Build sections here so sanitizer is available
+    this.sections = [
+      {
+        label: 'Patrimoine', key: 'patrimoine', collapsed: false,
+        items: [
+          { label: 'Tableau de bord',   route: '/dashboard',     icon: this.svg(ICONS.grid) },
+          { label: 'Propriétaires',     route: '/proprietaires', icon: this.svg(ICONS.user) },
+          { label: 'Propriétés',        route: '/proprietes',    icon: this.svg(ICONS.home) },
+          { label: 'Produits locatifs', route: '/produits',      icon: this.svg(ICONS.tag)  },
+        ]
+      },
+      {
+        label: 'Gestion Locative', key: 'locative', collapsed: false,
+        items: [
+          { label: 'Locataires',           route: '/locataires',        icon: this.svg(ICONS.users) },
+          { label: 'Contrats de location', route: '/contrats-location', icon: this.svg(ICONS.filePlus) },
+          { label: 'Contrats de gestion',  route: '/contrats-gestion',  icon: this.svg(ICONS.fileCheck) },
+        ]
+      },
+      {
+        label: 'Collectes & Finance', key: 'finance', collapsed: false,
+        items: [
+          { label: 'Collectes',            route: '/collectes',            icon: this.svg(ICONS.coins),       badge: '5', badgeColor: 'gold' },
+          { label: 'Validation collectes', route: '/collectes/validation', icon: this.svg(ICONS.checkSquare) },
+          { label: 'Rapport collecteur',   route: '/collectes/rapport',    icon: this.svg(ICONS.barChart) },
+          { label: 'Bordereau',            route: '/collectes/bordereau',  icon: this.svg(ICONS.fileText) },
+          { label: 'Versements',           route: '/versements',           icon: this.svg(ICONS.creditCard) },
+          { label: 'Reversements',         route: '/reversements',         icon: this.svg(ICONS.arrowDown) },
+          { label: 'Contentieux',          route: '/contentieux',          icon: this.svg(ICONS.alertCircle), badge: '3', badgeColor: 'red' },
+          { label: 'Recouvrement',         route: '/recouvrement',         icon: this.svg(ICONS.refresh) },
+        ]
+      },
+      {
+        label: 'Travaux & Chantiers', key: 'travaux', collapsed: false,
+        items: [
+          { label: 'Suivi des tâches', route: '/taches',        icon: this.svg(ICONS.check),    badge: '8', badgeColor: 'blue' },
+          { label: 'Devis travaux',    route: '/devis-travaux', icon: this.svg(ICONS.drafting) },
+          { label: 'Suivi chantiers',  route: '/chantiers',     icon: this.svg(ICONS.building),  badge: '4', badgeColor: 'gold' },
+          { label: 'Agenda',           route: '/agenda',        icon: this.svg(ICONS.calendar) },
+        ]
+      },
+      {
+        label: 'Administration', key: 'admin', collapsed: false,
+        items: [
+          { label: 'Personnel',  route: '/personnel',  icon: this.svg(ICONS.userTie) },
+          { label: 'Rapports',   route: '/rapports',   icon: this.svg(ICONS.pieChart) },
+          { label: 'Paramètres', route: '/parametres', icon: this.svg(ICONS.settings) },
+        ]
+      }
+    ];
+
+    this.router.events.pipe(filter(e => e instanceof NavigationEnd))
+      .subscribe((e: any) => {
+        this.pageTitle = this.findTitle(e.urlAfterRedirects.split('?')[0]);
+      });
+    this.pageTitle = this.findTitle(this.router.url.split('?')[0]);
+  }
+
+  private readonly titles: Record<string, string> = {
+    '/dashboard':             'Tableau de bord',
+    '/proprietaires':         'Propriétaires',
+    '/proprietes':            'Propriétés',
+    '/produits':              'Produits locatifs',
+    '/locataires':            'Locataires',
+    '/contrats-location':     'Contrats de location',
+    '/contrats-gestion':      'Contrats de gestion',
+    '/collectes':             'Collectes',
+    '/collectes/validation':  'Validation collectes',
+    '/collectes/rapport':     'Rapport collecteur',
+    '/collectes/bordereau':   'Bordereau',
+    '/collectes/saisir':      'Saisir une collecte',
+    '/versements':            'Versements',
+    '/reversements':          'Reversements',
+    '/contentieux':           'Contentieux',
+    '/recouvrement':          'Recouvrement',
+    '/taches':                'Suivi des tâches',
+    '/devis-travaux':         'Devis travaux',
+    '/chantiers':             'Suivi chantiers',
+    '/agenda':                'Agenda',
+    '/personnel':             'Personnel',
+    '/rapports':              'Rapports',
+    '/parametres':            'Paramètres',
   };
 
-  currentTitle = signal('Tableau de bord');
-
-  constructor() {
-    this.router.events
-      .pipe(filter(e => e instanceof NavigationEnd))
-      .subscribe((e: any) => {
-        const url = (e.urlAfterRedirects as string).replace(/^\//, '').split('?')[0];
-        this.currentTitle.set(
-          this.PAGE_MAP[url]
-          ?? this.PAGE_MAP[url.split('/').slice(0, 2).join('/')]
-          ?? this.PAGE_MAP[url.split('/')[0]]
-          ?? 'Khalifat Djické'
-        );
-      });
+  private findTitle(url: string): string {
+    if (this.titles[url]) return this.titles[url];
+    const prefix = Object.keys(this.titles).find(k => url.startsWith(k + '/'));
+    return prefix ? this.titles[prefix] : 'Khalifat Djické';
   }
 
-  userName()     { return this.auth.getUser()?.nom ?? 'Utilisateur'; }
-  userInitiales() {
-    const n = this.auth.getUser()?.nom ?? 'U';
-    return n.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
-  }
-  userRole() {
-    const labels: Record<string, string> = {
-      Pdg: 'Direction générale', Direction: 'Direction',
-      Admin: 'Administrateur', Comptable: 'Comptable',
-      Collecteur: 'Collecteur', ChargeTravaux: 'Chargé travaux',
-    };
-    return labels[this.auth.getUser()?.role ?? ''] ?? '';
-  }
-  isDirection() { return this.auth.isDirection(); }
-  logout()      { this.auth.logout(); this.router.navigate(['/login']); }
-  closeMobile() { if (window.innerWidth < 900) this.sidebarOpen.set(false); }
-  toggleUserMenu() { this.userMenuOpen.update(v => !v); }
-
-  @HostListener('document:click', ['$event'])
-  onDocClick(e: Event) {
-    const t = e.target as HTMLElement;
-    if (!t.closest('.sb-foot')) this.userMenuOpen.set(false);
-  }
+  toggleSection(section: NavSection) { section.collapsed = !section.collapsed; }
+  toggleSidebar() { this.sidebarCollapsed.update(v => !v); }
+  closeMenus()    { this.showUserMenu = false; this.showNotifs = false; }
+  logout()        { this.auth.logout(); this.router.navigate(['/login']); }
 }
+
+// ── Raw SVG strings (14×14, stroke="currentColor") ───────────────────────────
+const ICONS = {
+  grid:        `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>`,
+  user:        `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+  home:        `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
+  tag:         `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`,
+  users:       `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  filePlus:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>`,
+  fileCheck:   `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 15 11 17 15 13"/></svg>`,
+  coins:       `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><line x1="16.71" y1="13.88" x2="13.29" y2="19.06"/></svg>`,
+  checkSquare: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`,
+  barChart:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+  fileText:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>`,
+  creditCard:  `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`,
+  alertCircle: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
+  refresh:     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>`,
+  check:       `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  drafting:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>`,
+  building:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="8" height="8" rx="1"/><rect x="14" y="3" width="8" height="8" rx="1"/><rect x="2" y="15" width="8" height="6" rx="1"/><rect x="14" y="15" width="8" height="6" rx="1"/></svg>`,
+  calendar:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+  userTie:     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="12" y1="11" x2="12" y2="17"/><polyline points="10 13 12 15 14 13"/></svg>`,
+  pieChart:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>`,
+  settings:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+  arrowDown:   `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`,
+};

@@ -603,3 +603,186 @@ export interface DossierRecouvrementDto {
   etape:            EtapeRecouvrement;
   loading?:         boolean;
 }
+// ══════════════════════════════════════════════════════════════
+//  TRAVAUX & CHANTIERS
+// ══════════════════════════════════════════════════════════════
+
+export type PrioriteTache = 'Urgente' | 'Moyenne' | 'Faible';
+export type StatutTache   = 'AouvFaire' | 'EnCours' | 'EnAttente' | 'Cloturee' | 'Annulee';
+export type CategorieTache = 'TravauxChantier' | 'GestionLocative' | 'Administration' | 'Contentieux' | 'Finance' | 'Autre';
+
+export interface TacheDto {
+  id:            string;
+  titre:         string;
+  description?:  string;
+  categorie:     CategorieTache;
+  categorieLabel:string;
+  priorite:      PrioriteTache;
+  prioriteLabel: string;
+  statut:        StatutTache;
+  statutLabel:   string;
+  proprieteTitre?:  string;
+  proprieteId?:     string;
+  assigneId?:       string;
+  assigneNom?:      string;
+  dateEcheance?:    string;
+  dateCreation:     string;
+  dateCloture?:     string;
+  avancement:       number;   // 0-100
+  devisId?:         string;
+  chantierId?:      string;
+  historique?:      TacheHistoriqueDto[];
+}
+
+export interface TacheHistoriqueDto {
+  date:        string;
+  auteur:      string;
+  description: string;
+}
+
+export interface TacheCreateDto {
+  titre:         string;
+  description?:  string;
+  categorie:     CategorieTache;
+  priorite:      PrioriteTache;
+  proprieteId?:  string;
+  assigneId?:    string;
+  dateEcheance?: string;
+}
+
+// ── Devis ────────────────────────────────────────────────────
+export type StatutDevis = 'Brouillon' | 'Emis' | 'EnAttente' | 'Accepte' | 'Refuse' | 'Expire';
+
+export interface LigneDevisDto {
+  id?:          string;
+  designation:  string;
+  quantite:     number;
+  unite:        string;
+  prixUnitaire: number;
+  total:        number;
+}
+
+export interface DevisDto {
+  id:              string;
+  numero:          string;
+  proprieteTitre:  string;
+  proprieteId:     string;
+  natureTravaux:   string;
+  entrepreneur:    string;
+  statut:          StatutDevis;
+  statutLabel:     string;
+  dateEmission:    string;
+  dateValidite:    string;
+  lignes:          LigneDevisDto[];
+  sousTotal:       number;
+  tva:             number;
+  totalTtc:        number;
+  conditions?:     string;
+  chantierId?:     string;
+}
+
+export interface DevisListItemDto {
+  id:             string;
+  numero:         string;
+  proprieteTitre: string;
+  natureTravaux:  string;
+  entrepreneur:   string;
+  statut:         StatutDevis;
+  statutLabel:    string;
+  dateEmission:   string;
+  totalTtc:       number;
+  chantierId?:    string;
+}
+
+export interface DevisCreateDto {
+  proprieteId:    string;
+  natureTravaux:  string;
+  entrepreneur:   string;
+  dateEmission:   string;
+  dateValidite:   string;
+  lignes:         Omit<LigneDevisDto, 'id' | 'total'>[];
+  conditions?:    string;
+}
+
+// ── Chantier ─────────────────────────────────────────────────
+export type StatutChantier = 'Planifie' | 'EnCours' | 'EnPause' | 'Termine' | 'Annule';
+
+export interface EtapeChantierDto {
+  id:            string;
+  titre:         string;
+  dateDebut?:    string;
+  dateFin?:      string;
+  statut:        'AouvFaire' | 'EnCours' | 'Terminee';
+  statutLabel:   string;
+  ordre:         number;
+}
+
+export interface ChantierDto {
+  id:              string;
+  intitule:        string;
+  proprieteId:     string;
+  proprieteTitre:  string;
+  proprieteAdresse:string;
+  devisId?:        string;
+  devisNumero?:    string;
+  entrepreneur:    string;
+  responsableId?:  string;
+  responsableNom?: string;
+  statut:          StatutChantier;
+  statutLabel:     string;
+  dateDebut:       string;
+  dateFinPrevue:   string;
+  dateFinReelle?:  string;
+  budget:          number;
+  avancement:      number;  // 0-100
+  joursRestants:   number;
+  joursDepassement:number;
+  etapes:          EtapeChantierDto[];
+}
+
+export interface ChantierListItemDto {
+  id:              string;
+  intitule:        string;
+  proprieteTitre:  string;
+  proprieteAdresse:string;
+  entrepreneur:    string;
+  statut:          StatutChantier;
+  statutLabel:     string;
+  avancement:      number;
+  budget:          number;
+  joursRestants:   number;
+  joursDepassement:number;
+  nbEtapesTotal:   number;
+  nbEtapesOk:      number;
+}
+
+// ── Agenda ───────────────────────────────────────────────────
+export type TypeEvenement = 'RDV' | 'Visite' | 'Travaux' | 'Deadline' | 'Reunion' | 'Autre';
+
+export interface EvenementAgendaDto {
+  id:           string;
+  titre:        string;
+  type:         TypeEvenement;
+  typeLabel:    string;
+  date:         string;
+  heure?:       string;
+  proprieteId?: string;
+  proprieteTitre?: string;
+  notes?:       string;
+  participants?:string[];
+  tacheId?:     string;
+  chantierId?:  string;
+}
+
+export interface EvenementCreateDto {
+  titre:        string;
+  type:         TypeEvenement;
+  date:         string;
+  heure?:       string;
+  proprieteId?: string;
+  notes?:       string;
+}
+
+
+
+

@@ -66,10 +66,17 @@ export const routes: Routes = [
       
       //Verements
       {path: 'versements', component:VersementsComponent},
-
+      { path: 'versements',    component: VersementsComponent },
+      
       // Recouvrement
       { path: 'contentieux', loadComponent: () => import('./features/recouvrement/contentieux.component').then(m => m.ContentieuxComponent) },
       { path: 'recouvrement', loadComponent: () => import('./features/recouvrement/recouvrement.component').then(m => m.RecouvrementComponent) },
+
+      // ── Travaux & Chantiers ──────────────────────────────────
+      { path: 'taches',           loadComponent: () => import('./features/travaux/taches/taches.component').then(m => m.TachesComponent) },
+      { path: 'devis-travaux',    loadComponent: () => import('./features/travaux/devis/devis-travaux.component').then(m => m.DevisTravauxComponent) },
+      { path: 'chantiers',        loadComponent: () => import('./features/travaux/chantiers/chantiers.component').then(m => m.ChantiersComponent) },
+      { path: 'agenda',           loadComponent: () => import('./features/travaux/agenda/agenda.component').then(m => m.AgendaComponent) },
 
       // Dashboard propriétaires (remplace ou complète la liste simple)
       { path: 'proprietaires/dashboard', loadComponent: () => import('./features/proprietaires/dashboard/proprietaires-dashboard.component').then(m => m.ProprietairesDashboardComponent),

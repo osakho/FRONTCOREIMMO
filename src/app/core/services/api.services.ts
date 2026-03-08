@@ -291,8 +291,8 @@ export class ContratsLocationService extends ApiService {
     return this.postForm<string>('/contrats-location', data);
   }
   
-  activer(id: string): Observable<void> {
-    return this.http.post<void>(`${this.base}/contrats-location/${id}/activer`, {});
+  activer(id: string, payload?: any): Observable<void> {
+    return this.http.post<void>(`${this.base}/contrats-location/${id}/activer`, payload ?? {});
   }
   
   validerChecklistEntree(id: string, data: any): Observable<void> {
@@ -309,6 +309,11 @@ export class ContratsLocationService extends ApiService {
       dateResiliation: dateResiliation.toISOString()
     });
   }
+
+  creerAvenant(id: string, data: any): Observable<void> {
+    return this.http.post<void>(`${this.base}/contrats-location/${id}/avenant`, data);
+  }
+
   getById(id: string): Observable<ContratLocationListItemDto> {
     return this.get<ContratLocationListItemDto>(`/contrats-location/${id}/resume`);
   }
@@ -427,4 +432,72 @@ export class RecouvrementService extends ApiService {
   exportExcel(): Observable<Blob> {
     return this.http.get(`${this.base}/recouvrement/export`, { responseType: 'blob' });
   }
+}
+// ══════════════════════════════════════════════════════════════
+//  TRAVAUX SERVICES
+// ══════════════════════════════════════════════════════════════
+import {
+  TacheDto, TacheCreateDto, StatutTache, PrioriteTache,
+  DevisDto, DevisListItemDto, DevisCreateDto, StatutDevis,
+  ChantierDto, ChantierListItemDto, StatutChantier,
+  EvenementAgendaDto, EvenementCreateDto
+} from '../models/models';
+
+@Injectable({ providedIn: 'root' })
+export class TachesService extends ApiService {
+  getAll(params?: { statut?: StatutTache; priorite?: PrioriteTache; assigneId?: string }): Observable<PagedList<TacheDto>> {
+    let p = new HttpParams();
+    if (params?.statut)    p = p.set('statut',    params.statut);
+    if (params?.priorite)  p = p.set('priorite',  params.priorite);
+    if (params?.assigneId) p = p.set('assigneId', params.assigneId);
+    return this.get<PagedList<TacheDto>>('/taches', p);
+  }
+  getById(id: string): Observable<TacheDto>         { return this.get<TacheDto>(`/taches/${id}`); }
+  create(dto: TacheCreateDto): Observable<TacheDto>  { return this.post<TacheDto>('/taches', dto); }
+  update(id: string, dto: Partial<TacheCreateDto>): Observable<TacheDto> { return this.put<TacheDto>(`/taches/${id}`, dto); }
+  cloture(id: string): Observable<TacheDto>          { return this.post<TacheDto>(`/taches/${id}/cloture`, {}); }
+  supprimer(id: string): Observable<any>             { return this.http.delete<any>(`${this.base}/taches/${id}`); }
+}
+
+@Injectable({ providedIn: 'root' })
+export class DevisTravauxService extends ApiService {
+  getAll(params?: { statut?: StatutDevis }): Observable<PagedList<DevisListItemDto>> {
+    let p = new HttpParams();
+    if (params?.statut) p = p.set('statut', params.statut);
+    return this.get<PagedList<DevisListItemDto>>('/devis-travaux', p);
+  }
+  getById(id: string): Observable<DevisDto>            { return this.get<DevisDto>(`/devis-travaux/${id}`); }
+  create(dto: DevisCreateDto): Observable<DevisDto>    { return this.post<DevisDto>('/devis-travaux', dto); }
+  update(id: string, dto: DevisCreateDto): Observable<DevisDto> { return this.put<DevisDto>(`/devis-travaux/${id}`, dto); }
+  accepter(id: string): Observable<DevisDto>           { return this.post<DevisDto>(`/devis-travaux/${id}/accepter`, {}); }
+  refuser(id: string): Observable<DevisDto>            { return this.post<DevisDto>(`/devis-travaux/${id}/refuser`, {}); }
+  convertirChantier(id: string): Observable<ChantierDto> { return this.post<ChantierDto>(`/devis-travaux/${id}/convertir-chantier`, {}); }
+}
+
+@Injectable({ providedIn: 'root' })
+export class ChantiersService extends ApiService {
+  getAll(params?: { statut?: StatutChantier }): Observable<PagedList<ChantierListItemDto>> {
+    let p = new HttpParams();
+    if (params?.statut) p = p.set('statut', params.statut);
+    return this.get<PagedList<ChantierListItemDto>>('/chantiers', p);
+  }
+  getById(id: string): Observable<ChantierDto>         { return this.get<ChantierDto>(`/chantiers/${id}`); }
+  create(dto: any): Observable<ChantierDto>             { return this.post<ChantierDto>('/chantiers', dto); }
+  update(id: string, dto: any): Observable<ChantierDto> { return this.put<ChantierDto>(`/chantiers/${id}`, dto); }
+  validerEtape(id: string, etapeId: string): Observable<ChantierDto> { return this.post<ChantierDto>(`/chantiers/${id}/etapes/${etapeId}/valider`, {}); }
+  cloture(id: string): Observable<ChantierDto>          { return this.post<ChantierDto>(`/chantiers/${id}/cloture`, {}); }
+}
+
+@Injectable({ providedIn: 'root' })
+export class AgendaService extends ApiService {
+  getAll(params?: { dateDebut?: string; dateFin?: string; type?: string }): Observable<EvenementAgendaDto[]> {
+    let p = new HttpParams();
+    if (params?.dateDebut) p = p.set('dateDebut', params.dateDebut);
+    if (params?.dateFin)   p = p.set('dateFin',   params.dateFin);
+    if (params?.type)      p = p.set('type',       params.type);
+    return this.get<EvenementAgendaDto[]>('/agenda', p);
+  }
+  create(dto: EvenementCreateDto): Observable<EvenementAgendaDto>  { return this.post<EvenementAgendaDto>('/agenda', dto); }
+  update(id: string, dto: EvenementCreateDto): Observable<EvenementAgendaDto> { return this.put<EvenementAgendaDto>(`/agenda/${id}`, dto); }
+  supprimer(id: string): Observable<any>                           { return this.http.delete<any>(`${this.base}/agenda/${id}`); }
 }
