@@ -324,7 +324,7 @@ const COLL_COLORS: Record<string, { bg: string; light: string }> = {
       --text:#1e293b; --muted:#64748b; --border:#e2e8f0; }
 
     /* ── Header ── */
-    .rec-page { max-width:1560px; margin:0 auto; }
+    .rec-page { width:100%; }
     .rec-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:20px; }
     .rec-title { font-size:22px; font-weight:800; color:var(--navy); }
     .rec-sub { font-size:13px; color:var(--muted); margin-top:2px; }
@@ -590,7 +590,7 @@ export class SuiviCollecteurComponent implements OnInit {
   tauxRecouvrement(r: LigneRecouvrementDto): number {
     return r.montantAttendu > 0 ? Math.round(r.montantCollecte / r.montantAttendu * 100) : (r.statut === 'ajour' ? 100 : 0);
   }
-
+  
   collColor(nom: string): { bg: string; light: string } {
     if (!this.collColors[nom]) {
       this.collColors[nom] = this.colorPool[this.colorIdx % this.colorPool.length];
