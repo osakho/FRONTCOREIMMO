@@ -683,11 +683,13 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
   // ════════════════════════════════════════════════════════════
   //  AVENANT
   // ════════════════════════════════════════════════════════════
-  ouvrirAvenant(c: ContratLocationListItemDto) {
-    this.svc.getById(c.id).subscribe((detail: any) => {
-      this.zone.run(() => this.afficherModalAvenant(c, detail));
-    });
-  }
+ouvrirAvenant(c: ContratLocationListItemDto) {
+  this.svc.getById(c.id).subscribe({
+    next:  (detail: any) => this.zone.run(() => this.afficherModalAvenant(c, detail)),
+    error: ()            => this.zone.run(() => this.afficherModalAvenant(c, c))
+    // fallback sur les données de liste si l'endpoint échoue
+  });
+}
 
   private afficherModalAvenant(c: ContratLocationListItemDto, detail: any) {
     const typeProduit: string = detail.typeProduit ?? detail.produitType ?? '';

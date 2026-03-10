@@ -826,5 +826,32 @@ export interface SuiviLoyersGlobalDto {
   contrats:      RecapFinancierContratDto[];
 }
 
+export interface LigneRecouvrementDto {
+  collecteurId:      string;
+  collecteurNom:     string;
+  proprietaireId:    string;
+  proprietaireNom:   string;
+  proprieteLibelle:  string;
+  produitId:         string;
+  produitCode:       string;
+  loyerReference:    number;
+  locataireId:       string;
+  locataireNom:      string;
+  locataireTel:      string;
+  zone:              string;
+  statut:            'retard' | 'ajour' | 'avance' | 'attente';
+  moisImpayes:       string[];
+  montantARecouvrir: number;
+  montantCollecte:   number;
+  montantAttendu:    number;
+}
+
+export interface FeuilleRecouvrementDto {
+  lignes:        LigneRecouvrementDto[];
+  collecteurs:   { id: string; nom: string }[];
+  proprietaires: { id: string; nom: string }[];
+  proprietes:    { id: string; nom: string }[];
+}
+
 
 

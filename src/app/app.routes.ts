@@ -84,6 +84,7 @@ export const routes: Routes = [
         canActivate: [directionGuard]
       },
       { path: 'suivi-loyers', loadComponent: () => import('./features/suivi-loyers/suivi-loyers.component').then(m => m.SuiviLoyersComponent) },
+      { path: 'suivi-collecteur', loadComponent: () => import('./features/suivi-collecteur/suivi-collecteur.component').then(m => m.SuiviCollecteurComponent) },
     ]
   },
 

@@ -18,7 +18,9 @@ import {
   DossierRecouvrementDto, EtapeRecouvrement,
    MoisLoyerDto,
   RecapFinancierContratDto,
-  SuiviLoyersGlobalDto
+  SuiviLoyersGlobalDto,
+  FeuilleRecouvrementDto,
+  LigneRecouvrementDto     
 } from '../models/models';
 import { environment } from '../../../environments/environment';
 
@@ -318,8 +320,11 @@ export class ContratsLocationService extends ApiService {
     return this.http.post<void>(`${this.base}/contrats-location/${id}/avenant`, data);
   }
 
-  getById(id: string): Observable<ContratLocationListItemDto> {
-    return this.get<ContratLocationListItemDto>(`/contrats-location/${id}/resume`);
+  // getById(id: string): Observable<ContratLocationListItemDto> {
+  //   return this.get<ContratLocationListItemDto>(`/contrats-location/${id}/resume`);
+  // }
+  getById(id: string): Observable<ContratLocationDto> {
+    return this.get<ContratLocationDto>(`/contrats-location/${id}`);
   }
 }
 
@@ -337,7 +342,7 @@ export class CollectesService extends ApiService {
     if (opts.semaine)      params = params.set('numeroSemaine', opts.semaine);
     return this.get<PagedList<CollecteDto>>('/collectes', params);
   }
-
+  
   saisir(data: any): Observable<string> {
     return this.post<string>('/collectes', data);
   }
@@ -435,6 +440,20 @@ export class RecouvrementService extends ApiService {
   /** Export Excel */
   exportExcel(): Observable<Blob> {
     return this.http.get(`${this.base}/recouvrement/export`, { responseType: 'blob' });
+  }
+
+  getFeuille(params?: {
+    collecteurId?:   string;
+    proprietaireId?: string;
+    proprieteId?:    string;
+    produitCode?:    string;
+    statut?:         string;
+  }): Observable<FeuilleRecouvrementDto> {
+    const qp = Object.entries(params || {})
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k}=${encodeURIComponent(v!)}`)
+      .join('&');
+    return this.get<FeuilleRecouvrementDto>(`/recouvrement/feuille${qp ? '?' + qp : ''}`);
   }
 }
 // ══════════════════════════════════════════════════════════════

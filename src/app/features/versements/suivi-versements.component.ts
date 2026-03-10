@@ -1,3 +1,10 @@
+// ═══════════════════════════════════════════════════════════════════════
+// CORRECTIONS FRONTEND — 3 fixes appliqués :
+// 1. Colonne Reporté masquée si aucune valeur > 0
+// 2. lignesParStatut robuste (trim + insensible à la casse)
+// 3. Affichage tauxCommission * 100 déjà appliqué
+// ═══════════════════════════════════════════════════════════════════════
+
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule, DecimalPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -9,7 +16,9 @@ import { Observable } from 'rxjs';
 export interface LigneProduitVersementDto {
   produitCode:      string;
   proprieteLibelle: string;
+  statutProduit:    'Loue' | 'Vacant' | 'LoyersEnAttente';
   montantEncaisse:  number;
+  montantAttendu:   number;
   nbCollectes:      number;
 }
 
@@ -25,8 +34,10 @@ export interface PeriodeVersementDto {
   datePrevue:     string;
   dateEffective?: string;
   montantBrut:    number;
+  montantReporte: number;
   commission:     number;
   retenueTravaux: number;
+  retenueAvance:  number;
   montantNet:     number;
   statut:         'Planifie' | 'EnAttente' | 'Effectue' | 'EnRetard' | 'Annule' | 'Derogation';
   statutLabel:    string;
@@ -36,16 +47,17 @@ export interface PeriodeVersementDto {
 }
 
 export interface SuiviVersementProprieteDto {
-  proprieteId:      string;
-  proprieteLibelle: string;
-  proprieteAdresse: string;
-  periodicite:      string;
-  periodiciteLabel: string;
-  tauxCommission:   number;
-  totalBrut:        number;
-  totalNet:         number;
-  nbProduitsLoues:  number;
-  periodes:         PeriodeVersementDto[];
+  proprieteId:       string;
+  proprieteLibelle:  string;
+  proprieteAdresse:  string;
+  periodicite:       string;
+  periodiciteLabel:  string;
+  tauxCommission:    number;
+  totalBrut:         number;
+  totalNet:          number;
+  nbProduitsLoues:   number;
+  nbProduitsVacants: number;
+  periodes:          PeriodeVersementDto[];
 }
 
 export interface SuiviVersementProprietaireDto {
@@ -214,8 +226,11 @@ export class SuiviVersementsService extends ApiService {
                     <span class="periodicite-badge" [ngClass]="'pb-' + pr.periodicite.toLowerCase()">
                       {{ pr.periodiciteLabel }}
                     </span>
-                    <span class="pr-taux">Commission {{ pr.tauxCommission * 100 }}%</span>
-                    <span class="pr-produits">{{ pr.nbProduitsLoues }} produit(s) loué(s)</span>
+                    <span class="pr-taux">Commission {{ pr.tauxCommission * 100 | number:'1.0-2' }}%</span>
+                    <span class="pr-produits">{{ pr.nbProduitsLoues }} loué(s)</span>
+                    <span class="pr-vacants" *ngIf="pr.nbProduitsVacants > 0">
+                      · {{ pr.nbProduitsVacants }} vacant(s)
+                    </span>
                   </div>
                 </div>
                 <div class="pr-totaux">
@@ -230,6 +245,8 @@ export class SuiviVersementsService extends ApiService {
                   <th>Période</th>
                   <th>Date prévue</th>
                   <th class="text-right">Brut</th>
+                  <!-- FIX 1 : colonne Reporté masquée si aucune valeur -->
+                  <th class="text-right" *ngIf="aDesReports(pr)">Reporté</th>
                   <th class="text-right">Commission</th>
                   <th class="text-right">Travaux</th>
                   <th class="text-right">Net</th>
@@ -254,8 +271,17 @@ export class SuiviVersementsService extends ApiService {
                       </div>
                     </td>
                     <td class="text-right">{{ periode.montantBrut | number:'1.0-0' }}</td>
+                    <!-- FIX 1 : cellule Reporté conditionnelle -->
+                    <td class="text-right" *ngIf="aDesReports(pr)">
+                      <span *ngIf="periode.montantReporte > 0" class="reporte-badge">
+                        +{{ periode.montantReporte | number:'1.0-0' }}
+                      </span>
+                    </td>
                     <td class="text-right text-commission">-{{ periode.commission | number:'1.0-0' }}</td>
-                    <td class="text-right text-travaux">-{{ periode.retenueTravaux | number:'1.0-0' }}</td>
+                    <td class="text-right text-travaux">
+                      <span *ngIf="periode.retenueTravaux > 0">-{{ periode.retenueTravaux | number:'1.0-0' }}</span>
+                      <span *ngIf="periode.retenueTravaux === 0" class="text-muted">—</span>
+                    </td>
                     <td class="text-right text-net font-bold">{{ periode.montantNet | number:'1.0-0' }}</td>
                     <td class="text-center">
                       <span class="badge"
@@ -328,6 +354,10 @@ export class SuiviVersementsService extends ApiService {
             <span class="fs-label">Loyers encaissés (brut)</span>
             <span class="fs-val">{{ selectedPeriode.montantBrut | number:'1.0-0' }} MRU</span>
           </div>
+          <div class="fs-row fs-report" *ngIf="selectedPeriode.montantReporte > 0">
+            <span class="fs-label">↩ Loyers reportés (période préc.)</span>
+            <span class="fs-val fs-pos">+{{ selectedPeriode.montantReporte | number:'1.0-0' }} MRU</span>
+          </div>
           <div class="fs-row fs-deduction" *ngFor="let d of selectedPeriode.deductions">
             <span class="fs-label">− {{ d.libelle }}</span>
             <span class="fs-val fs-neg">-{{ d.montant | number:'1.0-0' }} MRU</span>
@@ -338,31 +368,70 @@ export class SuiviVersementsService extends ApiService {
           </div>
         </div>
 
-        <!-- Détail par produit -->
+        <!-- Détail par produit locatif -->
         <div class="lignes-section">
           <div class="ls-title">Détail par produit locatif</div>
-          <div class="ls-row" *ngFor="let l of selectedPeriode.lignes">
-            <div class="ls-code">{{ l.produitCode }}</div>
-            <div class="ls-nb">{{ l.nbCollectes }} collecte(s)</div>
-            <div class="ls-montant">{{ l.montantEncaisse | number:'1.0-0' }} MRU</div>
-          </div>
+
+          <!-- FIX 2 : lignesParStatut robuste insensible à la casse -->
+          <ng-container *ngFor="let l of lignesParStatut(selectedPeriode.lignes, 'Loue')">
+            <div class="ls-row">
+              <div class="ls-code">{{ l.produitCode }}</div>
+              <div class="ls-statut ls-loue">✓ Loué</div>
+              <div class="ls-nb">{{ l.nbCollectes }} collecte(s)</div>
+              <div class="ls-montant">{{ l.montantEncaisse | number:'1.0-0' }} MRU</div>
+            </div>
+          </ng-container>
+
+          <ng-container *ngFor="let l of lignesParStatut(selectedPeriode.lignes, 'LoyersEnAttente')">
+            <div class="ls-row ls-row-attente">
+              <div class="ls-code">{{ l.produitCode }}</div>
+              <div class="ls-statut ls-attente">⏳ En attente</div>
+              <div class="ls-nb">Non encaissé</div>
+              <div class="ls-montant ls-montant-attendu">
+                {{ l.montantAttendu | number:'1.0-0' }} MRU attendu
+              </div>
+            </div>
+          </ng-container>
+
+          <ng-container *ngFor="let l of lignesParStatut(selectedPeriode.lignes, 'Vacant')">
+            <div class="ls-row ls-row-vacant">
+              <div class="ls-code">{{ l.produitCode }}</div>
+              <div class="ls-statut ls-vacant">🔒 Vacant</div>
+              <div class="ls-nb">—</div>
+              <div class="ls-montant ls-montant-zero">0 MRU</div>
+            </div>
+          </ng-container>
+
           <div class="ls-empty" *ngIf="!selectedPeriode.lignes.length">
             Aucune collecte enregistrée pour cette période
+          </div>
+
+          <!-- Légende -->
+          <div class="ls-legend" *ngIf="selectedPeriode.lignes.length">
+            <span class="leg-item leg-loue">
+              {{ lignesParStatut(selectedPeriode.lignes, 'Loue').length }} loué(s)
+            </span>
+            <span class="leg-item leg-attente"
+                  *ngIf="lignesParStatut(selectedPeriode.lignes, 'LoyersEnAttente').length > 0">
+              · {{ lignesParStatut(selectedPeriode.lignes, 'LoyersEnAttente').length }} en attente
+            </span>
+            <span class="leg-item leg-vacant"
+                  *ngIf="lignesParStatut(selectedPeriode.lignes, 'Vacant').length > 0">
+              · {{ lignesParStatut(selectedPeriode.lignes, 'Vacant').length }} vacant(s)
+            </span>
           </div>
         </div>
 
         <!-- Actions -->
         <div class="rp-actions">
-
-          <!-- Marquer effectué -->
-          <div class="action-group" *ngIf="selectedPeriode.statut === 'EnAttente' || selectedPeriode.statut === 'EnRetard'">
+          <div class="action-group"
+               *ngIf="selectedPeriode.statut === 'EnAttente' || selectedPeriode.statut === 'EnRetard'">
             <input class="input-ref" [(ngModel)]="refPaiement" placeholder="Référence paiement…">
             <button class="btn btn-gold btn-full" (click)="marquerEffectue()">
               ✓ Marquer comme versé
             </button>
           </div>
 
-          <!-- Dérogation -->
           <div class="action-group" *ngIf="selectedPeriode.statut === 'EnRetard'">
             <input class="input-ref" [(ngModel)]="motifDerogation" placeholder="Motif dérogation…">
             <button class="btn btn-secondary btn-full" (click)="accorderDerogation()">
@@ -370,7 +439,6 @@ export class SuiviVersementsService extends ApiService {
             </button>
           </div>
 
-          <!-- Envoi bordereau -->
           <div class="action-group envoi-group" *ngIf="selectedPeriode.statut !== 'Planifie'">
             <div class="ls-title" style="margin-bottom:6px">Envoyer le bordereau</div>
             <div class="envoi-btns">
@@ -380,12 +448,10 @@ export class SuiviVersementsService extends ApiService {
             </div>
           </div>
 
-          <!-- Export -->
           <div class="export-btns">
             <button class="btn btn-export" (click)="exportPdf()">📄 Export PDF</button>
             <button class="btn btn-export" (click)="exportExcel()">📊 Export Excel</button>
           </div>
-
         </div>
 
       </div>
@@ -418,7 +484,6 @@ export class SuiviVersementsService extends ApiService {
 </div>
   `,
   styles: [`
-    /* ── KPIs ── */
     .kpi-global { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
     .kg-card { background: #fff; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 10px rgba(14,28,56,.07); border: 1px solid #e8edf5; border-top: 3px solid #e2e8f0; }
     .kg-net        { border-top-color: #16a34a; }
@@ -434,19 +499,11 @@ export class SuiviVersementsService extends ApiService {
     .kg-pill-red  { background: #fee2e2; color: #991b1b; }
     .kg-pill-blue { background: #dbeafe; color: #1e40af; }
     .kg-pill-gray { background: #f1f5f9; color: #64748b; }
-
-    /* ── Header actions ── */
     .header-actions { display: flex; align-items: center; gap: 10px; }
     .select-annee { padding: 7px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: #fff; color: #0e1c38; cursor: pointer; }
-
-    /* ── Layout ── */
     .layout { display: grid; grid-template-columns: 1fr; gap: 20px; }
-    .layout.panel-open { grid-template-columns: 1fr 380px; align-items: start; }
-
-    /* ── Filtres ── */
+    .layout.panel-open { grid-template-columns: 1fr 390px; align-items: start; }
     .filter-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
-
-    /* ── Accordéon propriétaire ── */
     .proprietaire-card { background: #fff; border-radius: 12px; margin-bottom: 12px; border: 1px solid #e8edf5; box-shadow: 0 2px 8px rgba(14,28,56,.05); overflow: hidden; }
     .prop-header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; transition: background .15s; }
     .prop-header:hover { background: #f8fafc; }
@@ -462,8 +519,6 @@ export class SuiviVersementsService extends ApiService {
     .pk-danger { color: #dc2626 !important; }
     .prop-chevron { font-size: 10px; color: #94a3b8; transition: transform .2s; }
     .prop-chevron.open { transform: rotate(90deg); }
-
-    /* ── Propriété block ── */
     .prop-body { border-top: 1px solid #f1f5f9; }
     .propriete-block { padding: 12px 16px 0; border-bottom: 1px solid #f1f5f9; }
     .propriete-block:last-child { border-bottom: none; }
@@ -474,13 +529,12 @@ export class SuiviVersementsService extends ApiService {
     .pb-mensuel     { background: #d1fae5; color: #065f46; }
     .pb-bimensuel   { background: #dbeafe; color: #1e40af; }
     .pb-trimestriel { background: #fef3c7; color: #92400e; }
-    .pr-taux    { font-size: 11px; color: #64748b; }
+    .pr-taux     { font-size: 11px; color: #64748b; }
     .pr-produits { font-size: 11px; color: #94a3b8; }
+    .pr-vacants  { font-size: 11px; color: #f97316; }
     .pr-totaux { text-align: right; }
     .pr-brut { display: block; font-size: 11px; color: #64748b; }
     .pr-net  { display: block; font-size: 12px; font-weight: 700; color: #16a34a; }
-
-    /* ── Table périodes ── */
     .periods-table { margin-bottom: 12px; }
     .periode-label { font-family: monospace; font-size: 12px; font-weight: 600; color: #0e1c38; }
     .periode-mois  { font-size: 10px; color: #94a3b8; }
@@ -489,16 +543,14 @@ export class SuiviVersementsService extends ApiService {
     .text-commission { color: #c9a84c; }
     .text-travaux    { color: #f97316; }
     .text-net        { color: #16a34a; }
+    .text-muted      { color: #cbd5e1; }
     .font-bold       { font-weight: 700; }
     .row-retard td   { background: #fff5f5 !important; }
     .action-btns { display: flex; gap: 4px; justify-content: center; }
     .btn-icon { background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 4px; transition: background .15s; }
     .btn-icon:hover { background: #f1f5f9; }
-
-    /* ── Badges ── */
+    .reporte-badge { font-size: 10px; background: #fef3c7; color: #92400e; padding: 1px 5px; border-radius: 4px; font-weight: 600; }
     .badge-gold { background: #fef3c7; color: #92400e; }
-
-    /* ── Recap pane ── */
     .recap-pane { background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 24px rgba(14,28,56,.12); position: sticky; top: 20px; max-height: calc(100vh - 60px); overflow-y: auto; }
     .recap-pane::-webkit-scrollbar { width: 3px; }
     .recap-pane::-webkit-scrollbar-thumb { background: #e2e8f0; }
@@ -509,31 +561,38 @@ export class SuiviVersementsService extends ApiService {
     .rp-code { font-size: 11px; color: rgba(255,255,255,.5); font-family: monospace; margin-top: 2px; }
     .rp-close { background: rgba(255,255,255,.12); border: none; color: #fff; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; }
     .rp-close:hover { background: rgba(255,255,255,.2); }
-
-    /* ── Période info ── */
     .periode-info { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
     .pi-periode { font-size: 12px; color: #0e1c38; }
     .pi-date    { font-size: 12px; color: #64748b; }
-
-    /* ── Résumé financier ── */
     .fin-summary { padding: 10px 16px; border-bottom: 1px solid #f1f5f9; }
     .fs-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 12px; }
+    .fs-report    { background: #fffbeb; border-radius: 4px; padding: 4px 6px; margin: 2px 0; }
     .fs-deduction { color: #64748b; }
     .fs-total { border-top: 1px solid #e2e8f0; margin-top: 4px; padding-top: 8px; font-weight: 700; }
-    .fs-val   { font-weight: 600; }
-    .fs-neg   { color: #dc2626; }
-    .fs-net   { color: #16a34a; font-size: 14px; }
-
-    /* ── Lignes produits ── */
+    .fs-val { font-weight: 600; }
+    .fs-neg { color: #dc2626; }
+    .fs-pos { color: #d97706; font-weight: 700; }
+    .fs-net { color: #16a34a; font-size: 14px; }
     .lignes-section { padding: 10px 16px; border-bottom: 1px solid #f1f5f9; }
     .ls-title { font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
     .ls-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px dashed #f1f5f9; font-size: 12px; }
-    .ls-code { font-family: monospace; font-weight: 700; color: #0e1c38; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
-    .ls-nb   { color: #94a3b8; flex: 1; }
+    .ls-row-attente { background: #fffbeb; border-radius: 4px; padding: 4px 6px; margin: 1px 0; }
+    .ls-row-vacant  { background: #f8fafc; border-radius: 4px; padding: 4px 6px; margin: 1px 0; opacity: .75; }
+    .ls-code { font-family: monospace; font-weight: 700; color: #0e1c38; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px; flex-shrink: 0; }
+    .ls-statut { font-size: 10px; font-weight: 600; flex-shrink: 0; }
+    .ls-loue    { color: #16a34a; }
+    .ls-attente { color: #d97706; }
+    .ls-vacant  { color: #94a3b8; }
+    .ls-nb   { color: #94a3b8; flex: 1; font-size: 11px; }
     .ls-montant { font-weight: 700; color: #0e1c38; }
+    .ls-montant-attendu { color: #d97706; font-style: italic; font-size: 11px; }
+    .ls-montant-zero    { color: #cbd5e1; }
     .ls-empty { font-size: 11px; color: #94a3b8; text-align: center; padding: 8px 0; }
-
-    /* ── Actions ── */
+    .ls-legend { display: flex; gap: 6px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9; }
+    .leg-item   { font-size: 10px; }
+    .leg-loue   { color: #16a34a; }
+    .leg-attente { color: #d97706; }
+    .leg-vacant  { color: #94a3b8; }
     .rp-actions { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
     .action-group { display: flex; flex-direction: column; gap: 6px; }
     .input-ref { padding: 7px 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12px; width: 100%; }
@@ -548,21 +607,15 @@ export class SuiviVersementsService extends ApiService {
     .export-btns { display: flex; gap: 6px; border-top: 1px solid #f1f5f9; padding-top: 8px; }
     .btn-export { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; cursor: pointer; font-size: 11px; font-weight: 600; color: #475569; transition: background .15s; }
     .btn-export:hover { background: #f1f5f9; }
-
-    /* ── Modal ── */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 1000; display: flex; align-items: center; justify-content: center; }
     .modal { background: #fff; border-radius: 14px; width: 380px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
     .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: #0e1c38; }
     .modal-title  { font-size: 14px; font-weight: 700; color: #fff; }
     .modal-body   { padding: 16px; }
     .modal-info   { font-size: 13px; color: #0e1c38; background: #f8fafc; padding: 10px; border-radius: 8px; }
-
-    /* ── Loading ── */
     .sv-loading { display: flex; align-items: center; gap: 10px; padding: 60px; justify-content: center; color: #64748b; }
     .sv-spinner { width: 20px; height: 20px; border: 2px solid #e2e8f0; border-top-color: #0e1c38; border-radius: 50%; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── Table selected ── */
     .data-table tr.row-selected td { background: #eff6ff !important; }
     .data-table tr { cursor: pointer; }
   `]
@@ -570,11 +623,11 @@ export class SuiviVersementsService extends ApiService {
 export class SuiviVersementsComponent implements OnInit {
   private svc = inject(SuiviVersementsService);
 
-  loading    = true;
-  data:       SuiviVersementsGlobalDto | null = null;
-  filtre      = '';
-  anneeFiltre = new Date().getFullYear().toString();
-  annees      = Array.from({ length: 4 }, (_, i) => (new Date().getFullYear() - i).toString());
+  loading     = true;
+  data:        SuiviVersementsGlobalDto | null = null;
+  filtre       = '';
+  anneeFiltre  = new Date().getFullYear().toString();
+  annees       = Array.from({ length: 4 }, (_, i) => (new Date().getFullYear() - i).toString());
 
   selectedPeriode:       PeriodeVersementDto | null = null;
   selectedProprietaire:  SuiviVersementProprietaireDto | null = null;
@@ -584,7 +637,7 @@ export class SuiviVersementsComponent implements OnInit {
   modalPeriode:      PeriodeVersementDto | null = null;
   modalProprietaire: SuiviVersementProprietaireDto | null = null;
 
-  refPaiement    = '';
+  refPaiement     = '';
   motifDerogation = '';
 
   private openProprietaires = new Set<string>();
@@ -603,7 +656,8 @@ export class SuiviVersementsComponent implements OnInit {
     this.data?.proprietaires.forEach(p => this.openProprietaires.add(p.proprietaireId));
   }
 
-  isOpen(id: string)        { return this.openProprietaires.has(id); }
+  isOpen(id: string) { return this.openProprietaires.has(id); }
+
   toggleProprietaire(id: string) {
     if (this.openProprietaires.has(id)) this.openProprietaires.delete(id);
     else this.openProprietaires.add(id);
@@ -614,6 +668,21 @@ export class SuiviVersementsComponent implements OnInit {
     if (!this.filtre) return this.data.proprietaires;
     return this.data.proprietaires.filter(p =>
       p.proprietes.some(pr => pr.periodes.some(pe => pe.statut === this.filtre))
+    );
+  }
+
+  // FIX 1 : colonne Reporté masquée si aucune période n'a de report
+  aDesReports(pr: SuiviVersementProprieteDto): boolean {
+    return pr.periodes.some(p => p.montantReporte > 0);
+  }
+
+  // FIX 2 : insensible à la casse + trim pour éviter les faux négatifs
+  lignesParStatut(
+    lignes: LigneProduitVersementDto[],
+    statut: string
+  ): LigneProduitVersementDto[] {
+    return lignes.filter(l =>
+      (l.statutProduit ?? '').trim().toLowerCase() === statut.toLowerCase()
     );
   }
 
@@ -629,8 +698,8 @@ export class SuiviVersementsComponent implements OnInit {
     this.selectedPeriode      = periode;
     this.selectedProprietaire = proprietaire;
     this.selectedPropriete    = propriete;
-    this.refPaiement    = '';
-    this.motifDerogation = '';
+    this.refPaiement          = '';
+    this.motifDerogation      = '';
   }
 
   openEnvoi(periode: PeriodeVersementDto, proprietaire: SuiviVersementProprietaireDto) {
@@ -641,7 +710,6 @@ export class SuiviVersementsComponent implements OnInit {
 
   marquerEffectue() {
     if (!this.selectedPeriode || !this.refPaiement) return;
-    // TODO: récupérer versementId depuis backend — pour l'instant placeholder
     alert(`Versement marqué effectué — Réf: ${this.refPaiement}`);
   }
 

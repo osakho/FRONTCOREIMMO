@@ -1,58 +1,56 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { CommonModule, DecimalPipe, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SuiviLoyersService } from '../../core/services/api.services';
 import { SuiviLoyersGlobalDto, RecapFinancierContratDto } from '../../core/models/models';
+import { Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+import { ApiService } from '../../core/services/api.services';
 
+@Injectable({ providedIn: 'root' })
+export class CautionAvanceService extends ApiService {
+  envoyerNotification(contratId: string, canal: string, type: string): Observable<void> {
+    return this.post<void>(`/contrats-location/${contratId}/notifier-locataire`, { canal, type });
+  }
+}
 
-
-// ── Composant ────────────────────────────────────────────────
 @Component({
   selector: 'kdi-suivi-loyers',
   standalone: true,
-  imports: [CommonModule, FormsModule, DecimalPipe, DatePipe],
+  imports: [CommonModule, FormsModule],
   template: `
 <div class="page-enter">
-
-  <!-- Header -->
   <div class="page-header">
     <div>
       <div class="page-title"><span class="mi">payments</span> Suivi des loyers</div>
       <div class="page-subtitle">Situation financière locative en temps réel</div>
     </div>
-    <button class="btn btn-secondary" (click)="load()">
-      <span class="mi">refresh</span> Actualiser
-    </button>
+    <button class="btn btn-secondary" (click)="load()"><span class="mi">refresh</span> Actualiser</button>
   </div>
 
-  <!-- Loading -->
-  <div *ngIf="loading" class="sl-loading">
-    <div class="sl-spinner"></div> Chargement…
-  </div>
+  <div *ngIf="loading" class="sl-loading"><div class="sl-spinner"></div> Chargement…</div>
 
   <ng-container *ngIf="!loading && data">
-
-    <!-- ══ KPIs globaux ══ -->
     <div class="kpi-global">
       <div class="kg-card kg-du">
         <div class="kg-icon">📋</div>
         <div class="kg-body">
           <div class="kg-label">Total dû</div>
-          <div class="kg-val">{{ data.totalDu | number:'1.0-0' }} <span class="kg-unit">MRU</span></div>
+          <div class="kg-val">{{ data.totalDu | number:"1.0-0" }} <span class="kg-unit">MRU</span></div>
         </div>
       </div>
       <div class="kg-card kg-paye">
         <div class="kg-icon">✅</div>
         <div class="kg-body">
           <div class="kg-label">Total encaissé</div>
-          <div class="kg-val">{{ data.totalPaye | number:'1.0-0' }} <span class="kg-unit">MRU</span></div>
+          <div class="kg-val">{{ data.totalPaye | number:"1.0-0" }} <span class="kg-unit">MRU</span></div>
         </div>
       </div>
       <div class="kg-card" [class.kg-solde-neg]="data.totalSolde < 0" [class.kg-solde-pos]="data.totalSolde >= 0">
-        <div class="kg-icon">{{ data.totalSolde >= 0 ? '💚' : '🔴' }}</div>
+        <div class="kg-icon">{{ data.totalSolde >= 0 ? "💚" : "🔴" }}</div>
         <div class="kg-body">
           <div class="kg-label">Solde global</div>
-          <div class="kg-val">{{ data.totalSolde >= 0 ? '+' : '' }}{{ data.totalSolde | number:'1.0-0' }} <span class="kg-unit">MRU</span></div>
+          <div class="kg-val">{{ data.totalSolde >= 0 ? "+" : "" }}{{ data.totalSolde | number:"1.0-0" }} <span class="kg-unit">MRU</span></div>
         </div>
       </div>
       <div class="kg-card kg-stat">
@@ -67,13 +65,8 @@ import { SuiviLoyersGlobalDto, RecapFinancierContratDto } from '../../core/model
       </div>
     </div>
 
-    <!-- ══ Layout liste + panneau ══ -->
     <div class="layout" [class.panel-open]="selected !== null">
-
-      <!-- Liste -->
       <div class="list-pane">
-
-        <!-- Filtres statut loyer -->
         <div class="filter-bar" style="margin-bottom:14px">
           <button class="filter-chip" [class.active]="filtre===''"            (click)="setFiltre('')">Tous ({{ data.contrats.length }})</button>
           <button class="filter-chip" [class.active]="filtre==='AJour'"       (click)="setFiltre('AJour')">✓ À jour ({{ data.nbAJour }})</button>
@@ -81,36 +74,32 @@ import { SuiviLoyersGlobalDto, RecapFinancierContratDto } from '../../core/model
           <button class="filter-chip" [class.active]="filtre==='Credit'"      (click)="setFiltre('Credit')">★ Crédit ({{ data.nbCredit }})</button>
           <button class="filter-chip" [class.active]="filtre==='NonCommence'" (click)="setFiltre('NonCommence')">· En attente ({{ data.nbNonCommence }})</button>
         </div>
-
         <div class="table-card">
           <table class="data-table" *ngIf="contratsFiltres().length; else empty">
             <thead><tr>
-              <th>Bien</th>
-              <th>Locataire</th>
-              <th class="text-right">Loyer</th>
-              <th class="text-right">Dû</th>
-              <th class="text-right">Payé</th>
-              <th class="text-right">Solde</th>
-              <th class="text-center">Statut loyer</th>
-              <th class="text-center">Avancement</th>
+              <th>Bien</th><th>Locataire</th>
+              <th class="text-right">Loyer</th><th class="text-right">Dû</th>
+              <th class="text-right">Payé</th><th class="text-right">Solde</th>
+              <th class="text-center">Statut loyer</th><th class="text-center">Avancement</th>
             </tr></thead>
             <tbody>
               <tr *ngFor="let c of contratsFiltres()"
                   [class.row-selected]="selected?.contratId === c.contratId"
+                  [class.row-caution-ko]="!c.cautionReglee"
                   (click)="selectContrat(c)">
-                <td><span class="num-badge">{{ c.produitCode }}</span></td>
+                <td>
+                  <span class="num-badge">{{ c.produitCode }}</span>
+                  <span class="caution-dot" *ngIf="!c.cautionReglee" title="Caution non réglée">⚠</span>
+                </td>
                 <td>
                   <div class="cell-main">{{ c.locataireNom }}</div>
-                  <div class="cell-sub">Depuis {{ c.dateEntree | date:'MM/yyyy' }}</div>
+                  <div class="cell-sub">Depuis {{ c.dateEntree | date:"MM/yyyy" }}</div>
                 </td>
-                <td class="text-right" style="font-weight:600">
-                  {{ c.loyer | number:'1.0-0' }}
-                  <span style="font-size:.7rem;color:#8a97b0"> MRU</span>
-                </td>
-                <td class="text-right text-muted">{{ c.montantDu | number:'1.0-0' }}</td>
-                <td class="text-right" style="color:#16a34a;font-weight:600">{{ c.montantPaye | number:'1.0-0' }}</td>
-                <td class="text-right" [class.text-danger]="c.solde < 0" [class.text-success]="c.solde >= 0" style="font-weight:700">
-                  {{ c.solde >= 0 ? '+' : '' }}{{ c.solde | number:'1.0-0' }}
+                <td class="text-right" style="font-weight:600">{{ c.loyer | number:"1.0-0" }} <span style="font-size:.7rem;color:#8a97b0">MRU</span></td>
+                <td class="text-right text-muted">{{ c.montantDu | number:"1.0-0" }}</td>
+                <td class="text-right" style="color:#16a34a;font-weight:600">{{ c.montantPaye | number:"1.0-0" }}</td>
+                <td class="text-right" style="font-weight:700" [class.text-danger]="c.solde < 0" [class.text-success]="c.solde >= 0">
+                  {{ c.solde >= 0 ? "+" : "" }}{{ c.solde | number:"1.0-0" }}
                 </td>
                 <td class="text-center">
                   <span class="badge"
@@ -118,9 +107,9 @@ import { SuiviLoyersGlobalDto, RecapFinancierContratDto } from '../../core/model
                     [class.badge-blue]="c.statutLoyer==='Credit'"
                     [class.badge-red]="c.statutLoyer==='EnRetard'"
                     [class.badge-gray]="c.statutLoyer==='NonCommence'">
-                    {{ c.statutLoyer === 'AJour'       ? '✓ À jour'    :
-                       c.statutLoyer === 'Credit'      ? '★ Crédit'    :
-                       c.statutLoyer === 'EnRetard'    ? '✗ Retard'    : '· Attente' }}
+                    {{ c.statutLoyer === "AJour"    ? "✓ À jour" :
+                       c.statutLoyer === "Credit"   ? "★ Crédit" :
+                       c.statutLoyer === "EnRetard" ? "✗ Retard" : "· Attente" }}
                   </span>
                 </td>
                 <td class="text-center">
@@ -129,8 +118,7 @@ import { SuiviLoyersGlobalDto, RecapFinancierContratDto } from '../../core/model
                       <div class="progress-fill"
                            [style.width.%]="c.moisDepuisEntree > 0 ? (c.moisPayes / c.moisDepuisEntree * 100) : 0"
                            [class.fill-ok]="c.statutLoyer==='AJour' || c.statutLoyer==='Credit'"
-                           [class.fill-ko]="c.statutLoyer==='EnRetard'">
-                      </div>
+                           [class.fill-ko]="c.statutLoyer==='EnRetard'"></div>
                     </div>
                     <span class="progress-label">{{ c.moisPayes }}/{{ c.moisDepuisEntree }}</span>
                   </div>
@@ -147,12 +135,11 @@ import { SuiviLoyersGlobalDto, RecapFinancierContratDto } from '../../core/model
         </div>
       </div>
 
-      <!-- ══ Panneau détail ══ -->
+      <!-- Panneau détail -->
       <div class="recap-pane" *ngIf="selected">
-
         <div class="rp-header">
           <div class="rp-title-block">
-            <div class="rp-avatar">{{ selected.locataireNom[0] || '?' }}</div>
+            <div class="rp-avatar">{{ selected.locataireNom[0] || "?" }}</div>
             <div>
               <div class="rp-nom">{{ selected.locataireNom }}</div>
               <div class="rp-code">{{ selected.produitCode }}</div>
@@ -161,20 +148,19 @@ import { SuiviLoyersGlobalDto, RecapFinancierContratDto } from '../../core/model
           <button class="rp-close" (click)="selected = null">✕</button>
         </div>
 
-        <!-- Statut loyer -->
         <div class="statut-loyer" [ngClass]="'sl-' + selected.statutLoyer.toLowerCase()">
           <div class="sl-icon">
-            {{ selected.statutLoyer === 'AJour'    ? '✅' :
-               selected.statutLoyer === 'Credit'   ? '💚' :
-               selected.statutLoyer === 'EnRetard' ? '🔴' : '⏳' }}
+            {{ selected.statutLoyer === "AJour"    ? "✅" :
+               selected.statutLoyer === "Credit"   ? "💚" :
+               selected.statutLoyer === "EnRetard" ? "🔴" : "⏳" }}
           </div>
           <div>
             <div class="sl-label">{{ selected.statutLoyerLabel }}</div>
             <div class="sl-detail" *ngIf="selected.moisEnRetard > 0">
-              {{ selected.moisEnRetard }} mois impayé(s) · {{ selected.montantDu - selected.montantPaye | number:'1.0-0' }} MRU dus
+              {{ selected.moisEnRetard }} mois impayé(s) · {{ selected.montantDu - selected.montantPaye | number:"1.0-0" }} MRU dus
             </div>
             <div class="sl-detail" *ngIf="selected.moisEnAvance > 0">
-              {{ selected.moisEnAvance }} mois d'avance · crédit {{ selected.solde | number:'1.0-0' }} MRU
+              {{ selected.moisEnAvance }} mois d'avance · crédit {{ selected.solde | number:"1.0-0" }} MRU
             </div>
             <div class="sl-detail" *ngIf="selected.statutLoyer === 'AJour' && selected.moisEnAvance === 0">
               Tous les loyers sont à jour
@@ -182,19 +168,87 @@ import { SuiviLoyersGlobalDto, RecapFinancierContratDto } from '../../core/model
           </div>
         </div>
 
-        <!-- KPIs -->
+        <!-- RELANCE LOYER EN RETARD -->
+        <div class="relance-section" *ngIf="selected.statutLoyer === 'EnRetard'">
+          <div class="relance-header">
+            <span class="relance-icon">🔔</span>
+            <div>
+              <div class="relance-title">Relancer le locataire</div>
+              <div class="relance-detail">
+                {{ selected.moisEnRetard }} mois impayé(s) · {{ selected.montantDu - selected.montantPaye | number:"1.0-0" }} MRU dus
+              </div>
+            </div>
+          </div>
+          <select class="select-notif" [(ngModel)]="messageRelance" style="margin-bottom:7px">
+            <option value="relance_simple">Relance simple</option>
+            <option value="relance_urgente">Relance urgente (2+ mois)</option>
+            <option value="mise_en_demeure">Mise en demeure</option>
+          </select>
+          <div class="notif-btns">
+            <button class="btn btn-envoi btn-email"    (click)="relancerLocataire('email')">📧 Email</button>
+            <button class="btn btn-envoi btn-whatsapp" (click)="relancerLocataire('whatsapp')">💬 WhatsApp</button>
+            <button class="btn btn-envoi btn-sms"      (click)="relancerLocataire('sms')">📱 SMS</button>
+          </div>
+          <div class="notif-confirm" *ngIf="relanceConfirm">✅ {{ relanceConfirm }}</div>
+        </div>
+
+        <!-- CAUTION & AVANCE (informatif) -->
+        <div class="ca-section">
+          <div class="ca-title">Caution & Avance</div>
+          <div class="ca-block" [class.ca-ok]="selected.cautionReglee" [class.ca-ko]="!selected.cautionReglee">
+            <div class="ca-header">
+              <div class="ca-icon">🔒</div>
+              <div class="ca-info">
+                <div class="ca-label">Caution</div>
+                <div class="ca-montant">{{ selected.caution | number:"1.0-0" }} MRU</div>
+              </div>
+              <span class="badge" [class.badge-green]="selected.cautionReglee" [class.badge-red]="!selected.cautionReglee">
+                {{ selected.cautionReglee ? "✅ Réglée" : "❌ Non réglée" }}
+              </span>
+            </div>
+            <div class="ca-note ca-note-agence">🏦 Conservée par l'agence · restituée à la sortie</div>
+          </div>
+          <div class="ca-block ca-block-mt" [class.ca-ok]="selected.avanceLoyerReglee" [class.ca-ko]="!selected.avanceLoyerReglee">
+            <div class="ca-header">
+              <div class="ca-icon">💵</div>
+              <div class="ca-info">
+                <div class="ca-label">Avance loyer</div>
+                <div class="ca-montant">{{ selected.avanceLoyer | number:"1.0-0" }} MRU</div>
+              </div>
+              <span class="badge" [class.badge-green]="selected.avanceLoyerReglee" [class.badge-red]="!selected.avanceLoyerReglee">
+                {{ selected.avanceLoyerReglee ? "✅ Réglée" : "❌ Non réglée" }}
+              </span>
+            </div>
+            <div class="ca-note ca-note-proprio">👤 Affectée au propriétaire comme 1er mois</div>
+          </div>
+          <div class="notif-section">
+            <div class="notif-title">Notifier le locataire — Caution/Avance</div>
+            <select class="select-notif" [(ngModel)]="typeNotif" style="margin-bottom:7px">
+              <option value="caution_avance">Caution + Avance</option>
+              <option value="caution">Caution uniquement</option>
+              <option value="avance">Avance uniquement</option>
+            </select>
+            <div class="notif-btns">
+              <button class="btn btn-envoi btn-email"    (click)="notifier('email')">📧 Email</button>
+              <button class="btn btn-envoi btn-whatsapp" (click)="notifier('whatsapp')">💬 WhatsApp</button>
+              <button class="btn btn-envoi btn-sms"      (click)="notifier('sms')">📱 SMS</button>
+            </div>
+            <div class="notif-confirm" *ngIf="notifConfirm">✅ {{ notifConfirm }}</div>
+          </div>
+        </div>
+
         <div class="kpi-row">
           <div class="kpi" [class.kpi-ok]="selected.cautionReglee" [class.kpi-ko]="!selected.cautionReglee">
             <div class="kpi-icon">🔒</div>
             <div class="kpi-label">Caution</div>
-            <div class="kpi-val">{{ selected.caution | number:'1.0-0' }}</div>
-            <div class="kpi-status">{{ selected.cautionReglee ? '✅ Réglée' : '❌ Non réglée' }}</div>
+            <div class="kpi-val">{{ selected.caution | number:"1.0-0" }}</div>
+            <div class="kpi-status">{{ selected.cautionReglee ? "✅ Réglée" : "❌ Non réglée" }}</div>
           </div>
           <div class="kpi" [class.kpi-ok]="selected.avanceLoyerReglee" [class.kpi-ko]="!selected.avanceLoyerReglee">
             <div class="kpi-icon">💵</div>
             <div class="kpi-label">Avance</div>
-            <div class="kpi-val">{{ selected.avanceLoyer | number:'1.0-0' }}</div>
-            <div class="kpi-status">{{ selected.avanceLoyerReglee ? '✅ Réglée' : '❌ Non réglée' }}</div>
+            <div class="kpi-val">{{ selected.avanceLoyer | number:"1.0-0" }}</div>
+            <div class="kpi-status">{{ selected.avanceLoyerReglee ? "✅ Réglée" : "❌ Non réglée" }}</div>
           </div>
           <div class="kpi">
             <div class="kpi-icon">📅</div>
@@ -204,41 +258,35 @@ import { SuiviLoyersGlobalDto, RecapFinancierContratDto } from '../../core/model
           </div>
         </div>
 
-        <!-- Solde -->
         <div class="solde-row">
           <div class="solde-item">
             <span class="si-label">Total dû</span>
-            <span class="si-val">{{ selected.montantDu | number:'1.0-0' }} MRU</span>
+            <span class="si-val">{{ selected.montantDu | number:"1.0-0" }} MRU</span>
           </div>
           <div class="solde-item">
             <span class="si-label">Total payé</span>
-            <span class="si-val si-ok">{{ selected.montantPaye | number:'1.0-0' }} MRU</span>
+            <span class="si-val si-ok">{{ selected.montantPaye | number:"1.0-0" }} MRU</span>
           </div>
-          <div class="solde-item"
-               [class.solde-positif]="selected.solde >= 0"
-               [class.solde-negatif]="selected.solde < 0">
+          <div class="solde-item" [class.solde-positif]="selected.solde >= 0" [class.solde-negatif]="selected.solde < 0">
             <span class="si-label">Solde</span>
-            <span class="si-val">{{ selected.solde >= 0 ? '+' : '' }}{{ selected.solde | number:'1.0-0' }} MRU</span>
+            <span class="si-val">{{ selected.solde >= 0 ? "+" : "" }}{{ selected.solde | number:"1.0-0" }} MRU</span>
           </div>
         </div>
 
-        <!-- Calendrier mensuel -->
         <div class="mois-section">
           <div class="mois-title">Historique des loyers</div>
           <div class="mois-grid">
             <div class="mois-cell" *ngFor="let m of selected.mois"
                  [ngClass]="'mc-' + m.statut.toLowerCase()"
-                 [title]="m.label + ' : ' + (m.montantPaye | number:'1.0-0') + ' / ' + (m.montant | number:'1.0-0') + ' MRU'">
+                 [title]="m.label">
               <div class="mc-label">{{ m.label }}</div>
               <div class="mc-icon">
-                {{ m.statut === 'Paye'    ? '✓' :
-                   m.statut === 'Partiel' ? '½' :
-                   m.statut === 'Impaye'  ? '✗' :
-                   m.statut === 'Avance'  ? '★' : '·' }}
+                {{ m.statut === "Paye"    ? "✓" :
+                   m.statut === "Partiel" ? "½" :
+                   m.statut === "Impaye"  ? "✗" :
+                   m.statut === "Avance"  ? "★" : "·" }}
               </div>
-              <div class="mc-montant" *ngIf="m.statut !== 'Futur'">
-                {{ m.montantPaye | number:'1.0-0' }}
-              </div>
+              <div class="mc-montant" *ngIf="m.statut !== 'Futur'">{{ m.montantPaye | number:"1.0-0" }}</div>
             </div>
           </div>
           <div class="mois-legend">
@@ -250,10 +298,8 @@ import { SuiviLoyersGlobalDto, RecapFinancierContratDto } from '../../core/model
           </div>
         </div>
 
-        <!-- Dernier paiement -->
         <div class="last-payment" *ngIf="selected.dernierPaiement">
-          <span>🕐</span>
-          Dernier paiement : <strong>{{ selected.dernierPaiement | date:'dd/MM/yyyy' }}</strong>
+          <span>🕐</span> Dernier paiement : <strong>{{ selected.dernierPaiement | date:"dd/MM/yyyy" }}</strong>
         </div>
 
         <div class="rp-actions">
@@ -261,117 +307,122 @@ import { SuiviLoyersGlobalDto, RecapFinancierContratDto } from '../../core/model
             💰 Saisir un loyer
           </a>
         </div>
-
       </div>
     </div>
-
   </ng-container>
 </div>
   `,
   styles: [`
-    .kpi-global { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
-    .kg-card { background: #fff; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 10px rgba(14,28,56,.07); border: 1px solid #e8edf5; }
-    .kg-icon { font-size: 24px; flex-shrink: 0; }
-    .kg-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
-    .kg-val { font-size: 20px; font-weight: 800; color: #0e1c38; }
-    .kg-unit { font-size: 11px; font-weight: 400; color: #94a3b8; }
-    .kg-du { border-top: 3px solid #e2e8f0; }
-    .kg-paye { border-top: 3px solid #16a34a; }
-    .kg-solde-pos { border-top: 3px solid #16a34a; }
-    .kg-solde-neg { border-top: 3px solid #dc2626; }
-    .kg-stat { flex-direction: column; align-items: flex-start; gap: 0; }
-    .kg-stat-row { display: flex; gap: 6px; }
-    .kg-pill { font-size: 11px; padding: 3px 10px; border-radius: 20px; display: flex; gap: 5px; align-items: center; }
-    .kg-pill strong { font-weight: 800; }
-    .kg-pill-green { background: #d1fae5; color: #065f46; }
-    .kg-pill-red   { background: #fee2e2; color: #991b1b; }
-    .kg-pill-blue  { background: #dbeafe; color: #1e40af; }
-    .kg-pill-gray  { background: #f1f5f9; color: #64748b; }
-    .layout { display: grid; grid-template-columns: 1fr; gap: 20px; }
-    .layout.panel-open { grid-template-columns: 1fr 360px; align-items: start; }
-    .progress-wrap { display: flex; align-items: center; gap: 6px; min-width: 80px; }
-    .progress-bar { flex: 1; height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
-    .progress-fill { height: 100%; border-radius: 3px; transition: width .3s; }
-    .fill-ok { background: #16a34a; }
-    .fill-ko { background: #dc2626; }
-    .progress-label { font-size: 10px; color: #64748b; white-space: nowrap; }
-    .text-danger { color: #dc2626; }
-    .text-success { color: #16a34a; }
-    .cell-sub { font-size: .7rem; color: #8a97b0; margin-top: 1px; }
-    .badge-blue { background: #dbeafe; color: #1e40af; }
-    .recap-pane { background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 24px rgba(14,28,56,.12); position: sticky; top: 20px; max-height: calc(100vh - 60px); overflow-y: auto; }
-    .recap-pane::-webkit-scrollbar { width: 3px; }
-    .recap-pane::-webkit-scrollbar-thumb { background: #e2e8f0; }
-    .rp-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: #0e1c38; }
-    .rp-title-block { display: flex; align-items: center; gap: 10px; }
-    .rp-avatar { width: 36px; height: 36px; background: #c9a96e; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: #0e1c38; flex-shrink: 0; }
-    .rp-nom { font-size: 13px; font-weight: 700; color: #fff; }
-    .rp-code { font-size: 11px; color: rgba(255,255,255,.5); font-family: monospace; margin-top: 2px; }
-    .rp-close { background: rgba(255,255,255,.12); border: none; color: #fff; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; }
-    .rp-close:hover { background: rgba(255,255,255,.2); }
-    .statut-loyer { display: flex; align-items: flex-start; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #f1f5f9; }
-    .sl-ajour       { background: #f0fdf4; } .sl-credit      { background: #ecfdf5; }
-    .sl-enretard    { background: #fef2f2; } .sl-noncommence { background: #f8fafc; }
-    .sl-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
-    .sl-label { font-size: 13px; font-weight: 700; color: #0e1c38; }
-    .sl-detail { font-size: 11px; color: #64748b; margin-top: 3px; }
-    .kpi-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; padding: 10px 14px; border-bottom: 1px solid #f1f5f9; }
-    .kpi { background: #f8fafc; border-radius: 8px; padding: 9px 5px; text-align: center; border: 1px solid #e2e8f0; }
-    .kpi-ok { border-color: #86efac !important; background: #f0fdf4; } .kpi-ko { border-color: #fca5a5 !important; background: #fef2f2; }
-    .kpi-icon { font-size: 15px; margin-bottom: 2px; } .kpi-label { font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: .5px; }
-    .kpi-val { font-size: 12px; font-weight: 700; color: #0e1c38; margin: 2px 0; } .kpi-status { font-size: 9px; color: #64748b; }
-    .solde-row { display: grid; grid-template-columns: 1fr 1fr 1fr; background: #f1f5f9; gap: 1px; border-bottom: 1px solid #f1f5f9; }
-    .solde-item { background: #fff; padding: 9px 10px; text-align: center; }
-    .si-label { display: block; font-size: 9px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; }
-    .si-val { font-size: 11px; font-weight: 700; color: #0e1c38; } .si-ok { color: #16a34a; }
-    .solde-positif .si-val { color: #16a34a; } .solde-negatif .si-val { color: #dc2626; }
-    .mois-section { padding: 11px 14px; border-bottom: 1px solid #f1f5f9; }
-    .mois-title { font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px; }
-    .mois-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; }
-    .mois-cell { text-align: center; padding: 4px 2px; border-radius: 5px; }
-    .mc-paye { background: #d1fae5; } .mc-partiel { background: #fef3c7; } .mc-impaye { background: #fee2e2; } .mc-avance { background: #dbeafe; } .mc-futur { background: #f1f5f9; opacity: .6; }
-    .mc-label { font-size: 7px; color: #64748b; font-weight: 600; text-transform: uppercase; }
-    .mc-icon { font-size: 10px; margin: 1px 0; }
-    .mc-paye .mc-icon { color: #16a34a; } .mc-partiel .mc-icon { color: #d97706; } .mc-impaye .mc-icon { color: #dc2626; } .mc-avance .mc-icon { color: #2563eb; }
-    .mc-montant { font-size: 7px; color: #64748b; }
-    .mois-legend { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
-    .leg { font-size: 9px; color: #64748b; display: flex; align-items: center; gap: 3px; }
-    .leg::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 2px; }
-    .leg-paye::before { background: #d1fae5; } .leg-partiel::before { background: #fef3c7; } .leg-impaye::before { background: #fee2e2; } .leg-avance::before { background: #dbeafe; } .leg-futur::before { background: #f1f5f9; }
-    .last-payment { padding: 9px 14px; font-size: 11px; color: #64748b; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 6px; }
-    .rp-actions { padding: 12px 14px; }
-    .btn-full { width: 100%; justify-content: center; display: flex; }
-    .data-table tr.row-selected td { background: #eff6ff !important; }
-    .data-table tr.row-selected td:first-child { border-left: 3px solid #3b82f6; }
-    .data-table tr { cursor: pointer; }
-    .num-badge { font-family: monospace; background: var(--surf2); padding: 3px 8px; border-radius: 6px; font-size: .78rem; color: var(--navy); font-weight: 700; }
-    .sl-loading { display: flex; align-items: center; gap: 10px; padding: 60px; justify-content: center; color: #64748b; }
-    .sl-spinner { width: 20px; height: 20px; border: 2px solid #e2e8f0; border-top-color: #0e1c38; border-radius: 50%; animation: spin .7s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .kpi-global{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+    .kg-card{background:#fff;border-radius:12px;padding:16px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 10px rgba(14,28,56,.07);border:1px solid #e8edf5}
+    .kg-icon{font-size:24px;flex-shrink:0}.kg-label{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+    .kg-val{font-size:20px;font-weight:800;color:#0e1c38}.kg-unit{font-size:11px;font-weight:400;color:#94a3b8}
+    .kg-du{border-top:3px solid #e2e8f0}.kg-paye{border-top:3px solid #16a34a}.kg-solde-pos{border-top:3px solid #16a34a}.kg-solde-neg{border-top:3px solid #dc2626}
+    .kg-stat{flex-direction:column;align-items:flex-start;gap:0}.kg-stat-row{display:flex;gap:6px}
+    .kg-pill{font-size:11px;padding:3px 10px;border-radius:20px;display:flex;gap:5px;align-items:center}.kg-pill strong{font-weight:800}
+    .kg-pill-green{background:#d1fae5;color:#065f46}.kg-pill-red{background:#fee2e2;color:#991b1b}
+    .kg-pill-blue{background:#dbeafe;color:#1e40af}.kg-pill-gray{background:#f1f5f9;color:#64748b}
+    .layout{display:grid;grid-template-columns:1fr;gap:20px}.layout.panel-open{grid-template-columns:1fr 360px;align-items:start}
+    .progress-wrap{display:flex;align-items:center;gap:6px;min-width:80px}
+    .progress-bar{flex:1;height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden}
+    .progress-fill{height:100%;border-radius:3px;transition:width .3s}.fill-ok{background:#16a34a}.fill-ko{background:#dc2626}
+    .progress-label{font-size:10px;color:#64748b;white-space:nowrap}
+    .text-danger{color:#dc2626}.text-success{color:#16a34a}.cell-sub{font-size:.7rem;color:#8a97b0;margin-top:1px}
+    .caution-dot{font-size:10px;color:#f97316;margin-left:4px}.row-caution-ko td{background:#fffbf0!important}
+    .recap-pane{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 24px rgba(14,28,56,.12);position:sticky;top:20px;max-height:calc(100vh - 60px);overflow-y:auto}
+    .recap-pane::-webkit-scrollbar{width:3px}.recap-pane::-webkit-scrollbar-thumb{background:#e2e8f0}
+    .rp-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#0e1c38}
+    .rp-title-block{display:flex;align-items:center;gap:10px}
+    .rp-avatar{width:36px;height:36px;background:#c9a96e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#0e1c38;flex-shrink:0}
+    .rp-nom{font-size:13px;font-weight:700;color:#fff}.rp-code{font-size:11px;color:rgba(255,255,255,.5);font-family:monospace;margin-top:2px}
+    .rp-close{background:rgba(255,255,255,.12);border:none;color:#fff;width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}
+    .rp-close:hover{background:rgba(255,255,255,.2)}
+    .statut-loyer{display:flex;align-items:flex-start;gap:10px;padding:13px 16px;border-bottom:1px solid #f1f5f9}
+    .sl-ajour{background:#f0fdf4}.sl-credit{background:#ecfdf5}.sl-enretard{background:#fef2f2}.sl-noncommence{background:#f8fafc}
+    .sl-icon{font-size:20px;flex-shrink:0;margin-top:2px}.sl-label{font-size:13px;font-weight:700;color:#0e1c38}.sl-detail{font-size:11px;color:#64748b;margin-top:3px}
+    .relance-section{padding:12px 14px;border-bottom:1px solid #f1f5f9;background:#fff8f8}
+    .relance-header{display:flex;align-items:flex-start;gap:8px;margin-bottom:10px}
+    .relance-icon{font-size:18px;flex-shrink:0}.relance-title{font-size:12px;font-weight:700;color:#991b1b}.relance-detail{font-size:11px;color:#b91c1c;margin-top:2px}
+    .ca-section{padding:12px 14px;border-bottom:1px solid #f1f5f9}
+    .ca-title{font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+    .ca-block{border-radius:10px;padding:10px 12px;border:1px solid #e2e8f0;background:#f8fafc}.ca-block-mt{margin-top:8px}
+    .ca-ok{border-color:#86efac!important;background:#f0fdf4!important}.ca-ko{border-color:#fca5a5!important;background:#fef2f2!important}
+    .ca-header{display:flex;align-items:center;gap:8px}.ca-icon{font-size:18px;flex-shrink:0}.ca-info{flex:1}
+    .ca-label{font-size:11px;font-weight:600;color:#0e1c38}.ca-montant{font-size:14px;font-weight:800;color:#0e1c38}
+    .ca-note{font-size:10px;margin-top:5px;padding:3px 7px;border-radius:5px}
+    .ca-note-agence{background:#eff6ff;color:#1e40af}.ca-note-proprio{background:#f0fdf4;color:#065f46}
+    .notif-section{margin-top:10px;background:#f8fafc;border-radius:10px;padding:10px 12px;border:1px solid #e2e8f0}
+    .notif-title{font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+    .notif-btns{display:flex;gap:5px}
+    .select-notif{width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#fff;color:#0e1c38;cursor:pointer}
+    .btn-envoi{flex:1;padding:7px 4px;border-radius:8px;border:none;cursor:pointer;font-size:11px;font-weight:600;transition:opacity .15s}
+    .btn-envoi:hover{opacity:.85}.btn-email{background:#dbeafe;color:#1e40af}.btn-whatsapp{background:#d1fae5;color:#065f46}.btn-sms{background:#fef3c7;color:#92400e}
+    .notif-confirm{font-size:11px;color:#16a34a;margin-top:6px;text-align:center}
+    .kpi-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;padding:10px 14px;border-bottom:1px solid #f1f5f9}
+    .kpi{background:#f8fafc;border-radius:8px;padding:9px 5px;text-align:center;border:1px solid #e2e8f0}
+    .kpi-ok{border-color:#86efac!important;background:#f0fdf4}.kpi-ko{border-color:#fca5a5!important;background:#fef2f2}
+    .kpi-icon{font-size:15px;margin-bottom:2px}.kpi-label{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.5px}
+    .kpi-val{font-size:12px;font-weight:700;color:#0e1c38;margin:2px 0}.kpi-status{font-size:9px;color:#64748b}
+    .solde-row{display:grid;grid-template-columns:1fr 1fr 1fr;background:#f1f5f9;gap:1px;border-bottom:1px solid #f1f5f9}
+    .solde-item{background:#fff;padding:9px 10px;text-align:center}
+    .si-label{display:block;font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+    .si-val{font-size:11px;font-weight:700;color:#0e1c38}.si-ok{color:#16a34a}
+    .solde-positif .si-val{color:#16a34a}.solde-negatif .si-val{color:#dc2626}
+    .mois-section{padding:11px 14px;border-bottom:1px solid #f1f5f9}
+    .mois-title{font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+    .mois-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
+    .mois-cell{text-align:center;padding:4px 2px;border-radius:5px}
+    .mc-paye{background:#d1fae5}.mc-partiel{background:#fef3c7}.mc-impaye{background:#fee2e2}.mc-avance{background:#dbeafe}.mc-futur{background:#f1f5f9;opacity:.6}
+    .mc-label{font-size:7px;color:#64748b;font-weight:600;text-transform:uppercase}.mc-icon{font-size:10px;margin:1px 0}
+    .mc-paye .mc-icon{color:#16a34a}.mc-partiel .mc-icon{color:#d97706}.mc-impaye .mc-icon{color:#dc2626}.mc-avance .mc-icon{color:#2563eb}
+    .mc-montant{font-size:7px;color:#64748b}
+    .mois-legend{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+    .leg{font-size:9px;color:#64748b;display:flex;align-items:center;gap:3px}
+    .leg::before{content:\'\';display:inline-block;width:7px;height:7px;border-radius:2px}
+    .leg-paye::before{background:#d1fae5}.leg-partiel::before{background:#fef3c7}.leg-impaye::before{background:#fee2e2}.leg-avance::before{background:#dbeafe}.leg-futur::before{background:#f1f5f9}
+    .last-payment{padding:9px 14px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:6px}
+    .rp-actions{padding:12px 14px}
+    .btn-full{width:100%;justify-content:center;display:flex}
+    .data-table tr.row-selected td{background:#eff6ff!important}.data-table tr.row-selected td:first-child{border-left:3px solid #3b82f6}
+    .data-table tr{cursor:pointer}
+    .num-badge{font-family:monospace;background:var(--surf2);padding:3px 8px;border-radius:6px;font-size:.78rem;color:var(--navy);font-weight:700}
+    .sl-loading{display:flex;align-items:center;gap:10px;padding:60px;justify-content:center;color:#64748b}
+    .sl-spinner{width:20px;height:20px;border:2px solid #e2e8f0;border-top-color:#0e1c38;border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
   `]
 })
 export class SuiviLoyersComponent implements OnInit {
-  private svc = inject(SuiviLoyersService);
+  private svc   = inject(SuiviLoyersService);
+  private caSvc = inject(CautionAvanceService);
 
-  loading = true;
-  data: SuiviLoyersGlobalDto | null = null;
-  filtre = '';
+  loading  = true;
+  data:     SuiviLoyersGlobalDto | null = null;
+  filtre   = '';
   selected: RecapFinancierContratDto | null = null;
 
-  ngOnInit() { this.load(); }
+  typeNotif:      string = 'caution_avance';
+  notifConfirm    = '';
+  messageRelance  = 'relance_simple';
+  relanceEnCours  = false;
+  relanceConfirm  = '';
 
-  load() {
+  ngOnInit(): void { this.load(); }
+
+  load(): void {
     this.loading = true;
     this.svc.getSuivi().subscribe({
-      next:  d => { this.data = d; this.loading = false; },
+      next:  d  => { this.data = d; this.loading = false; },
       error: () => { this.data = this.buildFallback(); this.loading = false; }
     });
   }
 
-  setFiltre(f: string) { this.filtre = f; this.selected = null; }
+  setFiltre(f: string): void { this.filtre = f; this.selected = null; }
 
-  selectContrat(c: RecapFinancierContratDto) {
-    this.selected = this.selected?.contratId === c.contratId ? null : c;
+  selectContrat(c: RecapFinancierContratDto): void {
+    this.selected       = this.selected?.contratId === c.contratId ? null : c;
+    this.notifConfirm   = '';
+    this.relanceConfirm = '';
+    this.relanceEnCours = false;
   }
 
   contratsFiltres(): RecapFinancierContratDto[] {
@@ -380,11 +431,39 @@ export class SuiviLoyersComponent implements OnInit {
     return this.data.contrats.filter(c => c.statutLoyer === this.filtre);
   }
 
+  notifier(canal: string): void {
+    if (!this.selected) return;
+    this.notifConfirm = '';
+    const id = this.selected.contratId;
+    this.caSvc.envoyerNotification(id, canal, this.typeNotif).subscribe({
+      next: () => {
+        const labels: Record<string, string> = { email: 'email', whatsapp: 'WhatsApp', sms: 'SMS' };
+        const types: Record<string, string>  = { caution_avance: 'Caution & Avance', caution: 'Caution', avance: 'Avance' };
+        this.notifConfirm = (types[this.typeNotif] ?? this.typeNotif) + ' envoyée par ' + (labels[canal] ?? canal);
+        setTimeout(() => { this.notifConfirm = ''; }, 4000);
+      },
+      error: () => alert('Erreur lors de l\'envoi')
+    });
+  }
+
+  relancerLocataire(canal: string): void {
+    if (!this.selected || this.relanceEnCours) return;
+    this.relanceEnCours = true;
+    this.relanceConfirm = '';
+    const id = this.selected.contratId;
+    this.caSvc.envoyerNotification(id, canal, this.messageRelance).subscribe({
+      next: () => {
+        const labels: Record<string, string> = { email: 'email', whatsapp: 'WhatsApp', sms: 'SMS' };
+        const msgs: Record<string, string>   = { relance_simple: 'Relance simple', relance_urgente: 'Relance urgente', mise_en_demeure: 'Mise en demeure' };
+        this.relanceConfirm = (msgs[this.messageRelance] ?? this.messageRelance) + ' envoyée par ' + (labels[canal] ?? canal);
+        this.relanceEnCours = false;
+        setTimeout(() => { this.relanceConfirm = ''; }, 4000);
+      },
+      error: () => { this.relanceEnCours = false; alert('Erreur lors de l\'envoi'); }
+    });
+  }
+
   private buildFallback(): SuiviLoyersGlobalDto {
-    return {
-      totalDu: 0, totalPaye: 0, totalSolde: 0,
-      nbAJour: 0, nbEnRetard: 0, nbCredit: 0, nbNonCommence: 0,
-      contrats: []
-    };
+    return { totalDu: 0, totalPaye: 0, totalSolde: 0, nbAJour: 0, nbEnRetard: 0, nbCredit: 0, nbNonCommence: 0, contrats: [] };
   }
 }
