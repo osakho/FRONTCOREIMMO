@@ -33,14 +33,9 @@ export const routes: Routes = [
       { path: 'produits/:id',    loadComponent: () => import('./features/produits/detail/produit-detail.component').then(m => m.ProduitDetailComponent) },
 
       // Contrats de gestion
-      // { path: 'contrats-gestion',         loadComponent: () => import('./features/contrats-gestion/list/contrats-gestion-list.component').then(m => m.ContratsGestionListComponent), canActivate: [directionGuard] },
-      // { path: 'contrats-gestion/nouveau', loadComponent: () => import('./features/contrats-gestion/form/contrat-gestion-form.component').then(m => m.ContratGestionFormComponent), canActivate: [directionGuard] },
-      // { path: 'contrats-gestion/nouveau', redirectTo: '/contrats-gestion', pathMatch: 'full' },
       { path: 'contrats-gestion',         loadComponent: () => import('./features/contrats-gestion/list/contrats-gestion-list.component').then(m => m.ContratsGestionListComponent) },
       { path: 'contrats-gestion/nouveau', redirectTo: '/contrats-gestion', pathMatch: 'full' },  // ← AJOUTER
-// { path: 'contrats-gestion/:id',     loadComponent: () => import('./features/contrats-gestion/detail/...').then(... },
-
-      
+     
       // Locataires
       { path: 'locataires',         loadComponent: () => import('./features/locataires/list/locataires-list.component').then(m => m.LocatairesListComponent) },
       { path: 'locataires/nouveau', loadComponent: () => import('./features/locataires/form/locataire-form.component').then(m => m.LocataireFormComponent) },
@@ -49,7 +44,6 @@ export const routes: Routes = [
 
       // Contrats de location (bail)
       { path: 'contrats-location',         loadComponent: () => import('./features/contrats-location/list/contrats-location-list.component').then(m => m.ContratsLocationListComponent) },
-      // { path: 'contrats-location/nouveau', loadComponent: () => import('./features/contrats-location/form/contrat-location-form.component').then(m => m.ContratLocationFormComponent) },
       { path: 'contrats-location/nouveau', redirectTo: '/contrats-location', pathMatch: 'full' },
       { path: 'contrats-location/:id',     loadComponent: () => import('./features/contrats-location/detail/contrat-location-detail.component').then(m => m.ContratLocationDetailComponent) },
       
@@ -85,6 +79,7 @@ export const routes: Routes = [
       },
       { path: 'suivi-loyers', loadComponent: () => import('./features/suivi-loyers/suivi-loyers.component').then(m => m.SuiviLoyersComponent) },
       { path: 'suivi-collecteur', loadComponent: () => import('./features/suivi-collecteur/suivi-collecteur.component').then(m => m.SuiviCollecteurComponent) },
+      { path: 'charges-proprietaire', loadComponent: () => import('./features/charges-proprietaire/charges-proprietaire.component').then(m => m.ChargesProprietaireComponent)}
     ]
   },
 

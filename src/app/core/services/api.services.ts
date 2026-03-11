@@ -16,16 +16,16 @@ import {
   LoginRequest, LoginResponse,
   DashboardProprietairesResult,
   DossierRecouvrementDto, EtapeRecouvrement,
-   MoisLoyerDto,
+  MoisLoyerDto,
   RecapFinancierContratDto,
   SuiviLoyersGlobalDto,
   FeuilleRecouvrementDto,
-  LigneRecouvrementDto     
+  LigneRecouvrementDto
 } from '../models/models';
 import { environment } from '../../../environments/environment';
 
 
-// ── Base Service ─────────────────────────────────────────────
+// =====================================================================================================================================================
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   protected http = inject(HttpClient);
@@ -67,9 +67,9 @@ export class ApiService {
   }
 }
 
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 //  AUTH SERVICE
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 @Injectable({ providedIn: 'root' })
 export class AuthService extends ApiService {
   login(req: LoginRequest): Observable<LoginResponse> {
@@ -91,13 +91,11 @@ export class AuthService extends ApiService {
     catch { return null; }
   }
 
-  isLoggedIn(): boolean  { return !!this.getToken(); }
-
-  // ── Rôles — Pdg hérite de tous les droits Direction ──────────
-  isPdg(): boolean       { return this.getUser()?.role === 'Pdg'; }
-  isDirection(): boolean { return ['Direction', 'Admin', 'Pdg'].includes(this.getUser()?.role ?? ''); }
-  isComptable(): boolean { return ['Comptable', 'Direction', 'Admin', 'Pdg'].includes(this.getUser()?.role ?? ''); }
-  isCollecteur(): boolean{ return this.getUser()?.role === 'Collecteur'; }
+  isLoggedIn(): boolean   { return !!this.getToken(); }
+  isPdg(): boolean        { return this.getUser()?.role === 'Pdg'; }
+  isDirection(): boolean  { return ['Direction', 'Admin', 'Pdg'].includes(this.getUser()?.role ?? ''); }
+  isComptable(): boolean  { return ['Comptable', 'Direction', 'Admin', 'Pdg'].includes(this.getUser()?.role ?? ''); }
+  isCollecteur(): boolean { return this.getUser()?.role === 'Collecteur'; }
 
   saveSession(resp: LoginResponse): void {
     localStorage.setItem('kdi_token', resp.token);
@@ -105,9 +103,9 @@ export class AuthService extends ApiService {
   }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  PROPRIÉTAIRES SERVICE
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
+//  PROPRIÃ‰TAIRES SERVICE
+// =====================================================================================================================================================
 @Injectable({ providedIn: 'root' })
 export class ProprietairesService extends ApiService {
   getAll(page = 1, pageSize = 20, search?: string, estActif?: boolean): Observable<PagedList<ProprietaireListItemDto>> {
@@ -168,9 +166,9 @@ export class ProprietairesService extends ApiService {
   }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  PROPRIÉTÉS SERVICE
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
+//  PROPRIÃ‰TÃ‰S SERVICE
+// =====================================================================================================================================================
 @Injectable({ providedIn: 'root' })
 export class ProprietesService extends ApiService {
   getAll(page = 1, pageSize = 20, search?: string, proprietaireId?: string): Observable<PagedList<ProprieteListItemDto>> {
@@ -198,9 +196,9 @@ export class ProprietesService extends ApiService {
   }
 }
 
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 //  PRODUITS SERVICE
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 @Injectable({ providedIn: 'root' })
 export class ProduitsService extends ApiService {
   getAll(opts: { page?: number; pageSize?: number; proprieteId?: string; type?: TypeProduit; statut?: StatutProduit; search?: string } = {}): Observable<PagedList<ProduitListItemDto>> {
@@ -229,9 +227,9 @@ export class ProduitsService extends ApiService {
   }
 }
 
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 //  CONTRATS GESTION SERVICE
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 @Injectable({ providedIn: 'root' })
 export class ContratsGestionService extends ApiService {
   getAll(page = 1, pageSize = 20, proprieteId?: string, statut?: StatutContrat): Observable<PagedList<ContratGestionDto>> {
@@ -240,23 +238,23 @@ export class ContratsGestionService extends ApiService {
     if (statut)      params = params.set('statut', statut);
     return this.get<PagedList<ContratGestionDto>>('/contrats-gestion', params);
   }
-  
+
   create(data: FormData): Observable<string> {
     return this.postForm<string>('/contrats-gestion', data);
   }
-  
+
   activer(id: string): Observable<void> {
     return this.post<string>(`/contrats-gestion/${id}/activer`, {}).pipe(map(() => void 0));
   }
+
   creerAvenant(id: string, data: FormData): Observable<void> {
     return this.postForm<void>(`/contrats-gestion/${id}/avenant`, data);
   }
-  
 }
 
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 //  LOCATAIRES SERVICE
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 @Injectable({ providedIn: 'root' })
 export class LocatairesService extends ApiService {
   getAll(page = 1, pageSize = 20, search?: string, estActif?: boolean): Observable<PagedList<LocataireListItemDto>> {
@@ -273,15 +271,15 @@ export class LocatairesService extends ApiService {
   create(data: FormData): Observable<string> {
     return this.postForm<string>('/locataires', data);
   }
-  
+
   supprimer(id: string): Observable<void> {
     return this.delete<void>(`/locataires/${id}`);
   }
 }
 
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 //  CONTRATS LOCATION SERVICE
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 @Injectable({ providedIn: 'root' })
 export class ContratsLocationService extends ApiService {
   getAll(opts: { page?: number; produitId?: string; locataireId?: string; statut?: StatutContrat; search?: string } = {}): Observable<PagedList<ContratLocationListItemDto>> {
@@ -292,23 +290,23 @@ export class ContratsLocationService extends ApiService {
     if (opts.search)      params = params.set('search', opts.search);
     return this.get<PagedList<ContratLocationListItemDto>>('/contrats-location', params);
   }
-  
+
   create(data: FormData): Observable<string> {
     return this.postForm<string>('/contrats-location', data);
   }
-  
+
   activer(id: string, payload?: any): Observable<void> {
     return this.http.post<void>(`${this.base}/contrats-location/${id}/activer`, payload ?? {});
   }
-  
+
   validerChecklistEntree(id: string, data: any): Observable<void> {
     return this.http.post<void>(`${this.base}/contrats-location/${id}/checklist-entree`, data);
   }
-  
+
   cloturer(id: string, data: any): Observable<void> {
     return this.http.post<void>(`${this.base}/contrats-location/${id}/cloturer`, data);
   }
-  
+
   resilier(id: string, motifResiliation: string, dateResiliation: Date): Observable<void> {
     return this.http.post<void>(`${this.base}/contrats-location/${id}/resilier`, {
       motifResiliation,
@@ -320,17 +318,14 @@ export class ContratsLocationService extends ApiService {
     return this.http.post<void>(`${this.base}/contrats-location/${id}/avenant`, data);
   }
 
-  // getById(id: string): Observable<ContratLocationListItemDto> {
-  //   return this.get<ContratLocationListItemDto>(`/contrats-location/${id}/resume`);
-  // }
   getById(id: string): Observable<ContratLocationDto> {
     return this.get<ContratLocationDto>(`/contrats-location/${id}`);
   }
 }
 
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 //  COLLECTES SERVICE
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 @Injectable({ providedIn: 'root' })
 export class CollectesService extends ApiService {
   getAll(opts: { page?: number; contratId?: string; collecteurId?: string; periodeMois?: string; statut?: StatutCollecte; semaine?: number } = {}): Observable<PagedList<CollecteDto>> {
@@ -342,7 +337,7 @@ export class CollectesService extends ApiService {
     if (opts.semaine)      params = params.set('numeroSemaine', opts.semaine);
     return this.get<PagedList<CollecteDto>>('/collectes', params);
   }
-  
+
   saisir(data: any): Observable<string> {
     return this.post<string>('/collectes', data);
   }
@@ -373,9 +368,9 @@ export class CollectesService extends ApiService {
   }
 }
 
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 //  PERSONNEL SERVICE
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 @Injectable({ providedIn: 'root' })
 export class PersonnelService extends ApiService {
   getAll(page = 1): Observable<PagedList<PersonnelListItemDto>> {
@@ -391,16 +386,9 @@ export class PersonnelService extends ApiService {
   }
 }
 
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 //  DASHBOARD SERVICE
-// ══════════════════════════════════════════════════════════════
-// @Injectable({ providedIn: 'root' })
-// export class DashboardService extends ApiService {
-//   getDashboard(periodeMois?: string): Observable<DashboardDto> {
-//     const params = periodeMois ? new HttpParams().set('periodeMois', periodeMois) : undefined;
-//     return this.http.get<DashboardDto>(`${this.base}/dashboard`, { params });
-//   }
-// }
+// =====================================================================================================================================================
 @Injectable({ providedIn: 'root' })
 export class DashboardService extends ApiService {
   getDashboard(periodeMois?: string): Observable<DashboardDto> {
@@ -409,35 +397,27 @@ export class DashboardService extends ApiService {
   }
 }
 
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 //  RECOUVREMENT SERVICE
-//  Construit les dossiers impayés à partir de contrats-location
-//  actifs (estEnRetard) + collectes pour calculer montants dus
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 @Injectable({ providedIn: 'root' })
 export class RecouvrementService extends ApiService {
-
-  /** Récupère tous les dossiers impayés */
   getDossiers(): Observable<DossierRecouvrementDto[]> {
     return this.get<DossierRecouvrementDto[]>('/recouvrement/dossiers');
   }
 
-  /** Envoie une relance (email/SMS) pour un contrat */
   envoyerRelance(contratId: string, message?: string): Observable<void> {
     return this.post<void>(`/recouvrement/${contratId}/relancer`, { message: message ?? '' });
   }
 
-  /** Relance en masse */
   relancerMasse(contratIds: string[]): Observable<void> {
     return this.post<void>('/recouvrement/relancer-masse', { contratIds });
   }
 
-  /** Enregistre un encaissement (crée une collecte) */
   encaisser(contratId: string, data: { montant: number; mode: string; reference?: string }): Observable<void> {
     return this.post<void>(`/recouvrement/${contratId}/encaisser`, data);
   }
 
-  /** Export Excel */
   exportExcel(): Observable<Blob> {
     return this.http.get(`${this.base}/recouvrement/export`, { responseType: 'blob' });
   }
@@ -456,9 +436,10 @@ export class RecouvrementService extends ApiService {
     return this.get<FeuilleRecouvrementDto>(`/recouvrement/feuille${qp ? '?' + qp : ''}`);
   }
 }
-// ══════════════════════════════════════════════════════════════
+
+// =====================================================================================================================================================
 //  TRAVAUX SERVICES
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 import {
   TacheDto, TacheCreateDto, StatutTache, PrioriteTache,
   DevisDto, DevisListItemDto, DevisCreateDto, StatutDevis,
@@ -489,11 +470,11 @@ export class DevisTravauxService extends ApiService {
     if (params?.statut) p = p.set('statut', params.statut);
     return this.get<PagedList<DevisListItemDto>>('/devis-travaux', p);
   }
-  getById(id: string): Observable<DevisDto>            { return this.get<DevisDto>(`/devis-travaux/${id}`); }
-  create(dto: DevisCreateDto): Observable<DevisDto>    { return this.post<DevisDto>('/devis-travaux', dto); }
+  getById(id: string): Observable<DevisDto>              { return this.get<DevisDto>(`/devis-travaux/${id}`); }
+  create(dto: DevisCreateDto): Observable<DevisDto>      { return this.post<DevisDto>('/devis-travaux', dto); }
   update(id: string, dto: DevisCreateDto): Observable<DevisDto> { return this.put<DevisDto>(`/devis-travaux/${id}`, dto); }
-  accepter(id: string): Observable<DevisDto>           { return this.post<DevisDto>(`/devis-travaux/${id}/accepter`, {}); }
-  refuser(id: string): Observable<DevisDto>            { return this.post<DevisDto>(`/devis-travaux/${id}/refuser`, {}); }
+  accepter(id: string): Observable<DevisDto>             { return this.post<DevisDto>(`/devis-travaux/${id}/accepter`, {}); }
+  refuser(id: string): Observable<DevisDto>              { return this.post<DevisDto>(`/devis-travaux/${id}/refuser`, {}); }
   convertirChantier(id: string): Observable<ChantierDto> { return this.post<ChantierDto>(`/devis-travaux/${id}/convertir-chantier`, {}); }
 }
 
@@ -504,11 +485,11 @@ export class ChantiersService extends ApiService {
     if (params?.statut) p = p.set('statut', params.statut);
     return this.get<PagedList<ChantierListItemDto>>('/chantiers', p);
   }
-  getById(id: string): Observable<ChantierDto>         { return this.get<ChantierDto>(`/chantiers/${id}`); }
-  create(dto: any): Observable<ChantierDto>             { return this.post<ChantierDto>('/chantiers', dto); }
-  update(id: string, dto: any): Observable<ChantierDto> { return this.put<ChantierDto>(`/chantiers/${id}`, dto); }
+  getById(id: string): Observable<ChantierDto>          { return this.get<ChantierDto>(`/chantiers/${id}`); }
+  create(dto: any): Observable<ChantierDto>              { return this.post<ChantierDto>('/chantiers', dto); }
+  update(id: string, dto: any): Observable<ChantierDto>  { return this.put<ChantierDto>(`/chantiers/${id}`, dto); }
   validerEtape(id: string, etapeId: string): Observable<ChantierDto> { return this.post<ChantierDto>(`/chantiers/${id}/etapes/${etapeId}/valider`, {}); }
-  cloture(id: string): Observable<ChantierDto>          { return this.post<ChantierDto>(`/chantiers/${id}/cloture`, {}); }
+  cloture(id: string): Observable<ChantierDto>           { return this.post<ChantierDto>(`/chantiers/${id}/cloture`, {}); }
 }
 
 @Injectable({ providedIn: 'root' })
@@ -520,17 +501,73 @@ export class AgendaService extends ApiService {
     if (params?.type)      p = p.set('type',       params.type);
     return this.get<EvenementAgendaDto[]>('/agenda', p);
   }
-  create(dto: EvenementCreateDto): Observable<EvenementAgendaDto>  { return this.post<EvenementAgendaDto>('/agenda', dto); }
-  update(id: string, dto: EvenementCreateDto): Observable<EvenementAgendaDto> { return this.put<EvenementAgendaDto>(`/agenda/${id}`, dto); }
-  supprimer(id: string): Observable<any>                           { return this.http.delete<any>(`${this.base}/agenda/${id}`); }
+  create(dto: EvenementCreateDto): Observable<EvenementAgendaDto>              { return this.post<EvenementAgendaDto>('/agenda', dto); }
+  update(id: string, dto: EvenementCreateDto): Observable<EvenementAgendaDto>  { return this.put<EvenementAgendaDto>(`/agenda/${id}`, dto); }
+  supprimer(id: string): Observable<any>                                        { return this.http.delete<any>(`${this.base}/agenda/${id}`); }
 }
 
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 //  SUIVI LOYERS SERVICE
-// ══════════════════════════════════════════════════════════════
+// =====================================================================================================================================================
 @Injectable({ providedIn: 'root' })
 export class SuiviLoyersService extends ApiService {
   getSuivi(): Observable<SuiviLoyersGlobalDto> {
     return this.get<SuiviLoyersGlobalDto>('/contrats-location/suivi-loyers');
   }
+}
+
+// =====================================================================================================================================================
+//  CHARGES PROPRIETAIRE  DTOs exportes pour le composant
+// =====================================================================================================================================================
+export type TypeCharge   = 'Avance' | 'Impot' | 'Travaux' | 'Autre';
+export type StatutCharge = 'EnAttente' | 'Approuvee' | 'Refusee';
+
+export interface ChargeProprietaireDto {
+  id: string;
+  type: TypeCharge;
+  statut: StatutCharge;
+  libelle: string;
+  montant: number;
+  periodeMois?: string;
+  reference?: string;
+  notes?: string;
+  motifRefus?: string;
+  proprieteLibelle?: string;
+  chantierNumero?: string;
+  locataireNom?: string;
+  remboursementMensuel?: number;
+  moisRestants?: number;
+  creeLe: string;
+}
+
+export interface LigneReversement { libelle: string; montant: number; type: string; }
+
+export interface FeuilleChargesDto {
+  charges:                ChargeProprietaireDto[];
+  loyersCollectes:        number;
+  commission:             number;
+  totalChargesApprouvees: number;
+  netAReverser:           number;
+  chargesEnAttenteMontant: number;
+  lignesDetail:           LigneReversement[];
+  proprietaires:          { id: string; nom: string }[];
+  chantiersDisponibles:   { id: string; numero: string; libelle: string; montant: number; proprieteLibelle: string }[];
+  locataires:             { id: string; nom: string; produitCode: string }[];
+}
+
+// =====================================================================================================================================================
+//  CHARGES PROPRIETAIRE SERVICE
+//  âœ… HÃ©rite de ApiService à get/post accessibles via protected
+// =====================================================================================================================================================
+@Injectable({ providedIn: 'root' })
+export class ChargesProprietaireService extends ApiService {
+  getFeuille(proprietaireId: string, periodeMois: string): Observable<FeuilleChargesDto> {
+    const params = new HttpParams()
+      .set('proprietaireId', proprietaireId)
+      .set('periodeMois', periodeMois);
+    return this.get<FeuilleChargesDto>('/charges-proprietaire/feuille', params);
+  }
+  creer(cmd: any): Observable<void>                    { return this.post<void>('/charges-proprietaire', cmd); }
+  approuver(id: string): Observable<void>              { return this.post<void>(`/charges-proprietaire/${id}/approuver`, {}); }
+  refuser(id: string, motif: string): Observable<void> { return this.post<void>(`/charges-proprietaire/${id}/refuser`, { motif }); }
 }

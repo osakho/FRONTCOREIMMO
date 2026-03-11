@@ -5,8 +5,8 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { LocatairesService } from '../../../core/services/api.services';
-import { LocataireListItemDto, PagedList } from '../../../core/models/models';
+import { LocatairesService } from '../../core/services/api.services';
+import { LocataireListItemDto, PagedList } from '../../core/models/models';
 
 @Component({
   selector: 'kdi-locataires-list',

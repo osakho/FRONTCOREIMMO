@@ -433,7 +433,6 @@ export class ShellComponent implements OnInit {
           { label: 'Locataires',           route: '/locataires',        icon: this.svg(ICONS.users) },
           { label: 'Contrats de location', route: '/contrats-location', icon: this.svg(ICONS.filePlus) },
           { label: 'Contrats de gestion',  route: '/contrats-gestion',  icon: this.svg(ICONS.fileCheck) },
-          // { label: 'Contrats de gestion',  route: '/contrats-gestion',  icon: this.svg(ICONS.fileCheck) },
           { label: 'Suivi des loyers',     route: '/suivi-loyers',      icon: this.svg(ICONS.payments)  },
         ]
       },
@@ -449,6 +448,7 @@ export class ShellComponent implements OnInit {
           { label: 'Reversements',         route: '/reversements',         icon: this.svg(ICONS.arrowDown) },
           { label: 'Contentieux',          route: '/contentieux',          icon: this.svg(ICONS.alertCircle), badge: '3', badgeColor: 'red' },
           { label: 'Recouvrement',         route: '/recouvrement',         icon: this.svg(ICONS.refresh) },
+          { label: 'Charges propriétaires', route: '/charges-proprietaire', icon: this.svg(ICONS.wallet) },
           { label: 'Suivi collecteur',     route: '/suivi-collecteur', icon: this.svg(ICONS.clipboardList) },
           
         ]
@@ -498,6 +498,7 @@ export class ShellComponent implements OnInit {
     '/reversements':          'Reversements',
     '/contentieux':           'Contentieux',
     '/recouvrement':          'Recouvrement',
+    '/charges-proprietaire': 'Charges & Déductions',
     '/taches':                'Suivi des tâches',
     '/devis-travaux':         'Devis travaux',
     '/chantiers':             'Suivi chantiers',
