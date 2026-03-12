@@ -114,18 +114,13 @@ export class RecapContratService extends ApiService {
             </td>
             <td (click)="$event.stopPropagation()">
               <div class="row-actions">
-                <!-- Récap financier -->
                 <button class="btn btn-secondary btn-sm" (click)="toggleRecap(c)" title="Récap financier">
                   <span class="mi">analytics</span>
                 </button>
-
-                <!-- Activer : Brouillon uniquement -->
                 <button *ngIf="c.statutLabel==='Brouillon'"
                         class="btn btn-secondary btn-sm" (click)="activer(c)">
                   <span class="mi">check_circle</span> Activer
                 </button>
-
-                <!-- Actif : avenant + résiliation -->
                 <ng-container *ngIf="c.statutLabel==='Actif'">
                   <button class="btn btn-secondary btn-sm" (click)="ouvrirAvenant(c)">
                     <span class="mi">edit_document</span> Avenant
@@ -134,7 +129,6 @@ export class RecapContratService extends ApiService {
                     <span class="mi">cancel</span> Résilier
                   </button>
                 </ng-container>
-
                 <span *ngIf="c.statutLabel==='Resilie' || c.statutLabel==='Termine'"
                       style="font-size:.75rem;color:#94a3b8;padding:4px 8px">
                   <span class="mi" style="font-size:14px">lock</span> Clôturé
@@ -159,7 +153,6 @@ export class RecapContratService extends ApiService {
 
   <!-- ══ PANNEAU RÉCAP FINANCIER ══ -->
   <div class="recap-pane" *ngIf="recap !== null || recapLoading">
-
     <div class="rp-header">
       <div class="rp-title-block">
         <div class="rp-avatar">{{ recap?.locataireNom?.[0] ?? '?' }}</div>
@@ -170,14 +163,10 @@ export class RecapContratService extends ApiService {
       </div>
       <button class="rp-close" (click)="closeRecap()">✕</button>
     </div>
-
     <div class="rp-loading" *ngIf="recapLoading">
       <div class="spinner-sm"></div> Chargement…
     </div>
-
     <ng-container *ngIf="recap && !recapLoading">
-
-      <!-- Statut loyer -->
       <div class="statut-loyer" [ngClass]="'sl-' + recap.statutLoyer.toLowerCase()">
         <div class="sl-icon">
           {{ recap.statutLoyer === 'AJour'    ? '✅' :
@@ -197,8 +186,6 @@ export class RecapContratService extends ApiService {
           </div>
         </div>
       </div>
-
-      <!-- KPIs -->
       <div class="kpi-row">
         <div class="kpi" [class.kpi-ok]="recap.cautionReglee" [class.kpi-ko]="!recap.cautionReglee">
           <div class="kpi-icon">🔒</div>
@@ -219,8 +206,6 @@ export class RecapContratService extends ApiService {
           <div class="kpi-status">mois</div>
         </div>
       </div>
-
-      <!-- Solde -->
       <div class="solde-row">
         <div class="solde-item">
           <span class="si-label">Total dû</span>
@@ -237,8 +222,6 @@ export class RecapContratService extends ApiService {
           <span class="si-val">{{ recap.solde >= 0 ? '+' : '' }}{{ recap.solde | number:'1.0-0' }} MRU</span>
         </div>
       </div>
-
-      <!-- Calendrier mensuel -->
       <div class="mois-section">
         <div class="mois-title">Historique des loyers</div>
         <div class="mois-grid">
@@ -265,31 +248,23 @@ export class RecapContratService extends ApiService {
           <span class="leg leg-futur">· À venir</span>
         </div>
       </div>
-
-      <!-- Dernier paiement -->
       <div class="last-payment" *ngIf="recap.dernierPaiement">
         <span>🕐</span>
         Dernier paiement : <strong>{{ recap.dernierPaiement | date:'dd/MM/yyyy' }}</strong>
       </div>
-
-      <!-- Actions -->
       <div class="rp-actions">
         <button class="btn btn-gold btn-full" (click)="ouvrirSaisieLoyer()">
           💰 Saisir un loyer
         </button>
       </div>
-
     </ng-container>
   </div>
 
 </div>
   `,
   styles: [`
-    /* ── Layout deux colonnes ── */
     .layout { display: grid; grid-template-columns: 1fr; gap: 20px; }
     .layout.panel-open { grid-template-columns: 1fr 360px; align-items: start; }
-
-    /* ── Recap pane ── */
     .recap-pane {
       background: #fff; border-radius: 14px; overflow: hidden;
       box-shadow: 0 4px 24px rgba(14,28,56,.12);
@@ -298,7 +273,6 @@ export class RecapContratService extends ApiService {
     }
     .recap-pane::-webkit-scrollbar { width: 3px; }
     .recap-pane::-webkit-scrollbar-thumb { background: #e2e8f0; }
-
     .rp-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: #0e1c38; }
     .rp-title-block { display: flex; align-items: center; gap: 10px; }
     .rp-avatar { width: 36px; height: 36px; background: #c9a96e; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: #0e1c38; flex-shrink: 0; }
@@ -306,12 +280,9 @@ export class RecapContratService extends ApiService {
     .rp-code { font-size: 11px; color: rgba(255,255,255,.5); font-family: monospace; margin-top: 2px; }
     .rp-close { background: rgba(255,255,255,.12); border: none; color: #fff; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; }
     .rp-close:hover { background: rgba(255,255,255,.2); }
-
     .rp-loading { display: flex; align-items: center; gap: 10px; padding: 28px; color: #64748b; font-size: 13px; }
     .spinner-sm { width: 16px; height: 16px; border: 2px solid #e2e8f0; border-top-color: #0e1c38; border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
     @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Statut loyer */
     .statut-loyer { display: flex; align-items: flex-start; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #f1f5f9; }
     .sl-ajour       { background: #f0fdf4; }
     .sl-credit      { background: #ecfdf5; }
@@ -320,8 +291,6 @@ export class RecapContratService extends ApiService {
     .sl-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
     .sl-label { font-size: 13px; font-weight: 700; color: #0e1c38; }
     .sl-detail { font-size: 11px; color: #64748b; margin-top: 3px; }
-
-    /* KPIs */
     .kpi-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; padding: 10px 14px; border-bottom: 1px solid #f1f5f9; }
     .kpi { background: #f8fafc; border-radius: 8px; padding: 9px 5px; text-align: center; border: 1px solid #e2e8f0; }
     .kpi-ok { border-color: #86efac !important; background: #f0fdf4; }
@@ -330,8 +299,6 @@ export class RecapContratService extends ApiService {
     .kpi-label { font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: .5px; }
     .kpi-val { font-size: 12px; font-weight: 700; color: #0e1c38; margin: 2px 0; }
     .kpi-status { font-size: 9px; color: #64748b; }
-
-    /* Solde */
     .solde-row { display: grid; grid-template-columns: 1fr 1fr 1fr; background: #f1f5f9; gap: 1px; border-bottom: 1px solid #f1f5f9; }
     .solde-item { background: #fff; padding: 9px 10px; text-align: center; }
     .si-label { display: block; font-size: 9px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; }
@@ -339,8 +306,6 @@ export class RecapContratService extends ApiService {
     .si-ok { color: #16a34a; }
     .solde-positif .si-val { color: #16a34a; }
     .solde-negatif .si-val { color: #dc2626; }
-
-    /* Calendrier */
     .mois-section { padding: 11px 14px; border-bottom: 1px solid #f1f5f9; }
     .mois-title { font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px; }
     .mois-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; }
@@ -359,17 +324,12 @@ export class RecapContratService extends ApiService {
     .leg-paye::before    { background: #d1fae5; } .leg-partiel::before { background: #fef3c7; }
     .leg-impaye::before  { background: #fee2e2; } .leg-avance::before  { background: #dbeafe; }
     .leg-futur::before   { background: #f1f5f9; }
-
     .last-payment { padding: 9px 14px; font-size: 11px; color: #64748b; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 6px; }
     .rp-actions { padding: 12px 14px; }
     .btn-full { width: 100%; justify-content: center; }
-
-    /* Row selected */
     .data-table tr.row-selected td { background: #eff6ff !important; }
     .data-table tr.row-selected td:first-child { border-left: 3px solid #3b82f6; }
     .data-table tr { cursor: pointer; }
-
-    /* Actions existantes */
     .num-badge { font-family:monospace; background:var(--surf2); padding:3px 8px; border-radius:6px; font-size:.78rem; color:var(--navy); font-weight:700; }
     .btn-danger { background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; }
     .btn-danger:hover { background:#fecaca; }
@@ -396,11 +356,31 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
   private currentContrat: ContratLocationListItemDto | null = null;
 
   // ── Modal nouveau bail ──
-  etape       = 1;
-  submitting  = false;
-  stepLabels  = ['Bien & locataire', 'Conditions financières', 'Documents & récap'];
+  etape      = 1;
+  submitting = false;
+
+  // ── stepLabels dynamique selon le produit sélectionné ──
+  get stepLabels(): string[] {
+    return this.produitNeedIndexStep()
+      ? ['Bien & locataire', 'Conditions financières', 'Index & compteurs', 'Documents & récap']
+      : ['Bien & locataire', 'Conditions financières', 'Documents & récap'];
+  }
+
+  // ── Étape index : existe seulement si le produit a des compteurs ou est une chambre ──
+  produitNeedIndexStep(): boolean {
+    if (!this.produitSel) return false;
+    const type = (this.produitSel.type ?? this.produitSel.typeLabel ?? "").toString();
+    if (type === "Chambre") return true;
+    if (type === "Appartement") return !!(this.produitSel.hasCompteurElec || this.produitSel.hasCompteurEau);
+    if (type === "Boutique")    return true; // élec toujours obligatoire
+    return !!(this.produitSel.hasCompteurElec || this.produitSel.hasCompteurEau);
+  }
+
+  // ── Étape "Documents" = étape 3 ou 4 selon produit ──
+  get etapeDocuments(): number { return this.produitNeedIndexStep() ? 4 : 3; }
 
   produitSel:       any   = null;
+  produitDetailLoading = false; // bloque "Suivant" le temps du getById
   produitResultats: any[] = [];
   searchProduit   = '';
 
@@ -421,7 +401,9 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
     dateSortiePrevue: '',
     jourDebutPaiement: 1, jourFinPaiement: 5,
     destinationBien: 'Habitation',
-    conditionsParticulieres: ''
+    conditionsParticulieres: '',
+    indexElecEntree: '' as any,
+    indexEauEntree:  '' as any
   };
 
   // ── Dérogation PDG : permet l'antidatage du contrat ──
@@ -447,7 +429,6 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
     this.recapLoading = true;
     this.selectedId   = c.id;
     this.currentContrat = c;
-
     this.recapSvc.getRecap(c.id).subscribe({
       next:  r  => { this.recap = r; this.recapLoading = false; },
       error: () => { this.recap = this.buildFallbackRecap(c); this.recapLoading = false; }
@@ -463,14 +444,9 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
 
   ouvrirSaisieLoyer() {
     if (!this.currentContrat) return;
-    // Navigation vers saisie collecte — adapter selon votre router
     window.location.href = `/collectes/saisir?contratId=${this.currentContrat.id}`;
   }
 
-  /**
-   * Fallback calculé en frontend si l'endpoint /recap-financier n'existe pas encore.
-   * Affiche tous les mois depuis l'entrée comme IMPAYÉS (sans collectes connues).
-   */
   private buildFallbackRecap(c: ContratLocationListItemDto): RecapFinancierContratDto {
     const entree    = new Date(c.dateEntree);
     const now       = new Date();
@@ -479,14 +455,12 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
     );
     const moisLabels = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
     const mois: MoisLoyer[] = [];
-
     for (let i = 0; i <= Math.min(moisTotal + 1, 11); i++) {
       const d      = new Date(entree.getFullYear(), entree.getMonth() + i, 1);
       const label  = moisLabels[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2);
       const periode= `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       mois.push({ periode, label, montant: c.loyer, montantPaye: 0, statut: i >= moisTotal ? 'Futur' : 'Impaye' });
     }
-
     const montantDu = moisTotal * c.loyer;
     return {
       contratId: c.id, locataireNom: c.locataireNom, produitCode: c.produitCode, loyer: c.loyer,
@@ -504,9 +478,7 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
   // ════════════════════════════════════════════════════════════
   //  ACTIVATION
   // ════════════════════════════════════════════════════════════
-  activer(c: ContratLocationListItemDto) {
-    this.ouvrirModalActivation(c);
-  }
+  activer(c: ContratLocationListItemDto) { this.ouvrirModalActivation(c); }
 
   private ouvrirModalActivation(c: ContratLocationListItemDto) {
     const checklist = {
@@ -516,7 +488,6 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
       edlEntreeValide:    false,
       photosAvantRemise:  false,
     };
-
     const render = () => {
       const allOk = Object.values(checklist).every(v => v);
       const item = (key: keyof typeof checklist, label: string, icon: string) => {
@@ -532,7 +503,6 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
             <span style="font-size:13px;color:${checked ? '#15803d' : '#475569'};font-weight:${checked ? '600' : '400'}">${icon} ${label}</span>
           </label>`;
       };
-
       const html = `
         <div style="position:fixed;inset:0;background:rgba(14,28,56,.55);backdrop-filter:blur(4px);z-index:99999;
              display:flex;align-items:center;justify-content:center;font-family:'DM Sans','Inter',sans-serif" id="kdi-activ-overlay">
@@ -580,15 +550,12 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
             </div>
           </div>
         </div>`;
-
       let existing = document.getElementById('kdi-activ-overlay');
       if (existing) existing.remove();
-
       const wrapper = document.createElement('div');
       wrapper.innerHTML = html;
       const overlay = wrapper.firstElementChild as HTMLElement;
       document.body.appendChild(overlay);
-
       overlay.querySelectorAll('[data-key]').forEach(el => {
         el.addEventListener('click', () => this.zone.run(() => {
           const key = (el as HTMLElement).dataset['key'] as keyof typeof checklist;
@@ -596,7 +563,6 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
           render();
         }));
       });
-
       overlay.querySelector('#kdi-activ-close')?.addEventListener('click',  () => this.zone.run(() => overlay.remove()));
       overlay.querySelector('#kdi-activ-cancel')?.addEventListener('click', () => this.zone.run(() => overlay.remove()));
       overlay.querySelector('#kdi-activ-confirm')?.addEventListener('click', () => this.zone.run(() => {
@@ -612,10 +578,7 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
   }
 
   isDirection() { return this.auth.isDirection(); }
-  peutResilier() {
-    return this.auth.isPdg() ||
-      ['Pdg','Assistante','Direction','Admin'].includes((this.auth as any)['getUser']?.()?.role ?? '');
-  }
+  peutResilier() { return this.auth.isPdg(); }
 
   // ════════════════════════════════════════════════════════════
   //  RÉSILIATION
@@ -623,7 +586,6 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
   ouvrirResiliation(c: ContratLocationListItemDto) {
     let motif = '';
     let dateRes = new Date().toISOString().slice(0,10);
-
     const render = () => {
       const html = `
         <div style="position:fixed;inset:0;background:rgba(14,28,56,.55);backdrop-filter:blur(4px);z-index:99999;
@@ -661,12 +623,10 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
             </div>
           </div>
         </div>`;
-
       document.getElementById('kdi-resil-overlay')?.remove();
       const wrap = document.createElement('div'); wrap.innerHTML = html;
       const overlay = wrap.firstElementChild as HTMLElement;
       document.body.appendChild(overlay);
-
       overlay.querySelector('#kdi-resil-date')?.addEventListener('input',   (ev) => this.zone.run(() => { dateRes = (ev.target as HTMLInputElement).value; }));
       overlay.querySelector('#kdi-resil-motif')?.addEventListener('input',  (ev) => this.zone.run(() => { motif  = (ev.target as HTMLTextAreaElement).value; }));
       overlay.querySelector('#kdi-resil-close')?.addEventListener('click',  () => this.zone.run(() => overlay.remove()));
@@ -686,19 +646,17 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
   // ════════════════════════════════════════════════════════════
   //  AVENANT
   // ════════════════════════════════════════════════════════════
-ouvrirAvenant(c: ContratLocationListItemDto) {
-  this.svc.getById(c.id).subscribe({
-    next:  (detail: any) => this.zone.run(() => this.afficherModalAvenant(c, detail)),
-    error: ()            => this.zone.run(() => this.afficherModalAvenant(c, c))
-    // fallback sur les données de liste si l'endpoint échoue
-  });
-}
+  ouvrirAvenant(c: ContratLocationListItemDto) {
+    this.svc.getById(c.id).subscribe({
+      next:  (detail: any) => this.zone.run(() => this.afficherModalAvenant(c, detail)),
+      error: ()            => this.zone.run(() => this.afficherModalAvenant(c, c))
+    });
+  }
 
   private afficherModalAvenant(c: ContratLocationListItemDto, detail: any) {
     const typeProduit: string = detail.typeProduit ?? detail.produitType ?? '';
-    const isChambre     = typeProduit === 'Chambre';
+    const isChambre      = typeProduit === 'Chambre';
     const needsCompteurs = ['Appartement','Boutique'].includes(typeProduit);
-
     let av = {
       nouveauLoyer:    detail.loyer ?? '',
       nouvelleDateSortie: detail.dateSortiePrevue ?? '',
@@ -709,13 +667,11 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
       indexElec:  '' as any,
       indexEau:   '' as any,
     };
-
     const render = () => {
       const lbl = (t: string) => `<label style="font-size:12px;font-weight:600;color:#4a5878;display:block;margin-bottom:5px">${t}</label>`;
       const inp = (id: string, type: string, val: any, ph = '') =>
         `<input id="${id}" type="${type}" value="${val}" placeholder="${ph}"
           style="padding:8px 11px;border:1.5px solid #e3e8f0;border-radius:7px;font-family:inherit;font-size:.84rem;width:100%;box-sizing:border-box">`;
-
       let compteurSection = '';
       if (needsCompteurs) {
         compteurSection = `
@@ -749,7 +705,6 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
             </div>
           </div>`;
       }
-
       const html = `
         <div style="position:fixed;inset:0;background:rgba(14,28,56,.55);backdrop-filter:blur(4px);z-index:99999;
              display:flex;align-items:center;justify-content:center;font-family:'DM Sans','Inter',sans-serif" id="kdi-av-overlay">
@@ -789,12 +744,10 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
             </div>
           </div>
         </div>`;
-
       document.getElementById('kdi-av-overlay')?.remove();
       const wrap = document.createElement('div'); wrap.innerHTML = html;
       const overlay = wrap.firstElementChild as HTMLElement;
       document.body.appendChild(overlay);
-
       const bind = (id: string, field: keyof typeof av) => {
         overlay.querySelector(`#${id}`)?.addEventListener('input', (ev) =>
           this.zone.run(() => { (av as any)[field] = (ev.target as HTMLInputElement).value; }));
@@ -805,19 +758,14 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
       bind('kdi-av-cond',     'conditionsParticulieres');
       bind('kdi-av-idx-elec', 'indexElec');
       bind('kdi-av-idx-eau',  'indexEau');
-
       overlay.querySelector('#kdi-av-has-elec')?.addEventListener('change', (ev) =>
         this.zone.run(() => { av.hasCompteurElec = (ev.target as HTMLInputElement).checked; render(); }));
       overlay.querySelector('#kdi-av-has-eau')?.addEventListener('change', (ev) =>
         this.zone.run(() => { av.hasCompteurEau = (ev.target as HTMLInputElement).checked; render(); }));
-
       overlay.querySelector('#kdi-av-close')?.addEventListener('click',  () => this.zone.run(() => overlay.remove()));
       overlay.querySelector('#kdi-av-cancel')?.addEventListener('click', () => this.zone.run(() => overlay.remove()));
       overlay.querySelector('#kdi-av-confirm')?.addEventListener('click', () => this.zone.run(() => {
         if (!av.motif.trim()) { alert('Le motif est obligatoire.'); return; }
-        if (needsCompteurs && (!av.hasCompteurElec || !av.hasCompteurEau)) {
-          alert(`Un ${typeProduit} doit avoir un compteur électrique et eau.`); return;
-        }
         const fd = new FormData();
         fd.append('motif', av.motif);
         if (av.nouveauLoyer)            fd.append('nouveauLoyer',            String(av.nouveauLoyer));
@@ -840,14 +788,15 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
   // ════════════════════════════════════════════════════════════
   ouvrirModal() {
     this.etape = 1;
-    this.produitSel = null; this.produitResultats = []; this.searchProduit = '';
+    this.produitSel = null; this.produitResultats = []; this.searchProduit = ''; this.produitDetailLoading = false;
     this.locataireSel = null; this.locataireResultats = []; this.searchLocataire = '';
     this.docContrat = null; this.photosEdl = [];
     this.step2 = {
       loyer: '', caution: '', avanceLoyer: '', periodicite: 'Mensuel',
       dateEntree: new Date().toISOString().slice(0,10), dateSortiePrevue: '',
       jourDebutPaiement: 1, jourFinPaiement: 5,
-      destinationBien: 'Habitation', conditionsParticulieres: ''
+      destinationBien: 'Habitation', conditionsParticulieres: '',
+      indexElecEntree: '', indexEauEntree: ''
     };
     this.derogationActive = false;
     this.detruireOverlay();
@@ -862,12 +811,16 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
 
   private construireOverlay(): HTMLElement {
     const e = this.etape;
+    const totalEtapes = this.stepLabels.length;
+
     const stepperHTML = this.stepLabels.map((label, i) => {
       const n = i + 1, isActive = e === n, isDone = e > n;
       const dotBg    = isDone ? '#0d9f5a' : isActive ? '#0e1c38' : '#e8edf5';
       const dotColor = (isDone || isActive) ? '#fff' : '#8a97b0';
       const lineColor = isDone ? '#0d9f5a' : '#d0d8e8';
-      const line = i < 2 ? `<div style="flex:1;height:2px;background:${lineColor};margin:0 6px 18px"></div>` : '';
+      const line = i < totalEtapes - 1
+        ? `<div style="flex:1;height:2px;background:${lineColor};margin:0 6px 18px"></div>`
+        : '';
       return `
         <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
           <div style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:${dotBg};color:${dotColor};font-weight:700;font-size:13px">${isDone?'✓':n}</div>
@@ -878,7 +831,7 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
     const btnPrev = e > 1
       ? `<button id="kdi-prev" style="padding:7px 15px;border-radius:8px;font-family:inherit;font-size:.79rem;cursor:pointer;border:1px solid #e3e8f0;background:#fff;color:#0e1c38">← Précédent</button>`
       : `<button id="kdi-cancel" style="padding:7px 15px;border-radius:8px;font-family:inherit;font-size:.79rem;cursor:pointer;border:1px solid #e3e8f0;background:#fff;color:#0e1c38">✕ Annuler</button>`;
-    const btnNext = e < 3
+    const btnNext = e < totalEtapes
       ? `<button id="kdi-next" ${!this.etapeValide()?'disabled':''} style="padding:7px 15px;border-radius:8px;font-family:inherit;font-size:.79rem;cursor:pointer;border:none;background:#0e1c38;color:#fff;opacity:${!this.etapeValide()?'.4':'1'}">Suivant →</button>`
       : `<button id="kdi-submit" ${this.submitting?'disabled':''} style="padding:7px 15px;border-radius:8px;font-family:inherit;font-size:.79rem;font-weight:600;cursor:pointer;border:none;background:linear-gradient(135deg,#c9a96e,#dfc28e);color:#0e1c38">🔑 ${this.submitting?'Création…':'Créer le bail'}</button>`;
 
@@ -916,7 +869,7 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
         const id = (el as HTMLElement).dataset['produitId'];
         el.addEventListener('click', () => this.zone.run(() => {
           const p = this.produitResultats.find((x: any) => x.id === id);
-          if (p) { this.selectionnerProduit(p); this.rerender(); }
+          if (p) { this.selectionnerProduit(p); }
         }));
       });
       overlay.querySelector('#kdi-clear-produit')?.addEventListener('click', () =>
@@ -954,7 +907,6 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
       bind('#kdi-jdebut','jourDebutPaiement'); bind('#kdi-jfin','jourFinPaiement');
       bind('#kdi-destination','destinationBien'); bind('#kdi-cond','conditionsParticulieres');
 
-      // ── Dérogation PDG : activer / désactiver l'antidatage ──
       overlay.querySelector('#kdi-derog-btn')?.addEventListener('click', (ev) => {
         ev.preventDefault();
         this.zone.run(() => { this.derogationActive = true; this.rerender(); });
@@ -962,17 +914,36 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
       overlay.querySelector('#kdi-derog-cancel')?.addEventListener('click', () => {
         this.zone.run(() => {
           this.derogationActive = false;
-          // Ramener la date à aujourd'hui si elle est dans le passé
           const today = new Date().toISOString().slice(0, 10);
           if (this.step2.dateEntree < today) this.step2.dateEntree = today;
           this.rerender();
         });
       });
-
       updateNextBtn();
     }
 
-    if (e === 3) {
+    // ── Étape 3 : Index compteurs (si produit avec compteurs) ──
+    if (e === 3 && this.produitNeedIndexStep()) {
+      const updateNextBtn = () => {
+        const btn = overlay.querySelector('#kdi-next') as HTMLButtonElement | null;
+        if (!btn) return;
+        const ok = this.etapeValide();
+        btn.disabled = !ok; btn.style.opacity = ok ? '1' : '.4'; btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+      };
+      const bindIdx = (sel: string, field: 'indexElecEntree' | 'indexEauEntree') => {
+        const el = overlay.querySelector(sel) as HTMLInputElement | null;
+        el?.addEventListener('input', (ev) => this.zone.run(() => {
+          this.step2[field] = (ev.target as HTMLInputElement).value;
+          updateNextBtn();
+        }));
+      };
+      bindIdx('#kdi-idx-elec', 'indexElecEntree');
+      bindIdx('#kdi-idx-eau',  'indexEauEntree');
+      updateNextBtn();
+    }
+
+    // ── Étape Documents (3 ou 4 selon produit) ──
+    if (e === this.etapeDocuments) {
       overlay.querySelector('#kdi-doc-contrat')?.addEventListener('change', (ev) =>
         this.zone.run(() => { this.docContrat = (ev.target as HTMLInputElement).files?.[0] ?? null; this.rerender(); }));
       overlay.querySelector('#kdi-doc-photos')?.addEventListener('change', (ev) =>
@@ -993,6 +964,7 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
     const lbl = (txt: string) =>
       `<label style="font-size:.72rem;font-weight:600;color:#4a5878;display:block;margin-bottom:5px">${txt}</label>`;
 
+    // ── ÉTAPE 1 : Bien & locataire ──────────────────────────────
     if (this.etape === 1) {
       const produitSearch = !this.produitSel ? `
         ${inp('kdi-search-produit','text',this.searchProduit,'Rechercher un bien disponible…')}
@@ -1005,9 +977,8 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
             <strong>${this.produitSel.code ?? this.produitSel.libelle}</strong>
             <span style="color:#8a97b0;margin-left:6px">${this.produitSel.proprieteLibelle ?? ''}</span>
           </div>
-          <button id="kdi-clear-produit" style="border:none;background:none;cursor:pointer;font-size:16px;color:#8a97b0">✕</button>
+          ${this.produitDetailLoading ? `<span style="font-size:11px;color:#c9a96e;display:flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin .7s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Chargement…</span>` : `<button id="kdi-clear-produit" style="border:none;background:none;cursor:pointer;font-size:16px;color:#8a97b0">✕</button>`}
         </div>`;
-
       const locataireSearch = !this.locataireSel ? `
         ${inp('kdi-search-locataire','text',this.searchLocataire,'Rechercher un locataire…')}
         <div id="kdi-dropdown-locataire"></div>
@@ -1020,17 +991,15 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
           </div>
           <button id="kdi-clear-locataire" style="border:none;background:none;cursor:pointer;font-size:16px;color:#8a97b0">✕</button>
         </div>`;
-
       return `
         <div style="font-size:.85rem;font-weight:600;color:#0e1c38;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #e3e8f0">Bien locatif & locataire</div>
         <div style="margin-bottom:16px">${lbl('Bien locatif *')}${produitSearch}</div>
         <div>${lbl('Locataire *')}${locataireSearch}</div>`;
     }
-    
+
+    // ── ÉTAPE 2 : Conditions financières ───────────────────────
     if (this.etape === 2) {
       const s = this.step2;
-      // ── helper local insensible à la casse ──
-      // const estPdg = ['pdg','Pdg','PDG'].includes(this.auth.getUser()?.role ?? '');
       const estPdg = this.auth.getUser()?.role === 'Direction';
       return `
         <div style="font-size:.85rem;font-weight:600;color:#0e1c38;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #e3e8f0">Conditions financières & durée</div>
@@ -1062,14 +1031,12 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
                   title="Dérogation PDG — autoriser l'antidatage"
                   style="position:absolute;right:7px;top:50%;transform:translateY(-50%);
                          border:none;background:none;cursor:pointer;font-size:15px;
-                         opacity:.4;padding:2px;line-height:1;color:#92400e;
-                         transition:opacity .15s"
+                         opacity:.4;padding:2px;line-height:1;color:#92400e;transition:opacity .15s"
                   onmouseover="this.style.opacity='1'"
                   onmouseout="this.style.opacity='.4'">🔓</button>` : ''}
             </div>
             ${this.derogationActive ? `
-              <div style="font-size:.69rem;color:#b45309;margin-top:3px;
-                          display:flex;align-items:center;gap:3px">
+              <div style="font-size:.69rem;color:#b45309;margin-top:3px;display:flex;align-items:center;gap:3px">
                 ⚠️ Antidatage PDG actif — date libre
               </div>` : ''}
           </div>
@@ -1077,16 +1044,14 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
         </div>
         ${this.derogationActive ? `
         <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;
-             padding:10px 13px;margin-bottom:14px;display:flex;align-items:center;
-             justify-content:space-between;gap:10px">
+             padding:10px 13px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px">
           <span style="font-size:.75rem;color:#92400e">
             🔓 <strong>Dérogation PDG active</strong> — le contrat peut être antidaté.
             Cette opération est enregistrée dans les logs.
           </span>
           <button id="kdi-derog-cancel"
             style="border:none;background:rgba(180,83,9,.12);border-radius:5px;
-                   padding:3px 10px;font-size:.72rem;cursor:pointer;
-                   color:#92400e;font-weight:600;white-space:nowrap">
+                   padding:3px 10px;font-size:.72rem;cursor:pointer;color:#92400e;font-weight:600;white-space:nowrap">
             ✕ Désactiver
           </button>
         </div>` : ''}
@@ -1102,6 +1067,106 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
         </div>`;
     }
 
+    // ── ÉTAPE 3 : Index compteurs (conditionnelle) ──────────────
+    if (this.etape === 3 && this.produitNeedIndexStep()) {
+      const p    = this.produitSel;
+      const type = (p?.type ?? p?.typeLabel ?? '').toString();
+      const isChambre  = type === 'Chambre';
+      const isAppart   = type === 'Appartement';
+      const isBoutique = type === 'Boutique';
+      const hasElec    = !!(p?.hasCompteurElec);
+      const hasEau     = !!(p?.hasCompteurEau);
+
+      const elecOblig  = (isAppart && hasElec) || isBoutique || (isChambre && hasElec);
+      const eauOblig   = (isAppart && hasEau)  || (isChambre && hasEau);
+      const elecInfo   = isChambre && !hasElec;
+      const eauInfo    = isChambre && !hasEau;
+
+      const showElec = hasElec || isBoutique || isChambre;
+      const showEau  = hasEau  || isAppart   || isChambre;
+
+      const badgeOblig = `<span style="font-size:.65rem;font-weight:700;padding:1px 7px;border-radius:10px;background:#fee2e2;color:#b91c1c;margin-left:6px">Obligatoire</span>`;
+      const badgeInfo  = `<span style="font-size:.65rem;font-weight:700;padding:1px 7px;border-radius:10px;background:#dbeafe;color:#1d4ed8;margin-left:6px">Informatif</span>`;
+      const badgeFacul = `<span style="font-size:.65rem;font-weight:700;padding:1px 7px;border-radius:10px;background:#f0fdf4;color:#15803d;margin-left:6px">Facultatif</span>`;
+
+      const buildChamp = (
+        id: string, label: string, icon: string, val: any,
+        obligatoire: boolean, informatif: boolean, _facultatif: boolean, hint: string
+      ) => {
+        const badge   = obligatoire ? badgeOblig : informatif ? badgeInfo : badgeFacul;
+        const filled  = val !== '' && val !== null && val !== undefined;
+        const borderC = obligatoire ? (filled ? '#22c55e' : '#fca5a5') : informatif ? '#93c5fd' : '#86efac';
+        const bgC     = obligatoire ? (filled ? '#f0fdf4' : '#fff5f5') : informatif ? '#eff6ff' : '#f0fdf4';
+        return `
+          <div style="background:${bgC};border:1.5px solid ${borderC};border-radius:12px;padding:16px 18px;transition:all .2s">
+            <div style="display:flex;align-items:center;margin-bottom:10px">
+              <span style="font-size:20px;margin-right:8px">${icon}</span>
+              <span style="font-size:.82rem;font-weight:700;color:#0e1c38">${label}</span>
+              ${badge}
+              ${filled ? `<span style="margin-left:auto;font-size:18px">✅</span>` : ''}
+            </div>
+            <div style="position:relative">
+              <input id="${id}" type="number" value="${val ?? ''}" step="0.01" min="0"
+                placeholder="Ex : 1 234,56"
+                style="padding:10px 44px 10px 14px;border:1.5px solid ${filled ? '#22c55e' : '#d1d5db'};
+                       border-radius:8px;font-family:inherit;font-size:.88rem;width:100%;
+                       box-sizing:border-box;background:#fff;color:#0e1c38;outline:none;transition:border-color .15s">
+              <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:.72rem;font-weight:600;color:#94a3b8">kWh/m³</span>
+            </div>
+            <div style="font-size:.69rem;color:#64748b;margin-top:6px;display:flex;align-items:center;gap:4px">
+              ℹ️ ${hint}
+            </div>
+          </div>`;
+      };
+
+      const elecHint = isBoutique
+        ? 'Index relevé sur le compteur électrique — obligatoire pour les boutiques.'
+        : isAppart
+          ? 'Index relevé sur le compteur électrique individuel de l\'appartement.'
+          : hasElec
+            ? 'Compteur individuel — index obligatoire pour le suivi de consommation.'
+            : 'Compteur partagé — index informatif, permet le suivi par unité.';
+      const eauHint = isBoutique
+        ? 'Eau optionnelle pour les boutiques — renseignez si disponible.'
+        : isAppart
+          ? 'Index relevé sur le compteur eau individuel de l\'appartement.'
+          : hasEau
+            ? 'Compteur individuel — index obligatoire pour le suivi de consommation.'
+            : 'Compteur partagé — index informatif, permet le suivi par unité.';
+
+      const regleLabel = isAppart
+        ? `Appartement avec ${hasElec && hasEau ? 'compteurs eau + électricité' : hasElec ? 'compteur électricité' : 'compteur eau'} — relevés obligatoires.`
+        : isBoutique
+          ? 'Boutique — index électricité obligatoire, eau facultative.'
+          : hasElec && hasEau
+            ? 'Chambre avec compteurs individuels — index obligatoires.'
+            : hasElec
+              ? 'Chambre — électricité individuelle (obligatoire), eau partagée (informatif).'
+              : hasEau
+                ? 'Chambre — eau individuelle (obligatoire), électricité partagée (informatif).'
+                : 'Chambre avec compteurs partagés — index informatifs.';
+
+      return `
+        <div style="font-size:.85rem;font-weight:600;color:#0e1c38;margin-bottom:4px;padding-bottom:10px;border-bottom:1px solid #e3e8f0;display:flex;align-items:center;gap:8px">
+          ⚡💧 Relevé des index — état des lieux d'entrée
+        </div>
+        <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:9px;padding:10px 13px;margin-bottom:18px;font-size:.75rem;color:#0369a1;display:flex;align-items:flex-start;gap:7px">
+          <span style="font-size:16px;flex-shrink:0">📋</span>
+          <span>${regleLabel} Ces valeurs serviront de référence pour le calcul des charges.</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          ${showElec ? buildChamp('kdi-idx-elec', 'Électricité', '⚡',
+              this.step2.indexElecEntree, elecOblig, elecInfo, !elecOblig && !elecInfo, elecHint) : ''}
+          ${showEau  ? buildChamp('kdi-idx-eau',  'Eau',         '💧',
+              this.step2.indexEauEntree,  eauOblig,  eauInfo,  !eauOblig  && !eauInfo,  eauHint)  : ''}
+        </div>
+        ${(elecOblig || eauOblig) ? `
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 13px;margin-top:14px;font-size:.73rem;color:#92400e;display:flex;align-items:center;gap:7px">
+          ⚠️ Les champs <strong>Obligatoires</strong> doivent être renseignés pour continuer.
+        </div>` : ''}`;
+    }
+
+    // ── ÉTAPE DOCUMENTS (3 ou 4) ────────────────────────────────
     const s = this.step2;
     const ci = (ok: boolean, t: string) =>
       `<span style="display:flex;align-items:center;gap:4px;padding:3px 10px;border-radius:10px;font-size:.72rem;font-weight:500;background:${ok?'#d1fae5':'#e8edf5'};color:${ok?'#065f46':'#8a97b0'}">${ok?'✓':'○'} ${t}</span>`;
@@ -1124,6 +1189,8 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
           ${row('Entrée', s.dateEntree)}
           ${row('Paiement', 'du '+s.jourDebutPaiement+' au '+s.jourFinPaiement)}
           ${row('Destination', s.destinationBien)}
+          ${s.indexElecEntree !== '' ? row('Index élec.', String(s.indexElecEntree)+' kWh') : ''}
+          ${s.indexEauEntree  !== '' ? row('Index eau',   String(s.indexEauEntree) +' m³')  : ''}
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
@@ -1198,7 +1265,7 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
       const id = (el as HTMLElement).dataset['produitId'];
       el.addEventListener('click', () => this.zone.run(() => {
         const p = this.produitResultats.find((x: any) => x.id === id);
-        if (p) { this.selectionnerProduit(p); this.rerender(); }
+        if (p) { this.selectionnerProduit(p); }
       }));
     });
   }
@@ -1225,14 +1292,61 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
   }
 
   private selectionnerProduit(p: any) {
-    this.produitSel = p; this.produitResultats = [];
+    this.produitResultats = [];
+    // Déduire type depuis typeLabel si type absent (backend ne le retourne pas dans la liste)
+    const typeLabel = (p.typeLabel ?? p.type ?? "").toString();
+    p.type = p.type ?? typeLabel; // normalise
+    // hasCompteurElec/Eau : si absents de la liste, on fait un getById une seule fois
+    const hasKnownCompteurs = p.hasCompteurElec !== undefined || p.hasCompteurEau !== undefined;
     const ref = Number(p.loyerReference ?? p.loyer ?? 0);
     if (ref > 0) { this.step2.loyer = ref; this.step2.caution = ref * 2; this.step2.avanceLoyer = ref; }
+    if (hasKnownCompteurs) {
+      // La liste retourne déjà les compteurs — utilisation directe, pas de getById
+      this.produitSel = p;
+      this.produitDetailLoading = false;
+      this.rerender();
+    } else {
+      // La liste ne retourne pas les compteurs — getById nécessaire
+      this.produitDetailLoading = true;
+      const container = this.overlayEl?.querySelector('#kdi-dropdown-produit') as HTMLElement | null;
+      if (container) container.innerHTML = `<div style="padding:10px 12px;font-size:.8rem;color:#c9a96e">⟳ Chargement…</div>`;
+      this.produitSvc.getById(p.id).subscribe({
+        next: (detail: any) => this.zone.run(() => {
+          // Prendre les compteurs du detail, le type de p (plus fiable)
+          this.produitSel = {
+            ...p,
+            hasCompteurElec: !!(detail.hasCompteurElec ?? false),
+            hasCompteurEau:  !!(detail.hasCompteurEau  ?? false),
+            type: detail.type ?? p.type ?? typeLabel,
+          };
+          this.produitDetailLoading = false;
+          this.rerender();
+        }),
+        error: () => this.zone.run(() => {
+          this.produitSel = p;
+          this.produitDetailLoading = false;
+          this.rerender();
+        })
+      });
+    }
   }
 
   etapeValide(): boolean {
-    if (this.etape === 1) return !!this.produitSel && !!this.locataireSel;
+    if (this.etape === 1) return !!this.produitSel && !!this.locataireSel && !this.produitDetailLoading;
     if (this.etape === 2) return Number(this.step2.loyer) > 0 && Number(this.step2.caution) >= 0 && !!this.step2.dateEntree;
+    if (this.etape === 3 && this.produitNeedIndexStep()) {
+      const p      = this.produitSel;
+      const type   = (p?.type ?? p?.typeLabel ?? '').toString();
+      const hasElec    = !!(p?.hasCompteurElec);
+      const hasEau     = !!(p?.hasCompteurEau);
+      const isAppart   = type === 'Appartement';
+      const isBoutique = type === 'Boutique';
+      const isChambre  = type === 'Chambre';
+      const elecOblig  = (isAppart && hasElec) || isBoutique || (isChambre && hasElec);
+      const eauOblig   = (isAppart && hasEau)  || (isChambre && hasEau);
+      if (elecOblig && (this.step2.indexElecEntree === '' || this.step2.indexElecEntree === null)) return false;
+      if (eauOblig  && (this.step2.indexEauEntree  === '' || this.step2.indexEauEntree  === null)) return false;
+    }
     return true;
   }
 
@@ -1245,7 +1359,6 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
     fd.append('Loyer',             String(this.step2.loyer));
     fd.append('Caution',           String(this.step2.caution));
     fd.append('AvanceLoyer',       String(this.step2.avanceLoyer || 0));
-    // ── Caution et avance toujours réglées à la création (règle métier) ──
     fd.append('CautionReglee',     'true');
     fd.append('AvanceLoyerReglee', 'true');
     fd.append('Periodicite',       this.step2.periodicite);
@@ -1253,11 +1366,12 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
     fd.append('JourDebutPaiement', String(this.step2.jourDebutPaiement));
     fd.append('JourFinPaiement',   String(this.step2.jourFinPaiement));
     fd.append('DestinationBien',   this.step2.destinationBien);
-    // ── Dérogation PDG : signale au backend que l'antidatage est autorisé ──
-    if (this.derogationActive) fd.append('DerogationPdg', 'true');
-    if (this.step2.dateSortiePrevue)        fd.append('DateSortiePrevue',        this.step2.dateSortiePrevue);
-    if (this.step2.conditionsParticulieres) fd.append('ConditionsParticulieres', this.step2.conditionsParticulieres);
-    if (this.docContrat)                    fd.append('DocContrat',              this.docContrat);
+    if (this.derogationActive)                   fd.append('DerogationPdg',           'true');
+    if (this.step2.indexElecEntree !== '')        fd.append('IndexElecEntree',          String(this.step2.indexElecEntree));
+    if (this.step2.indexEauEntree  !== '')        fd.append('IndexEauEntree',           String(this.step2.indexEauEntree));
+    if (this.step2.dateSortiePrevue)             fd.append('DateSortiePrevue',         this.step2.dateSortiePrevue);
+    if (this.step2.conditionsParticulieres)      fd.append('ConditionsParticulieres',  this.step2.conditionsParticulieres);
+    if (this.docContrat)                         fd.append('DocContrat',               this.docContrat);
     this.photosEdl.forEach(f => fd.append('PhotosEtatLieux', f));
     this.svc.create(fd).subscribe({
       next:  () => { this.submitting = false; this.derogationActive = false; this.fermerModal(); this.load(); },

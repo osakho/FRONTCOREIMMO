@@ -241,6 +241,9 @@ export interface ProduitListItemDto {
   proprieteLibelle: string;
   code:             string;
   typeLabel:        string;
+  type?:            TypeProduit;  // présent si le backend le retourne
+  hasCompteurElec?: boolean;
+  hasCompteurEau?:  boolean;
   loyerReference:   number;
   statutLabel:      string;
   surface?:         number;
