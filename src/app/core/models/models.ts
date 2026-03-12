@@ -343,15 +343,19 @@ export interface ContratLocationResumeLocataire {
 //  CONTRATS DE LOCATION
 // ══════════════════════════════════════════════════════════════
 export interface ContratLocationListItemDto {
-  id:               string;
-  numero:           string;
-  produitCode:      string;
-  locataireNom:     string;
-  loyer:            number;
-  statutLabel:      string;
-  dateEntree:       string;
-  dateSortiePrevue?:string;
-  estEnRetard:      boolean;
+  id:                  string;
+  numero:              string;
+  produitCode:         string;
+  locataireNom:        string;
+  loyer:               number;
+  caution:             number;
+  avanceLoyer:         number;
+  cautionReglee:       boolean;
+  avanceLoyerReglee:   boolean;
+  statutLabel:         string;
+  dateEntree:          string;
+  dateSortiePrevue?:   string;
+  estEnRetard:         boolean;
 }
 
 export interface ContratLocationDto {
@@ -852,6 +856,3 @@ export interface FeuilleRecouvrementDto {
   proprietaires: { id: string; nom: string }[];
   proprietes:    { id: string; nom: string }[];
 }
-
-
-

@@ -484,16 +484,31 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
       mois.push({ periode, label, montant: c.loyer, montantPaye: 0, statut: i >= moisTotal ? 'Futur' : 'Impaye' });
     }
 
-    const montantDu = moisTotal * c.loyer;
+    const montantDu = Math.max(0, moisTotal - 1) * c.loyer; // M0 couvert par l'avance
+    // ── Lire les vraies valeurs depuis le DTO enrichi ──
+    const cautionReglee     = c.cautionReglee     ?? true;
+    const avanceLoyerReglee = c.avanceLoyerReglee ?? true;
+    const caution           = c.caution           ?? 0;
+    const avanceLoyer       = c.avanceLoyer       ?? 0;
+
+    // Premier mois marqué Avance (couvert par l'avance versée)
+    if (mois.length > 0 && moisTotal > 0) {
+      mois[0].statut     = 'Avance';
+      mois[0].montantPaye = c.loyer;
+    }
+
+    const moisPayes = moisTotal > 0 ? 1 : 0; // au moins le 1er mois couvert par avance
     return {
       contratId: c.id, locataireNom: c.locataireNom, produitCode: c.produitCode, loyer: c.loyer,
-      caution: 0, cautionReglee: false, avanceLoyer: 0, avanceLoyerReglee: false,
-      moisDepuisEntree: moisTotal, moisPayes: 0, moisEnAvance: 0, moisEnRetard: moisTotal,
-      montantDu, montantPaye: 0, solde: -montantDu,
-      statutLoyer:      moisTotal === 0 ? 'NonCommence' : 'EnRetard',
+      caution, cautionReglee, avanceLoyer, avanceLoyerReglee,
+      moisDepuisEntree: moisTotal, moisPayes, moisEnAvance: 0, moisEnRetard: Math.max(0, moisTotal - 1),
+      montantDu, montantPaye: moisTotal > 0 ? c.loyer : 0, solde: -montantDu,
+      statutLoyer:      moisTotal === 0 ? 'NonCommence' : (montantDu === 0 ? 'AJour' : 'EnRetard'),
       statutLoyerLabel: moisTotal === 0
         ? 'Pas encore commencé'
-        : `En retard — ${moisTotal} mois non payé${moisTotal > 1 ? 's' : ''}`,
+        : montantDu === 0
+          ? 'À jour — avance couvre le premier mois'
+          : `En retard — ${moisTotal - 1} mois non payé${moisTotal - 1 > 1 ? 's' : ''}`,
       mois
     };
   }
@@ -1067,6 +1082,9 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
         ${ci(!!this.docContrat,'Contrat signé')} ${ci(this.photosEdl.length>0,'Photos EDL')}
       </div>
+      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:.78rem;color:#166534;display:flex;align-items:center;gap:8px">
+        ✅ <strong>Caution et avance loyer seront marquées comme réglées</strong> — l'avance sera automatiquement affectée au premier mois de loyer.
+      </div>
       <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #e3e8f0">
         <div style="display:flex;align-items:center;gap:8px;width:180px;flex-shrink:0">
           <span style="font-size:16px;color:#c9a96e">📄</span>
@@ -1183,6 +1201,11 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
     fd.append('Loyer',             String(this.step2.loyer));
     fd.append('Caution',           String(this.step2.caution));
     fd.append('AvanceLoyer',       String(this.step2.avanceLoyer || 0));
+    // ── Caution et avance TOUJOURS réglées à la création (règle métier) ──
+    fd.append('CautionReglee',     'true');
+    fd.append('AvanceLoyerReglee', 'true');
+    fd.append('ContratSigne',      this.docContrat ? 'true' : 'false');
+    fd.append('EdlEntreeValide',   this.photosEdl.length > 0 ? 'true' : 'false');
     fd.append('Periodicite',       this.step2.periodicite);
     fd.append('DateEntree',        this.step2.dateEntree);
     fd.append('JourDebutPaiement', String(this.step2.jourDebutPaiement));
