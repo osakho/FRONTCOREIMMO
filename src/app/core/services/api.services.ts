@@ -92,7 +92,8 @@ export class AuthService extends ApiService {
   }
 
   isLoggedIn(): boolean   { return !!this.getToken(); }
-  isPdg(): boolean        { return this.getUser()?.role === 'Pdg'; }
+  // isPdg(): boolean        { return this.getUser()?.role === 'Pdg'; }
+  isPdg(): boolean { return this.getUser()?.role === 'Direction'; }
   isDirection(): boolean  { return ['Direction', 'Admin', 'Pdg'].includes(this.getUser()?.role ?? ''); }
   isComptable(): boolean  { return ['Comptable', 'Direction', 'Admin', 'Pdg'].includes(this.getUser()?.role ?? ''); }
   isCollecteur(): boolean { return this.getUser()?.role === 'Collecteur'; }

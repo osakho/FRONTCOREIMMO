@@ -424,6 +424,9 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
     conditionsParticulieres: ''
   };
 
+  // ── Dérogation PDG : permet l'antidatage du contrat ──
+  derogationActive = false;
+
   private overlayEl: HTMLElement | null = null;
 
   ngOnInit() { this.load(); }
@@ -484,31 +487,16 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
       mois.push({ periode, label, montant: c.loyer, montantPaye: 0, statut: i >= moisTotal ? 'Futur' : 'Impaye' });
     }
 
-    const montantDu = Math.max(0, moisTotal - 1) * c.loyer; // M0 couvert par l'avance
-    // ── Lire les vraies valeurs depuis le DTO enrichi ──
-    const cautionReglee     = c.cautionReglee     ?? true;
-    const avanceLoyerReglee = c.avanceLoyerReglee ?? true;
-    const caution           = c.caution           ?? 0;
-    const avanceLoyer       = c.avanceLoyer       ?? 0;
-
-    // Premier mois marqué Avance (couvert par l'avance versée)
-    if (mois.length > 0 && moisTotal > 0) {
-      mois[0].statut     = 'Avance';
-      mois[0].montantPaye = c.loyer;
-    }
-
-    const moisPayes = moisTotal > 0 ? 1 : 0; // au moins le 1er mois couvert par avance
+    const montantDu = moisTotal * c.loyer;
     return {
       contratId: c.id, locataireNom: c.locataireNom, produitCode: c.produitCode, loyer: c.loyer,
-      caution, cautionReglee, avanceLoyer, avanceLoyerReglee,
-      moisDepuisEntree: moisTotal, moisPayes, moisEnAvance: 0, moisEnRetard: Math.max(0, moisTotal - 1),
-      montantDu, montantPaye: moisTotal > 0 ? c.loyer : 0, solde: -montantDu,
-      statutLoyer:      moisTotal === 0 ? 'NonCommence' : (montantDu === 0 ? 'AJour' : 'EnRetard'),
+      caution: 0, cautionReglee: false, avanceLoyer: 0, avanceLoyerReglee: false,
+      moisDepuisEntree: moisTotal, moisPayes: 0, moisEnAvance: 0, moisEnRetard: moisTotal,
+      montantDu, montantPaye: 0, solde: -montantDu,
+      statutLoyer:      moisTotal === 0 ? 'NonCommence' : 'EnRetard',
       statutLoyerLabel: moisTotal === 0
         ? 'Pas encore commencé'
-        : montantDu === 0
-          ? 'À jour — avance couvre le premier mois'
-          : `En retard — ${moisTotal - 1} mois non payé${moisTotal - 1 > 1 ? 's' : ''}`,
+        : `En retard — ${moisTotal} mois non payé${moisTotal > 1 ? 's' : ''}`,
       mois
     };
   }
@@ -861,6 +849,7 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
       jourDebutPaiement: 1, jourFinPaiement: 5,
       destinationBien: 'Habitation', conditionsParticulieres: ''
     };
+    this.derogationActive = false;
     this.detruireOverlay();
     this.overlayEl = this.construireOverlay();
     document.body.appendChild(this.overlayEl);
@@ -964,6 +953,22 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
       bind('#kdi-perio','periodicite'); bind('#kdi-dentree','dateEntree'); bind('#kdi-dsortie','dateSortiePrevue');
       bind('#kdi-jdebut','jourDebutPaiement'); bind('#kdi-jfin','jourFinPaiement');
       bind('#kdi-destination','destinationBien'); bind('#kdi-cond','conditionsParticulieres');
+
+      // ── Dérogation PDG : activer / désactiver l'antidatage ──
+      overlay.querySelector('#kdi-derog-btn')?.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        this.zone.run(() => { this.derogationActive = true; this.rerender(); });
+      });
+      overlay.querySelector('#kdi-derog-cancel')?.addEventListener('click', () => {
+        this.zone.run(() => {
+          this.derogationActive = false;
+          // Ramener la date à aujourd'hui si elle est dans le passé
+          const today = new Date().toISOString().slice(0, 10);
+          if (this.step2.dateEntree < today) this.step2.dateEntree = today;
+          this.rerender();
+        });
+      });
+
       updateNextBtn();
     }
 
@@ -1021,9 +1026,12 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
         <div style="margin-bottom:16px">${lbl('Bien locatif *')}${produitSearch}</div>
         <div>${lbl('Locataire *')}${locataireSearch}</div>`;
     }
-
+    
     if (this.etape === 2) {
       const s = this.step2;
+      // ── helper local insensible à la casse ──
+      // const estPdg = ['pdg','Pdg','PDG'].includes(this.auth.getUser()?.role ?? '');
+      const estPdg = this.auth.getUser()?.role === 'Direction';
       return `
         <div style="font-size:.85rem;font-weight:600;color:#0e1c38;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #e3e8f0">Conditions financières & durée</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
@@ -1040,9 +1048,48 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
           </select></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-          <div>${lbl("Date d'entrée *")}${inp('kdi-dentree','date',s.dateEntree)}</div>
+          <div>
+            ${lbl("Date d'entrée *")}
+            <div style="position:relative">
+              <input id="kdi-dentree" type="date" value="${s.dateEntree}"
+                ${this.derogationActive ? '' : `max="${new Date().toISOString().slice(0,10)}"`}
+                style="padding:8px 11px;border:1.5px solid ${this.derogationActive ? '#f59e0b' : '#e3e8f0'};
+                       border-radius:7px;font-family:inherit;font-size:.81rem;color:#0e1c38;
+                       background:${this.derogationActive ? '#fffbeb' : '#f2f5fa'};
+                       width:100%;box-sizing:border-box;padding-right:${estPdg ? '32px' : '11px'}">
+              ${estPdg && !this.derogationActive ? `
+                <button id="kdi-derog-btn"
+                  title="Dérogation PDG — autoriser l'antidatage"
+                  style="position:absolute;right:7px;top:50%;transform:translateY(-50%);
+                         border:none;background:none;cursor:pointer;font-size:15px;
+                         opacity:.4;padding:2px;line-height:1;color:#92400e;
+                         transition:opacity .15s"
+                  onmouseover="this.style.opacity='1'"
+                  onmouseout="this.style.opacity='.4'">🔓</button>` : ''}
+            </div>
+            ${this.derogationActive ? `
+              <div style="font-size:.69rem;color:#b45309;margin-top:3px;
+                          display:flex;align-items:center;gap:3px">
+                ⚠️ Antidatage PDG actif — date libre
+              </div>` : ''}
+          </div>
           <div>${lbl('Date de sortie prévue')}${inp('kdi-dsortie','date',s.dateSortiePrevue)}</div>
         </div>
+        ${this.derogationActive ? `
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;
+             padding:10px 13px;margin-bottom:14px;display:flex;align-items:center;
+             justify-content:space-between;gap:10px">
+          <span style="font-size:.75rem;color:#92400e">
+            🔓 <strong>Dérogation PDG active</strong> — le contrat peut être antidaté.
+            Cette opération est enregistrée dans les logs.
+          </span>
+          <button id="kdi-derog-cancel"
+            style="border:none;background:rgba(180,83,9,.12);border-radius:5px;
+                   padding:3px 10px;font-size:.72rem;cursor:pointer;
+                   color:#92400e;font-weight:600;white-space:nowrap">
+            ✕ Désactiver
+          </button>
+        </div>` : ''}
         <div style="background:#f2f5fa;border:1px solid #e3e8f0;border-radius:8px;padding:12px;margin-bottom:14px">
           <div style="font-size:.76rem;font-weight:600;color:#4a5878;margin-bottom:10px">📅 Fenêtre de paiement</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -1081,9 +1128,6 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
         ${ci(!!this.docContrat,'Contrat signé')} ${ci(this.photosEdl.length>0,'Photos EDL')}
-      </div>
-      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:.78rem;color:#166534;display:flex;align-items:center;gap:8px">
-        ✅ <strong>Caution et avance loyer seront marquées comme réglées</strong> — l'avance sera automatiquement affectée au premier mois de loyer.
       </div>
       <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #e3e8f0">
         <div style="display:flex;align-items:center;gap:8px;width:180px;flex-shrink:0">
@@ -1201,22 +1245,22 @@ ouvrirAvenant(c: ContratLocationListItemDto) {
     fd.append('Loyer',             String(this.step2.loyer));
     fd.append('Caution',           String(this.step2.caution));
     fd.append('AvanceLoyer',       String(this.step2.avanceLoyer || 0));
-    // ── Caution et avance TOUJOURS réglées à la création (règle métier) ──
+    // ── Caution et avance toujours réglées à la création (règle métier) ──
     fd.append('CautionReglee',     'true');
     fd.append('AvanceLoyerReglee', 'true');
-    fd.append('ContratSigne',      this.docContrat ? 'true' : 'false');
-    fd.append('EdlEntreeValide',   this.photosEdl.length > 0 ? 'true' : 'false');
     fd.append('Periodicite',       this.step2.periodicite);
     fd.append('DateEntree',        this.step2.dateEntree);
     fd.append('JourDebutPaiement', String(this.step2.jourDebutPaiement));
     fd.append('JourFinPaiement',   String(this.step2.jourFinPaiement));
     fd.append('DestinationBien',   this.step2.destinationBien);
+    // ── Dérogation PDG : signale au backend que l'antidatage est autorisé ──
+    if (this.derogationActive) fd.append('DerogationPdg', 'true');
     if (this.step2.dateSortiePrevue)        fd.append('DateSortiePrevue',        this.step2.dateSortiePrevue);
     if (this.step2.conditionsParticulieres) fd.append('ConditionsParticulieres', this.step2.conditionsParticulieres);
     if (this.docContrat)                    fd.append('DocContrat',              this.docContrat);
     this.photosEdl.forEach(f => fd.append('PhotosEtatLieux', f));
     this.svc.create(fd).subscribe({
-      next:  () => { this.submitting = false; this.fermerModal(); this.load(); },
+      next:  () => { this.submitting = false; this.derogationActive = false; this.fermerModal(); this.load(); },
       error: () => { this.submitting = false; this.rerender(); }
     });
   }
