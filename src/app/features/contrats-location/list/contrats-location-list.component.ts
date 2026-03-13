@@ -464,7 +464,7 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
     const montantDu = moisTotal * c.loyer;
     return {
       contratId: c.id, locataireNom: c.locataireNom, produitCode: c.produitCode, loyer: c.loyer,
-      caution: 0, cautionReglee: false, avanceLoyer: 0, avanceLoyerReglee: false,
+      caution: c.caution ?? 0, cautionReglee: c.cautionReglee ?? false, avanceLoyer: c.avanceLoyer ?? 0, avanceLoyerReglee: c.avanceLoyerReglee ?? false,
       moisDepuisEntree: moisTotal, moisPayes: 0, moisEnAvance: 0, moisEnRetard: moisTotal,
       montantDu, montantPaye: 0, solde: -montantDu,
       statutLoyer:      moisTotal === 0 ? 'NonCommence' : 'EnRetard',

@@ -30,6 +30,7 @@ export interface DeductionVersementDto {
 
 export interface PeriodeVersementDto {
   periodeId:      string;
+  versementId?:   string;  // GUID du versement en base
   moisConcernes:  string[];
   datePrevue:     string;
   dateEffective?: string;
@@ -48,6 +49,7 @@ export interface PeriodeVersementDto {
 
 export interface SuiviVersementProprieteDto {
   proprieteId:       string;
+  contratGestionId:  string;  // pour preparer versement
   proprieteLibelle:  string;
   proprieteAdresse:  string;
   periodicite:       string;
@@ -95,12 +97,24 @@ export class SuiviVersementsService extends ApiService {
     return this.get<SuiviVersementsGlobalDto>(url);
   }
 
+  preparer(contratGestionId: string, periode: string, datePrevue: string): Observable<string> {
+    return this.post<string>('/versements/preparer', { contratGestionId, periode, datePrevue });
+  }
+
   marquerEffectue(versementId: string, reference: string): Observable<void> {
-    return this.post<void>(`/versements/${versementId}/effectuer`, { reference });
+    const fd = new FormData();
+    fd.append('Reference',        reference);
+    fd.append('DateEffective',    new Date().toISOString().split('T')[0]);
+    fd.append('Mode',             'Virement');
+    fd.append('NotifierEmail',    'false');
+    fd.append('NotifierWhatsApp', 'false');
+    fd.append('NotifierSms',      'false');
+    return this.http.post<void>(`${this.base}/versements/${versementId}/effectuer`, fd);
   }
 
   accorderDerogation(versementId: string, motif: string): Observable<void> {
-    return this.post<void>(`/versements/${versementId}/accorder-derogation`, motif);
+    return this.http.post<void>(`${this.base}/versements/${versementId}/accorder-derogation`,
+      JSON.stringify(motif), { headers: { 'Content-Type': 'application/json' } });
   }
 
   envoyerBordereau(versementId: string, canal: 'email' | 'whatsapp' | 'sms'): Observable<void> {
@@ -708,24 +722,75 @@ export class SuiviVersementsComponent implements OnInit {
     this.showEnvoiModal    = true;
   }
 
+  saving = false;
+
   marquerEffectue() {
-    if (!this.selectedPeriode || !this.refPaiement) return;
-    alert(`Versement marqué effectué — Réf: ${this.refPaiement}`);
+    if (!this.selectedPeriode || !this.refPaiement.trim() || this.saving) return;
+    this.saving = true;
+    const doEffectuer = (versementId: string) => {
+      this.svc.marquerEffectue(versementId, this.refPaiement.trim()).subscribe({
+        next: () => {
+          this.selectedPeriode = null;
+          this.refPaiement = '';
+          this.saving = false;
+          this.load();
+        },
+        error: () => { this.saving = false; alert('Erreur lors du marquage.'); }
+      });
+    };
+    if (this.selectedPeriode.versementId) {
+      doEffectuer(this.selectedPeriode.versementId);
+    } else if (this.selectedPropriete?.contratGestionId) {
+      // Créer le versement en base avant de le marquer effectué
+      const periode = this.selectedPeriode.moisConcernes[0];
+      const datePrevue = this.selectedPeriode.datePrevue;
+      this.svc.preparer(this.selectedPropriete.contratGestionId, periode, datePrevue).subscribe({
+        next: (id: string) => doEffectuer(id),
+        error: () => { this.saving = false; alert('Erreur lors de la préparation du versement.'); }
+      });
+    } else {
+      this.saving = false;
+      alert('Impossible de déterminer le contrat de gestion.');
+    }
   }
 
   accorderDerogation() {
-    if (!this.selectedPeriode || !this.motifDerogation) return;
-    alert(`Dérogation accordée — Motif: ${this.motifDerogation}`);
+    if (!this.selectedPeriode || !this.motifDerogation.trim() || this.saving) return;
+    if (!this.selectedPeriode.versementId) {
+      alert('Ce versement n\'a pas encore été préparé.');
+      return;
+    }
+    this.saving = true;
+    this.svc.accorderDerogation(this.selectedPeriode.versementId, this.motifDerogation.trim()).subscribe({
+      next: () => {
+        this.selectedPeriode = null;
+        this.motifDerogation = '';
+        this.saving = false;
+        this.load();
+      },
+      error: () => { this.saving = false; alert('Erreur lors de la dérogation.'); }
+    });
   }
 
   envoyer(canal: 'email' | 'whatsapp' | 'sms') {
-    if (!this.selectedPeriode) return;
-    alert(`Bordereau envoyé par ${canal}`);
+    if (!this.selectedPeriode || this.saving) return;
+    if (!this.selectedPeriode.versementId) { alert('Versement non préparé.'); return; }
+    this.saving = true;
+    this.svc.envoyerBordereau(this.selectedPeriode.versementId, canal).subscribe({
+      next: () => { this.saving = false; alert(`Bordereau envoyé par ${canal}.`); },
+      error: () => { this.saving = false; alert('Erreur lors de l\'envoi.'); }
+    });
   }
 
   envoyerModal(canal: 'email' | 'whatsapp' | 'sms') {
+    if (!this.modalPeriode || this.saving) return;
+    if (!this.modalPeriode.versementId) { alert('Versement non préparé.'); return; }
     this.showEnvoiModal = false;
-    alert(`Bordereau envoyé par ${canal}`);
+    this.saving = true;
+    this.svc.envoyerBordereau(this.modalPeriode.versementId, canal).subscribe({
+      next: () => { this.saving = false; alert(`Bordereau envoyé par ${canal}.`); },
+      error: () => { this.saving = false; alert('Erreur lors de l\'envoi.'); }
+    });
   }
 
   exportPdf()   { alert('Export PDF — à brancher sur le backend'); }
