@@ -404,6 +404,7 @@ export interface CollecteDto {
   contratLocationId: string;
   contratNumero:     string;
   produitCode:       string;
+  proprieteLibelle:  string;
   locataireNom:      string;
   locataireTel:      string;
   periodeMois:       string;

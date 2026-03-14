@@ -159,6 +159,7 @@ import { CollecteDto, PagedList, StatutCollecte } from '../../../core/models/mod
 
     <table class="data-table" *ngIf="collectesFiltrees().length; else empty">
       <thead><tr>
+        <th>Propriété</th>
         <th>Locataire</th>
         <th>Bien</th>
         <th>Période</th>
@@ -174,6 +175,7 @@ import { CollecteDto, PagedList, StatutCollecte } from '../../../core/models/mod
         <tr *ngFor="let c of collectesFiltrees()"
             [class.row-valide]="c.statutLabel==='Valide'"
             [class.row-rejete]="c.statutLabel==='Rejete'">
+          <td class="text-muted">{{ c.proprieteLibelle }}</td>
           <td>
             <div class="cell-main">{{ c.locataireNom }}</div>
             <div class="cell-sub">{{ c.locataireTel }}</div>
