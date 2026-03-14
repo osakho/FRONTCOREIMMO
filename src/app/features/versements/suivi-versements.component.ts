@@ -362,19 +362,11 @@ export class SuiviVersementsService extends ApiService {
           </div>
         </div>
 
-        <!-- Résumé financier -->
+        <!-- Résumé brut + net (header rapide) -->
         <div class="fin-summary">
           <div class="fs-row">
             <span class="fs-label">Loyers encaissés (brut)</span>
             <span class="fs-val">{{ selectedPeriode.montantBrut | number:'1.0-0' }} MRU</span>
-          </div>
-          <div class="fs-row fs-report" *ngIf="selectedPeriode.montantReporte > 0">
-            <span class="fs-label">↩ Loyers reportés (période préc.)</span>
-            <span class="fs-val fs-pos">+{{ selectedPeriode.montantReporte | number:'1.0-0' }} MRU</span>
-          </div>
-          <div class="fs-row fs-deduction" *ngFor="let d of selectedPeriode.deductions">
-            <span class="fs-label">− {{ d.libelle }}</span>
-            <span class="fs-val fs-neg">-{{ d.montant | number:'1.0-0' }} MRU</span>
           </div>
           <div class="fs-row fs-total">
             <span class="fs-label">Net à verser</span>
@@ -382,43 +374,78 @@ export class SuiviVersementsService extends ApiService {
           </div>
         </div>
 
-        <!-- Détail par produit locatif -->
+        <!-- Détail par produit locatif — tableau complet -->
         <div class="lignes-section">
           <div class="ls-title">Détail par produit locatif</div>
 
-          <!-- FIX 2 : lignesParStatut robuste insensible à la casse -->
-          <ng-container *ngFor="let l of lignesParStatut(selectedPeriode.lignes, 'Loue')">
-            <div class="ls-row">
-              <div class="ls-code">{{ l.produitCode }}</div>
-              <div class="ls-statut ls-loue">✓ Loué</div>
-              <div class="ls-nb">{{ l.nbCollectes }} collecte(s)</div>
-              <div class="ls-montant">{{ l.montantEncaisse | number:'1.0-0' }} MRU</div>
-            </div>
-          </ng-container>
-
-          <ng-container *ngFor="let l of lignesParStatut(selectedPeriode.lignes, 'LoyersEnAttente')">
-            <div class="ls-row ls-row-attente">
-              <div class="ls-code">{{ l.produitCode }}</div>
-              <div class="ls-statut ls-attente">⏳ En attente</div>
-              <div class="ls-nb">Non encaissé</div>
-              <div class="ls-montant ls-montant-attendu">
-                {{ l.montantAttendu | number:'1.0-0' }} MRU attendu
-              </div>
-            </div>
-          </ng-container>
-
-          <ng-container *ngFor="let l of lignesParStatut(selectedPeriode.lignes, 'Vacant')">
-            <div class="ls-row ls-row-vacant">
-              <div class="ls-code">{{ l.produitCode }}</div>
-              <div class="ls-statut ls-vacant">🔒 Vacant</div>
-              <div class="ls-nb">—</div>
-              <div class="ls-montant ls-montant-zero">0 MRU</div>
-            </div>
-          </ng-container>
-
-          <div class="ls-empty" *ngIf="!selectedPeriode.lignes.length">
-            Aucune collecte enregistrée pour cette période
-          </div>
+          <table class="detail-table">
+            <thead>
+              <tr>
+                <th>Produit</th>
+                <th>Statut</th>
+                <th class="r">Collectes</th>
+                <th class="r">Encaissé</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Produits loués -->
+              <tr *ngFor="let l of lignesParStatut(selectedPeriode.lignes, 'Loue')">
+                <td><span class="ls-code">{{ l.produitCode }}</span></td>
+                <td><span class="dt-badge dt-loue">loué</span></td>
+                <td class="r dt-muted">{{ l.nbCollectes }} collecte(s)</td>
+                <td class="r dt-enc">{{ l.montantEncaisse | number:'1.0-0' }} MRU</td>
+              </tr>
+              <!-- Produits en attente -->
+              <tr *ngFor="let l of lignesParStatut(selectedPeriode.lignes, 'LoyersEnAttente')" class="row-attente">
+                <td><span class="ls-code">{{ l.produitCode }}</span></td>
+                <td><span class="dt-badge dt-attente">en attente</span></td>
+                <td class="r dt-muted">Non encaissé</td>
+                <td class="r dt-att">{{ l.montantAttendu | number:'1.0-0' }} MRU attendu</td>
+              </tr>
+              <!-- Produits vacants -->
+              <tr *ngFor="let l of lignesParStatut(selectedPeriode.lignes, 'Vacant')" class="row-vacant">
+                <td><span class="ls-code">{{ l.produitCode }}</span></td>
+                <td><span class="dt-badge dt-vacant">vacant</span></td>
+                <td class="r dt-muted">—</td>
+                <td class="r dt-muted">0 MRU</td>
+              </tr>
+              <!-- Ligne total brut -->
+              <tr class="row-total">
+                <td colspan="3">Montant brut</td>
+                <td class="r">{{ selectedPeriode.montantBrut | number:'1.0-0' }} MRU</td>
+              </tr>
+              <!-- Déductions -->
+              <tr class="row-ded" *ngIf="selectedPeriode.montantReporte > 0">
+                <td colspan="3">− Report période précédente</td>
+                <td class="r dt-neg">-{{ selectedPeriode.montantReporte | number:'1.0-0' }} MRU</td>
+              </tr>
+              <tr class="row-ded" *ngIf="selectedPeriode.commission > 0">
+                <td colspan="3">− Commission agence</td>
+                <td class="r dt-neg">-{{ selectedPeriode.commission | number:'1.0-0' }} MRU</td>
+              </tr>
+              <tr class="row-ded" *ngIf="selectedPeriode.retenueTravaux > 0">
+                <td colspan="3">− Retenue travaux</td>
+                <td class="r dt-neg">-{{ selectedPeriode.retenueTravaux | number:'1.0-0' }} MRU</td>
+              </tr>
+              <tr class="row-ded" *ngIf="selectedPeriode.retenueAvance > 0">
+                <td colspan="3">− Avance déduite</td>
+                <td class="r dt-neg">-{{ selectedPeriode.retenueAvance | number:'1.0-0' }} MRU</td>
+              </tr>
+              <tr class="row-ded">
+                <td colspan="3">− Impôts</td>
+                <td class="r dt-muted">—</td>
+              </tr>
+              <tr class="row-ded">
+                <td colspan="3">− Services agence</td>
+                <td class="r dt-muted">—</td>
+              </tr>
+              <!-- Net final -->
+              <tr class="row-net">
+                <td colspan="3">Net à verser</td>
+                <td class="r">{{ selectedPeriode.montantNet | number:'1.0-0' }} MRU</td>
+              </tr>
+            </tbody>
+          </table>
 
           <!-- Légende -->
           <div class="ls-legend" *ngIf="selectedPeriode.lignes.length">
@@ -439,10 +466,10 @@ export class SuiviVersementsService extends ApiService {
         <!-- Actions -->
         <div class="rp-actions">
           <div class="action-group"
-               *ngIf="selectedPeriode.statut === 'EnAttente' || selectedPeriode.statut === 'EnRetard'">
+               *ngIf="selectedPeriode.statut === 'EnAttente' || selectedPeriode.statut === 'EnRetard' || (selectedPeriode.statut.toLowerCase().startsWith('planifi') && selectedPeriode.montantBrut > 0)">
             <input class="input-ref" [(ngModel)]="refPaiement" placeholder="Référence paiement…">
-            <button class="btn btn-gold btn-full" (click)="marquerEffectue()">
-              ✓ Marquer comme versé
+            <button class="btn btn-gold btn-full" (click)="marquerEffectue()" [disabled]="saving || !refPaiement.trim()">
+              {{ saving ? 'Enregistrement…' : '✓ Marquer comme versé' }}
             </button>
           </div>
 
@@ -453,7 +480,7 @@ export class SuiviVersementsService extends ApiService {
             </button>
           </div>
 
-          <div class="action-group envoi-group" *ngIf="selectedPeriode.statut !== 'Planifie'">
+          <div class="action-group envoi-group" *ngIf="!selectedPeriode.statut.toLowerCase().startsWith('planifi') || selectedPeriode.montantBrut > 0">
             <div class="ls-title" style="margin-bottom:6px">Envoyer le bordereau</div>
             <div class="envoi-btns">
               <button class="btn btn-envoi btn-email"    (click)="envoyer('email')">📧 Email</button>
@@ -588,21 +615,29 @@ export class SuiviVersementsService extends ApiService {
     .fs-pos { color: #d97706; font-weight: 700; }
     .fs-net { color: #16a34a; font-size: 14px; }
     .lignes-section { padding: 10px 16px; border-bottom: 1px solid #f1f5f9; }
-    .ls-title { font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
-    .ls-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px dashed #f1f5f9; font-size: 12px; }
-    .ls-row-attente { background: #fffbeb; border-radius: 4px; padding: 4px 6px; margin: 1px 0; }
-    .ls-row-vacant  { background: #f8fafc; border-radius: 4px; padding: 4px 6px; margin: 1px 0; opacity: .75; }
-    .ls-code { font-family: monospace; font-weight: 700; color: #0e1c38; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px; flex-shrink: 0; }
-    .ls-statut { font-size: 10px; font-weight: 600; flex-shrink: 0; }
-    .ls-loue    { color: #16a34a; }
-    .ls-attente { color: #d97706; }
-    .ls-vacant  { color: #94a3b8; }
-    .ls-nb   { color: #94a3b8; flex: 1; font-size: 11px; }
-    .ls-montant { font-weight: 700; color: #0e1c38; }
-    .ls-montant-attendu { color: #d97706; font-style: italic; font-size: 11px; }
-    .ls-montant-zero    { color: #cbd5e1; }
-    .ls-empty { font-size: 11px; color: #94a3b8; text-align: center; padding: 8px 0; }
-    .ls-legend { display: flex; gap: 6px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f1f5f9; }
+    .ls-title { font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+    .ls-code { font-family: monospace; font-weight: 700; color: #0e1c38; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+    .detail-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    .detail-table th { font-size: 10px; font-weight: 600; color: #94a3b8; padding: 4px 6px; text-align: right; border-bottom: 1px solid #f1f5f9; }
+    .detail-table th:first-child { text-align: left; }
+    .detail-table td { font-size: 12px; padding: 7px 6px; border-bottom: 1px solid #f1f5f9; text-align: right; color: #0e1c38; }
+    .detail-table td:first-child { text-align: left; }
+    .detail-table tr:last-child td { border-bottom: none; }
+    .detail-table tr.row-attente td { background: #fffbeb; }
+    .detail-table tr.row-vacant  td { background: #f8fafc; color: #94a3b8; }
+    .detail-table tr.row-total   td { font-weight: 700; background: #f1f5f9; border-top: 1px solid #e2e8f0; }
+    .detail-table tr.row-ded     td { color: #64748b; font-size: 12px; }
+    .detail-table tr.row-net     td { font-weight: 700; font-size: 13px; background: #dcfce7; color: #15803d; border-top: 1px solid #bbf7d0; }
+    .dt-badge { display: inline-flex; font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 600; }
+    .dt-loue   { background: #d1fae5; color: #065f46; }
+    .dt-attente{ background: #fef3c7; color: #92400e; }
+    .dt-vacant { background: #f1f5f9; color: #94a3b8; }
+    .dt-enc { font-weight: 700; color: #0e1c38; }
+    .dt-att { color: #d97706; font-style: italic; }
+    .dt-neg { color: #dc2626; }
+    .dt-muted { color: #94a3b8; }
+    .r { text-align: right; }
+    .ls-legend { display: flex; gap: 6px; margin-top: 4px; padding-top: 6px; border-top: 1px dashed #f1f5f9; }
     .leg-item   { font-size: 10px; }
     .leg-loue   { color: #16a34a; }
     .leg-attente { color: #d97706; }
@@ -725,7 +760,11 @@ export class SuiviVersementsComponent implements OnInit {
   saving = false;
 
   marquerEffectue() {
-    if (!this.selectedPeriode || !this.refPaiement.trim() || this.saving) return;
+    if (!this.selectedPeriode || this.saving) return;
+    if (!this.refPaiement.trim()) {
+      alert('Veuillez saisir une référence de paiement.');
+      return;
+    }
     this.saving = true;
     const doEffectuer = (versementId: string) => {
       this.svc.marquerEffectue(versementId, this.refPaiement.trim()).subscribe({
