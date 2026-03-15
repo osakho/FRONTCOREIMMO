@@ -79,7 +79,8 @@ export const routes: Routes = [
       },
       { path: 'suivi-loyers', loadComponent: () => import('./features/suivi-loyers/suivi-loyers.component').then(m => m.SuiviLoyersComponent) },
       { path: 'suivi-collecteur', loadComponent: () => import('./features/suivi-collecteur/suivi-collecteur.component').then(m => m.SuiviCollecteurComponent) },
-      { path: 'charges-proprietaire', loadComponent: () => import('./features/charges-proprietaire/charges-proprietaire.component').then(m => m.ChargesProprietaireComponent)}
+      { path: 'charges-proprietaire', loadComponent: () => import('./features/charges-proprietaire/charges-proprietaire.component').then(m => m.ChargesProprietaireComponent) },
+      { path: 'reversements', loadComponent: () => import('./features/reversements/reversements.component').then(m => m.ReversementsComponent) }
     ]
   },
 

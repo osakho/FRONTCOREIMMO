@@ -660,7 +660,7 @@ export class ContentieuxComponent implements OnInit {
   phaseIndex(p: PhaseProcedure): number {
     return PHASES.indexOf(p);
   }
-
+  
   phaseKey(p: PhaseProcedure): string { return p; }
 
   countPhase(phase: string): number {
