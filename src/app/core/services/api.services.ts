@@ -407,8 +407,16 @@ export class RecouvrementService extends ApiService {
     return this.get<DossierRecouvrementDto[]>('/recouvrement/dossiers');
   }
 
-  envoyerRelance(contratId: string, message?: string): Observable<void> {
-    return this.post<void>(`/recouvrement/${contratId}/relancer`, { message: message ?? '' });
+    getDossiersContentieux(): Observable<any[]> {
+    return this.get<any[]>('/contentieux');
+  }
+  
+  
+  envoyerRelance(contratId: string, message?: string, canal?: string): Observable<void> {
+    return this.post<void>(`/recouvrement/${contratId}/relancer`, {
+      message: message ?? '',
+      canal:   canal   ?? 'email'
+    });
   }
 
   relancerMasse(contratIds: string[]): Observable<void> {
@@ -421,6 +429,22 @@ export class RecouvrementService extends ApiService {
 
   exportExcel(): Observable<Blob> {
     return this.http.get(`${this.base}/recouvrement/export`, { responseType: 'blob' });
+  }
+  
+  ouvrirDossierContentieux(data: {
+    contratId:    string;
+    montantDu:    number;
+    avocat?:      string;
+    huissier?:    string;
+    motif:        string;
+  }): Observable<{ id: string }> {
+    return this.post<{ id: string }>('/contentieux/ouvrir', data);
+  }
+  
+  
+  
+  getLocatairesEnRetard(): Observable<{ contratId: string; locataireNom: string; montantDu: number }[]> {
+    return this.get<{ contratId: string; locataireNom: string; montantDu: number }[]>('/recouvrement/locataires-retard');
   }
 
   getFeuille(params?: {

@@ -379,9 +379,9 @@ export class ContratsGestionListComponent implements OnInit, OnDestroy {
       overlay.querySelector('#kdi-clear-prop')?.addEventListener('click', () =>
         this.zone.run(() => { this.propSel = null; this.rerender(); }));
       (overlay.querySelector('#kdi-taux') as HTMLInputElement)?.addEventListener('input', (e) =>
-        this.zone.run(() => { this.step1.tauxCommission = (e.target as HTMLInputElement).value; this.rerender(); }));
+        this.zone.run(() => { this.step1.tauxCommission = (e.target as HTMLInputElement).value; }));
       (overlay.querySelector('#kdi-perio') as HTMLSelectElement)?.addEventListener('change', (e) =>
-        this.zone.run(() => { this.step1.periodicite = (e.target as HTMLSelectElement).value; this.rerender(); }));
+        this.zone.run(() => { this.step1.periodicite = (e.target as HTMLSelectElement).value; }));
       (overlay.querySelector('#kdi-ddeb') as HTMLInputElement)?.addEventListener('change', (e) =>
         this.zone.run(() => { this.step1.dateDebut = (e.target as HTMLInputElement).value; }));
       (overlay.querySelector('#kdi-dfin') as HTMLInputElement)?.addEventListener('change', (e) =>
@@ -413,14 +413,7 @@ export class ContratsGestionListComponent implements OnInit, OnDestroy {
     if (this.etape === 1) {
       const propSearch = !this.propSel ? `
         ${inp('kdi-search-prop','text', this.searchProp,'Rechercher une propriété sans contrat…')}
-        ${this.propResultats.length ? `
-          <div style="border:1px solid #e3e8f0;border-radius:8px;overflow:hidden;margin-top:6px;background:#fff;max-height:200px;overflow-y:auto">
-            ${this.propResultats.map((p: any) => `
-              <div data-prop-id="${p.id}" style="display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:.8rem">
-                <strong>${p.libelle}</strong>
-                <span style="color:#8a97b0;margin-left:auto">${p.proprietaireNom ?? ''}</span>
-              </div>`).join('')}
-          </div>` : ''}
+        <div id='kdi-dropdown-prop'></div>
         <div style="margin-top:5px;font-size:.7rem;color:#8a97b0">ℹ️ Seules les propriétés sans contrat de gestion actif sont proposées</div>
       ` : `
         <div style="display:flex;align-items:center;gap:10px;background:#f2f5fa;border:1px solid #d0d8e8;border-radius:8px;padding:10px 12px">
@@ -540,12 +533,35 @@ export class ContratsGestionListComponent implements OnInit, OnDestroy {
   onSearchPropRaw(val: string) {
     this.searchProp = val;
     clearTimeout(this.timer);
-    if (val.length < 2) { this.propResultats = []; this.rerender(); return; }
+    this.updateDropdownProp([]);
+    if (val.length < 2) { this.propResultats = []; return; }
     this.timer = setTimeout(() =>
       this.propSvc.getAll(1, 10, val).subscribe(r => {
         this.propResultats = r.items.filter((p: any) => !p.aContratGestion);
-        this.rerender();
+        this.updateDropdownProp(this.propResultats);
       }), 350);
+  }
+
+  private updateDropdownProp(items: any[]) {
+    const container = this.overlayEl?.querySelector('#kdi-dropdown-prop') as HTMLElement | null;
+    if (!container) return;
+    if (!items.length) { container.innerHTML = ''; return; }
+    container.innerHTML = `
+      <div style="border:1px solid #e3e8f0;border-radius:8px;overflow:hidden;margin-top:6px;background:#fff;max-height:180px;overflow-y:auto">
+        ${items.map((p: any) => `
+          <div data-prop-id="${p.id}" style="display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:.8rem">
+            <strong>${p.libelle}</strong>
+            <span style="color:#8a97b0;margin-left:6px">${p.proprietaireNom ?? ''}</span>
+            ${p.aContratGestion ? '<span style="font-size:11px;color:#d97706;margin-left:auto">⚠️ Contrat existant</span>' : ''}
+          </div>`).join('')}
+      </div>`;
+    container.querySelectorAll('[data-prop-id]').forEach(el => {
+      const id = (el as HTMLElement).dataset['propId'];
+      el.addEventListener('click', () => this.zone.run(() => {
+        const p = this.propResultats.find((x: any) => x.id === id);
+        if (p) { this.propSel = p; this.propResultats = []; this.rerender(); }
+      }));
+    });
   }
 
   etapeValide(): boolean {

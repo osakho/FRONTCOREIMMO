@@ -229,6 +229,54 @@ interface DossierContentieux {
 
 </div>
 
+<!-- ══ MODAL ENCAISSEMENT (Accord amiable) ══ -->
+<div class="cx-ov" [class.open]="mEncaisser()" (click)="mEncaisser.set(false)">
+  <div class="cx-modal" (click)="$event.stopPropagation()" *ngIf="dossierActif()">
+    <div class="cxm-hd" style="background:linear-gradient(135deg,#064E3B,#059669)">
+      <div class="cxm-hd-l">
+        <div class="cxm-ico">💳</div>
+        <div>
+          <div class="cxm-title">Enregistrer un paiement</div>
+          <div class="cxm-sub">{{ dossierActif()!.locataireNom }}</div>
+        </div>
+      </div>
+      <button class="cxm-close" (click)="mEncaisser.set(false)">✕</button>
+    </div>
+    <div class="cxm-body">
+      <div class="cxm-grid">
+        <div class="cxm-field">
+          <label class="cxm-lbl">Montant encaissé <span class="req">*</span></label>
+          <input class="cxm-inp" type="number" [(ngModel)]="encMontant"
+                 [placeholder]="dossierActif()!.montantDu">
+        </div>
+        <div class="cxm-field">
+          <label class="cxm-lbl">Mode de paiement</label>
+          <select class="cxm-sel" [(ngModel)]="encMode">
+            <option value="Especes">Espèces</option>
+            <option value="Bankily">Bankily</option>
+            <option value="Masrvi">Masrvi</option>
+            <option value="VirementBancaire">Virement bancaire</option>
+            <option value="Cheque">Chèque</option>
+          </select>
+        </div>
+        <div class="cxm-field" style="grid-column:1/-1">
+          <label class="cxm-lbl">Référence</label>
+          <input class="cxm-inp" [(ngModel)]="encRef" placeholder="N° reçu, référence transaction…">
+        </div>
+      </div>
+      <div class="cxm-err" *ngIf="encErrMsg()">⚠️ {{ encErrMsg() }}</div>
+      <div class="cxm-ok"  *ngIf="encOkMsg()">✅ {{ encOkMsg() }}</div>
+    </div>
+    <div class="cxm-foot">
+      <button class="btn-ghost" (click)="mEncaisser.set(false)">Annuler</button>
+      <button class="btn-ok-enc" [disabled]="!encMontant || encEnvoyant()" (click)="confirmerEncaissement()">
+        <span *ngIf="!encEnvoyant()">✔ Confirmer le paiement</span>
+        <span *ngIf="encEnvoyant()">Enregistrement…</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ MODAL NOUVEAU DOSSIER ══ -->
 <div class="cx-ov" [class.open]="showModal()" (click)="closeOv($event)">
   <div class="cx-modal" (click)="$event.stopPropagation()">
@@ -240,19 +288,51 @@ interface DossierContentieux {
           <div class="cxm-sub">Escalade procédurale d'un dossier recouvrement</div>
         </div>
       </div>
-      <button class="cxm-close" (click)="showModal.set(false)">✕</button>
+      <button class="cxm-close" (click)="closeModal()">✕</button>
     </div>
     <div class="cxm-body">
-      <div class="cxm-info">
-        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="10" cy="10" r="7.5"/><line x1="10" y1="7" x2="10" y2="11"/>
-          <circle cx="10" cy="13.5" r=".8" fill="currentColor" stroke="none"/>
-        </svg>
-        Fonctionnalité disponible dans la prochaine version. Contactez votre administrateur pour ouvrir manuellement un dossier.
+      <div class="cxm-alert-irrev">
+        <span class="cxm-alert-ico">⚠️</span>
+        <div>
+          <div class="cxm-alert-title">Action irréversible</div>
+          <div class="cxm-alert-sub">— L'ouverture d'un dossier contentieux déclenche les procédures légales.</div>
+        </div>
       </div>
+      <div class="cxm-grid">
+        <div class="cxm-field">
+          <label class="cxm-lbl">Locataire <span class="req">*</span></label>
+          <select class="cxm-sel" [(ngModel)]="formDossier.contratId" (ngModelChange)="onLocataireChange($event)">
+            <option value="">Sélectionner un locataire...</option>
+            <option *ngFor="let l of locatairesRetard()" [value]="l.contratId">{{ l.locataireNom }}</option>
+          </select>
+        </div>
+        <div class="cxm-field">
+          <label class="cxm-lbl">Montant total impayé</label>
+          <div class="cxm-input-ro">{{ formDossier.montantDu > 0 ? (formDossier.montantDu | number:'1.0-0') + ' MRU' : '—' }}</div>
+        </div>
+        <div class="cxm-field">
+          <label class="cxm-lbl">Avocat désigné</label>
+          <input class="cxm-inp" [(ngModel)]="formDossier.avocat" placeholder="Maître...">
+        </div>
+        <div class="cxm-field">
+          <label class="cxm-lbl">Huissier</label>
+          <input class="cxm-inp" [(ngModel)]="formDossier.huissier" placeholder="Maître...">
+        </div>
+      </div>
+      <div class="cxm-field cxm-field-full">
+        <label class="cxm-lbl">Motif d'ouverture <span class="req">*</span></label>
+        <textarea class="cxm-ta" [(ngModel)]="formDossier.motif" rows="4"
+          placeholder="Décrire les faits, les tentatives amiables échouées..."></textarea>
+      </div>
+      <div class="cxm-err" *ngIf="formError()">{{ formError() }}</div>
     </div>
     <div class="cxm-foot">
-      <button class="btn-ghost" (click)="showModal.set(false)">Fermer</button>
+      <button class="btn-ghost" (click)="closeModal()">Annuler</button>
+      <button class="btn-ouvrir" (click)="soumettreDossier()"
+              [disabled]="formSaving() || !formDossier.contratId || !formDossier.motif.trim()">
+        <span *ngIf="!formSaving()">⚖️ Ouvrir le dossier contentieux</span>
+        <span *ngIf="formSaving()">Enregistrement…</span>
+      </button>
     </div>
   </div>
 </div>
@@ -284,48 +364,53 @@ interface DossierContentieux {
     }
 
     /* ── PAGE ── */
-    .cx-page { max-width: 1100px; margin: 0 auto; }
+    .cx-page { max-width: 100%; }
 
     /* ── HEADER ── */
     .cx-header {
       display: flex; justify-content: space-between; align-items: flex-start;
-      margin-bottom: 8px; gap: 16px; flex-wrap: wrap;
+      margin-bottom: 20px; gap: 16px; flex-wrap: wrap;
     }
     .cx-title-row { display: flex; align-items: center; gap: 10px; }
     .cx-title {
-      font-size: 26px; font-weight: 900; color: var(--ink-mid);
-      font-family: 'Playfair Display', Georgia, serif; margin: 0 0 2px;
+      font-size: 30px; font-weight: 900; color: var(--ink-mid);
+      font-family: 'Playfair Display', Georgia, serif; margin: 0 0 2px; letter-spacing: -.5px;
     }
     .cx-title-acc { color: #C0392B; }
     .cx-sub-title {
-      font-size: 20px; font-weight: 700; color: var(--ink-mid);
+      font-size: 18px; font-weight: 700; color: var(--ink-mid);
       font-family: 'Playfair Display', Georgia, serif; margin: 0 0 4px;
     }
     .cx-sub { font-size: 13px; color: var(--muted); margin: 0; }
     .cx-header-actions { display: flex; gap: 10px; flex-shrink: 0; align-items: center; padding-top: 6px; }
     .btn-outline {
-      padding: 9px 18px; border-radius: 9px; border: 1.5px solid var(--cream-dk);
+      padding: 10px 18px; border-radius: 9px; border: 1.5px solid var(--cream-dk);
       background: #fff; color: var(--ink-soft); font-size: 13px; font-weight: 600;
       cursor: pointer; font-family: inherit; transition: all .15s;
+      display: flex; align-items: center; gap: 6px;
     }
-    .btn-outline:hover { border-color: var(--ink-mid); color: var(--ink-mid); }
+    .btn-outline:hover { border-color: var(--ink-mid); color: var(--ink-mid); background: var(--cream); }
     .btn-primary {
-      padding: 9px 20px; border-radius: 9px; background: var(--danger);
+      padding: 10px 22px; border-radius: 9px;
+      background: linear-gradient(135deg, var(--gold-d), var(--gold));
       color: #fff; border: none; font-size: 13px; font-weight: 700;
-      cursor: pointer; font-family: inherit; transition: box-shadow .15s;
+      cursor: pointer; font-family: inherit; transition: all .2s;
+      box-shadow: 0 3px 10px rgba(201,168,76,.3);
+      display: flex; align-items: center; gap: 6px;
     }
-    .btn-primary:hover { box-shadow: 0 4px 14px rgba(192,57,43,.35); }
+    .btn-primary:hover { box-shadow: 0 6px 20px rgba(201,168,76,.45); transform: translateY(-1px); }
 
     /* ── ALERTE AUDIENCE ── */
     .alert-audience {
-      display: flex; align-items: flex-start; gap: 12px;
-      background: #FFF5F5; border: 1.5px solid #FCA5A5;
-      border-left: 4px solid var(--danger);
-      border-radius: 10px; padding: 14px 18px; margin-bottom: 20px;
+      display: flex; align-items: flex-start; gap: 14px;
+      background: linear-gradient(135deg, #FFF5F5, #FFF0F0);
+      border: 1.5px solid #FCA5A5; border-left: 5px solid var(--danger);
+      border-radius: 12px; padding: 16px 20px; margin-bottom: 22px;
+      box-shadow: 0 2px 12px rgba(192,57,43,.1);
     }
-    .aa-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
-    .aa-title { font-size: 13.5px; font-weight: 700; color: var(--danger); }
-    .aa-sub   { font-size: 12.5px; color: #7F1D1D; margin-top: 3px; }
+    .aa-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+    .aa-title { font-size: 14px; font-weight: 800; color: var(--danger); letter-spacing: -.2px; }
+    .aa-sub   { font-size: 13px; color: #7F1D1D; margin-top: 4px; line-height: 1.5; }
 
     /* ── FILTRES ── */
     .cx-filters {
@@ -373,46 +458,48 @@ interface DossierContentieux {
 
     /* ── DOSSIER CARD ── */
     .dossier-card {
-      background: #fff; border-radius: var(--r); padding: 22px 24px 18px;
+      background: #fff; border-radius: var(--r); padding: 24px 28px 20px;
       border: 1.5px solid var(--cream-dk);
-      box-shadow: 0 2px 12px rgba(0,0,0,.06);
-      transition: box-shadow .18s;
+      box-shadow: 0 2px 16px rgba(0,0,0,.06);
+      transition: box-shadow .18s, transform .18s;
     }
-    .dossier-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,.1); }
-    .dossier-card.critique { border-color: rgba(192,57,43,.3); }
-    .dossier-card.eleve    { border-color: rgba(212,133,10,.25); }
+    .dossier-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,.11); transform: translateY(-1px); }
+    .dossier-card.critique { border-left: 4px solid var(--danger); }
+    .dossier-card.eleve    { border-left: 4px solid var(--warn); }
 
     /* ── Card Head ── */
-    .dc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-    .dc-head-left { display: flex; align-items: center; gap: 12px; }
+    .dc-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+    .dc-head-left { display: flex; align-items: center; gap: 14px; }
     .dc-avatar {
-      width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0;
+      width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
       background: linear-gradient(135deg, var(--ink-mid), var(--ink-soft));
-      color: var(--gold-l); font-size: 15px; font-weight: 800;
+      color: var(--gold-l); font-size: 16px; font-weight: 800;
       display: flex; align-items: center; justify-content: center;
       font-family: 'Playfair Display', Georgia, serif;
+      box-shadow: 0 3px 10px rgba(26,26,46,.25);
     }
-    .dc-nom { font-size: 16px; font-weight: 800; color: var(--ink-mid); font-family: 'Playfair Display', Georgia, serif; }
-    .dc-loc { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 4px; margin-top: 3px; }
+    .dc-nom { font-size: 18px; font-weight: 800; color: var(--ink-mid); font-family: 'Playfair Display', Georgia, serif; letter-spacing: -.3px; }
+    .dc-loc { font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 4px; margin-top: 4px; }
     .dc-montant { text-align: right; flex-shrink: 0; }
     .dc-mnt {
-      font-size: 20px; font-weight: 900; color: var(--danger);
+      font-size: 22px; font-weight: 900; color: var(--danger);
       font-family: 'Playfair Display', Georgia, serif; letter-spacing: .5px;
     }
-    .dc-mnt-lbl { font-size: 10.5px; color: var(--muted); text-align: right; margin-top: 2px; }
+    .dc-mnt-lbl { font-size: 10.5px; color: var(--muted); text-align: right; margin-top: 3px; letter-spacing: .3px; text-transform: uppercase; }
 
     /* ── Badges ── */
-    .dc-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+    .dc-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
     .badge-phase {
-      padding: 4px 11px; border-radius: 6px; font-size: 12px; font-weight: 700;
+      padding: 5px 12px; border-radius: 7px; font-size: 12px; font-weight: 700;
+      display: inline-flex; align-items: center; gap: 5px;
     }
     .badge-phase[data-p="Assignation"],
     .badge-phase[data-p="Jugement"],
     .badge-phase[data-p="Expulsion"] {
-      background: rgba(192,57,43,.1); color: var(--danger); border: 1px solid rgba(192,57,43,.2);
+      background: rgba(192,57,43,.12); color: var(--danger); border: 1px solid rgba(192,57,43,.25);
     }
     .badge-phase[data-p="Commandement"] {
-      background: rgba(212,133,10,.1); color: var(--warn); border: 1px solid rgba(212,133,10,.2);
+      background: rgba(212,133,10,.12); color: var(--warn); border: 1px solid rgba(212,133,10,.25);
     }
     .badge-phase[data-p="MiseEnDemeure"] {
       background: rgba(109,40,217,.1); color: var(--purple); border: 1px solid rgba(109,40,217,.2);
@@ -421,82 +508,78 @@ interface DossierContentieux {
       background: rgba(8,145,178,.1); color: var(--teal); border: 1px solid rgba(8,145,178,.2);
     }
     .badge-jours {
-      display: flex; align-items: center; gap: 5px;
-      padding: 4px 11px; border-radius: 6px; font-size: 12px; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 12px; border-radius: 7px; font-size: 12px; font-weight: 600;
       background: var(--cream); color: var(--muted); border: 1px solid var(--cream-dk);
     }
     .badge-niveau {
-      padding: 4px 11px; border-radius: 6px; font-size: 12px; font-weight: 700;
+      padding: 5px 12px; border-radius: 7px; font-size: 12px; font-weight: 700;
+      display: inline-flex; align-items: center; gap: 4px;
     }
-    .badge-niveau[data-n="critique"] { background: rgba(192,57,43,.1); color: var(--danger); }
-    .badge-niveau[data-n="eleve"]    { background: rgba(212,133,10,.1); color: var(--warn);   }
-    .badge-niveau[data-n="modere"]   { background: rgba(201,168,76,.1); color: var(--gold-d); }
+    .badge-niveau[data-n="critique"] { background: rgba(192,57,43,.12); color: var(--danger); border: 1px solid rgba(192,57,43,.2); }
+    .badge-niveau[data-n="eleve"]    { background: rgba(212,133,10,.12); color: var(--warn);   border: 1px solid rgba(212,133,10,.2); }
+    .badge-niveau[data-n="modere"]   { background: rgba(201,168,76,.12); color: var(--gold-d); border: 1px solid rgba(201,168,76,.2); }
     .badge-audience {
-      padding: 4px 11px; border-radius: 6px; font-size: 12px; font-weight: 700;
+      padding: 5px 12px; border-radius: 7px; font-size: 12px; font-weight: 700;
       background: rgba(29,78,216,.1); color: #1D4ED8; border: 1px solid rgba(29,78,216,.2);
+      display: inline-flex; align-items: center; gap: 5px;
     }
 
     /* ── TIMELINE ── */
     .timeline-wrap {
-      background: var(--cream); border-radius: 10px;
-      padding: 18px 24px; margin-bottom: 14px;
-      overflow-x: auto;
+      background: linear-gradient(135deg, var(--cream) 0%, #F0EBE3 100%);
+      border-radius: 12px; padding: 20px 28px; margin-bottom: 16px;
+      overflow-x: auto; border: 1px solid var(--cream-dk);
     }
-    .timeline {
-      display: flex; align-items: flex-start;
-      min-width: 480px;
-    }
+    .timeline { display: flex; align-items: flex-start; min-width: 520px; }
     .tl-line {
       flex: 1; height: 3px; background: var(--cream-dk);
-      margin-top: 17px; border-radius: 2px; transition: background .3s;
+      margin-top: 20px; border-radius: 2px; transition: background .3s;
     }
-    .tl-line.done   { background: var(--gold); }
+    .tl-line.done   { background: linear-gradient(90deg, var(--gold-d), var(--gold)); }
     .tl-line.active { background: linear-gradient(90deg, var(--gold), var(--cream-dk)); }
 
-    .tl-node-wrap {
-      display: flex; flex-direction: column; align-items: center;
-      gap: 7px; flex-shrink: 0;
-    }
+    .tl-node-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
     .tl-node {
-      width: 36px; height: 36px; border-radius: 50%;
+      width: 42px; height: 42px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 700; transition: all .2s;
+      font-size: 15px; font-weight: 700; transition: all .2s;
     }
-    .tl-node.done    { background: var(--gold); color: #fff; box-shadow: 0 0 0 3px rgba(201,168,76,.2); }
-    .tl-node.active  { background: var(--ink-mid); color: var(--gold-l); box-shadow: 0 0 0 4px rgba(26,26,46,.2); }
+    .tl-node.done    { background: linear-gradient(135deg, var(--gold-d), var(--gold)); color: #fff; box-shadow: 0 3px 10px rgba(201,168,76,.35); }
+    .tl-node.active  { background: var(--ink-mid); color: var(--gold-l); box-shadow: 0 4px 16px rgba(26,26,46,.3); }
     .tl-node.pending { background: #fff; border: 2px solid var(--cream-dk); color: var(--muted); }
-    .tl-node.danger.pending { border-color: rgba(192,57,43,.3); }
+    .tl-node.danger.pending { border-color: rgba(192,57,43,.4); color: rgba(192,57,43,.4); }
 
-    .tl-ico   { font-size: 16px; }
-    .tl-ico-p { font-size: 14px; color: var(--muted); opacity: .5; }
-    .tl-ico-e { font-size: 14px; opacity: .4; }
+    .tl-ico   { font-size: 17px; }
+    .tl-ico-p { font-size: 15px; color: var(--muted); opacity: .4; }
+    .tl-ico-e { font-size: 15px; opacity: .35; }
 
     .tl-lbl {
       font-size: 11px; font-weight: 600; color: var(--muted);
-      text-align: center; white-space: nowrap; max-width: 80px;
+      text-align: center; white-space: nowrap; max-width: 80px; line-height: 1.3;
     }
     .tl-lbl.active { color: var(--ink-mid); font-weight: 800; }
 
     /* ── ACTIONS ── */
-    .dc-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .dc-actions { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 4px; }
     .act-btn {
       display: inline-flex; align-items: center; gap: 6px;
-      padding: 7px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 700;
+      padding: 8px 16px; border-radius: 9px; font-size: 12.5px; font-weight: 700;
       cursor: pointer; font-family: inherit; border: 1.5px solid transparent;
-      transition: all .14s;
+      transition: all .14s; letter-spacing: .1px;
     }
     .act-btn.ghost  { background: var(--cream); color: var(--ink-soft); border-color: var(--cream-dk); }
-    .act-btn.ghost:hover { background: var(--cream-dk); }
-    .act-btn.teal   { background: var(--teal-bg); color: var(--teal); border-color: rgba(8,145,178,.2); }
-    .act-btn.teal:hover { background: rgba(8,145,178,.12); }
-    .act-btn.gold   { background: rgba(201,168,76,.1); color: var(--gold-d); border-color: rgba(201,168,76,.2); }
-    .act-btn.gold:hover { background: rgba(201,168,76,.2); }
-    .act-btn.purple { background: var(--purple-bg); color: var(--purple); border-color: rgba(109,40,217,.2); }
-    .act-btn.purple:hover { background: rgba(109,40,217,.1); }
-    .act-btn.danger { background: var(--danger-bg); color: var(--danger); border-color: rgba(192,57,43,.2); }
-    .act-btn.danger:hover { background: rgba(192,57,43,.12); }
-    .act-btn.warn   { background: var(--warn-bg); color: var(--warn); border-color: rgba(212,133,10,.2); }
-    .act-btn.warn:hover { background: rgba(212,133,10,.12); }
+    .act-btn.ghost:hover { background: var(--cream-dk); border-color: #ccc; }
+    .act-btn.teal   { background: var(--teal-bg); color: var(--teal); border-color: rgba(8,145,178,.25); }
+    .act-btn.teal:hover { background: rgba(8,145,178,.15); }
+    .act-btn.gold   { background: rgba(201,168,76,.12); color: var(--gold-d); border-color: rgba(201,168,76,.3); }
+    .act-btn.gold:hover { background: rgba(201,168,76,.22); }
+    .act-btn.purple { background: var(--purple-bg); color: var(--purple); border-color: rgba(109,40,217,.25); }
+    .act-btn.purple:hover { background: rgba(109,40,217,.12); }
+    .act-btn.danger { background: var(--danger-bg); color: var(--danger); border-color: rgba(192,57,43,.25); }
+    .act-btn.danger:hover { background: rgba(192,57,43,.15); }
+    .act-btn.warn   { background: var(--warn-bg); color: var(--warn); border-color: rgba(212,133,10,.25); }
+    .act-btn.warn:hover { background: rgba(212,133,10,.15); }
 
     /* ── MODAL ── */
     .cx-ov {
@@ -539,12 +622,34 @@ interface DossierContentieux {
     }
     .cxm-foot {
       padding: 12px 22px 16px; border-top: 1px solid var(--cream-dk);
-      display: flex; justify-content: flex-end;
+      display: flex; justify-content: flex-end; gap: 10px;
     }
+    .cxm-alert-irrev { display:flex; gap:12px; align-items:flex-start; background:#fff5f5; border:1px solid #fca5a5; border-left:4px solid var(--danger); border-radius:10px; padding:14px 16px; margin-bottom:20px; }
+    .cxm-alert-ico { font-size:18px; flex-shrink:0; }
+    .cxm-alert-title { font-size:13px; font-weight:700; color:var(--danger); margin-bottom:2px; }
+    .cxm-alert-sub { font-size:12px; color:#b91c1c; }
+    .cxm-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+    .cxm-field { display:flex; flex-direction:column; gap:6px; }
+    .cxm-field-full { margin-bottom:14px; }
+    .cxm-lbl { font-size:12px; font-weight:700; color:var(--ink-soft); }
+    .req { color:var(--danger); }
+    .cxm-sel, .cxm-inp { padding:10px 12px; border:1.5px solid var(--cream-dk); border-radius:9px; font-size:13px; color:var(--ink); background:#fafafa; outline:none; width:100%; box-sizing:border-box; transition:border .15s; }
+    .cxm-sel:focus, .cxm-inp:focus { border-color:var(--gold); background:#fff; }
+    .cxm-input-ro { padding:10px 12px; border:1.5px solid var(--cream-dk); border-radius:9px; font-size:13px; font-weight:700; color:var(--ink); background:#f1f5f9; }
+    .cxm-ta { padding:10px 12px; border:1.5px solid var(--cream-dk); border-radius:9px; font-size:13px; color:var(--ink); background:#fafafa; outline:none; width:100%; box-sizing:border-box; resize:vertical; font-family:inherit; transition:border .15s; }
+    .cxm-ta:focus { border-color:var(--gold); background:#fff; }
+    .cxm-err { background:var(--danger-bg); color:var(--danger); border:1px solid #fca5a5; border-radius:8px; padding:10px 14px; font-size:13px; margin-top:8px; }
+    .btn-ouvrir { flex:1; padding:12px 20px; background:var(--danger); color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; transition:all .2s; }
+    .btn-ouvrir:hover:not(:disabled) { background:#b91c1c; }
+    .btn-ouvrir:disabled { opacity:.5; cursor:not-allowed; }
     .btn-ghost {
       background: none; border: none; cursor: pointer; font-size: 13px;
       color: var(--muted); padding: 8px; font-family: inherit;
     }
+    .cxm-ok { background:#d1fae5; color:#065f46; border:1px solid #86efac; border-radius:8px; padding:10px 14px; font-size:13px; margin-top:8px; }
+    .btn-ok-enc { flex:1; padding:12px 20px; background:linear-gradient(135deg,#059669,#10b981); color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; transition:all .2s; }
+    .btn-ok-enc:hover:not(:disabled) { background:linear-gradient(135deg,#047857,#059669); }
+    .btn-ok-enc:disabled { opacity:.5; cursor:not-allowed; }
 
     @media(max-width: 768px) {
       .cx-header { flex-direction: column; }
@@ -557,11 +662,25 @@ interface DossierContentieux {
 export class ContentieuxComponent implements OnInit {
   private svc = inject(RecouvrementService);
 
-  dossiers   = signal<DossierContentieux[]>([]);
-  loading    = signal(true);
-  filtrePhase = signal('');
-  search     = '';
-  showModal  = signal(false);
+  dossiers         = signal<DossierContentieux[]>([]);
+  loading          = signal(true);
+  filtrePhase      = signal('');
+  search           = '';
+  showModal        = signal(false);
+  locatairesRetard = signal<{ contratId: string; locataireNom: string; montantDu: number }[]>([]);
+  formSaving       = signal(false);
+  formError        = signal('');
+  formDossier      = { contratId: '', montantDu: 0, avocat: '', huissier: '', motif: '' };
+
+  // ── Modal encaissement ──
+  mEncaisser   = signal(false);
+  dossierActif = signal<DossierContentieux | null>(null);
+  encEnvoyant  = signal(false);
+  encOkMsg     = signal('');
+  encErrMsg    = signal('');
+  encMontant   = 0;
+  encMode      = 'Especes';
+  encRef       = '';
 
   phases = [
     { key: 'Relances',      lbl: 'Relances',        ico: '📩' },
@@ -602,17 +721,27 @@ export class ContentieuxComponent implements OnInit {
 
   charger() {
     this.loading.set(true);
-    (this.svc.getDossiers() as any).subscribe({
-      next: (list: any[]) => {
-        // On filtre uniquement les dossiers en étape Contentieux
-        const contentieux = list
-          .filter((d: any) => d.etape === 'Contentieux')
-          .map((d: any) => this.enrichir(d));
+    (this.svc.getDossiersContentieux() as any).subscribe({
+      next: (list: any) => {
+        const lignes: any[] = Array.isArray(list) ? list : [];
+        const contentieux = lignes.map((d: any) => this.enrichir({
+          contratId:        d.contratId,
+          contratNumero:    d.produitCode ?? '',
+          locataireId:      '',
+          locataireNom:     d.locataireNom,
+          locataireTel:     d.locataireTel ?? '',
+          produitCode:      d.produitCode,
+          proprieteLibelle: d.proprieteLibelle,
+          loyer:            0,
+          montantDu:        d.montantDu,
+          joursRetard:      d.joursRetard ?? 0,
+          derniereRelance:  undefined,
+          etape:            'Contentieux'
+        }));
         this.dossiers.set(contentieux);
         this.loading.set(false);
       },
       error: () => {
-        // Données démo si API indisponible
         this.dossiers.set(this.demoData());
         this.loading.set(false);
       }
@@ -660,7 +789,7 @@ export class ContentieuxComponent implements OnInit {
   phaseIndex(p: PhaseProcedure): number {
     return PHASES.indexOf(p);
   }
-  
+
   phaseKey(p: PhaseProcedure): string { return p; }
 
   countPhase(phase: string): number {
@@ -675,13 +804,54 @@ export class ContentieuxComponent implements OnInit {
     return nom.trim().split(' ').filter(Boolean).slice(0,2).map(w => w[0]).join('').toUpperCase();
   }
 
-  ouvrirNouveauDossier() { this.showModal.set(true); }
-  closeOv(e: Event) {
-    if ((e.target as HTMLElement).classList.contains('cx-ov')) this.showModal.set(false);
+  ouvrirNouveauDossier() {
+    this.resetForm();
+    this.showModal.set(true);
+    this.svc.getLocatairesEnRetard().subscribe({ next: l => this.locatairesRetard.set(l), error: () => {} });
+  }
+  closeModal() { this.showModal.set(false); this.resetForm(); }
+  closeOv(e: Event) { if ((e.target as HTMLElement).classList.contains('cx-ov')) this.closeModal(); }
+  resetForm() { this.formDossier = { contratId: '', montantDu: 0, avocat: '', huissier: '', motif: '' }; this.formError.set(''); this.formSaving.set(false); }
+  onLocataireChange(contratId: string) { const l = this.locatairesRetard().find(x => x.contratId === contratId); this.formDossier.montantDu = l?.montantDu ?? 0; }
+  soumettreDossier() {
+    if (!this.formDossier.contratId || !this.formDossier.motif.trim()) { this.formError.set('Veuillez remplir tous les champs obligatoires.'); return; }
+    this.formSaving.set(true); this.formError.set('');
+    this.svc.ouvrirDossierContentieux({
+      contratId: this.formDossier.contratId, montantDu: this.formDossier.montantDu,
+      avocat: this.formDossier.avocat || undefined, huissier: this.formDossier.huissier || undefined,
+      motif: this.formDossier.motif,
+    }).subscribe({
+      next: () => { this.formSaving.set(false); this.closeModal(); this.charger(); },
+      error: (err: any) => {
+        this.formSaving.set(false);
+        const msg = err?.error?.message ?? err?.error?.title ?? ('Erreur ' + err?.status);
+        this.formError.set(msg);
+        console.error('[ContentieuxError]', err);
+      }
+    });
   }
 
   voirPieces(d: DossierContentieux)        { alert(`Pièces du dossier : ${d.locataireNom}`); }
-  accordAmiable(d: DossierContentieux)     { alert(`Accord amiable : ${d.locataireNom}`); }
+  accordAmiable(d: DossierContentieux) {
+    this.dossierActif.set(d);
+    this.encMontant = d.montantDu; this.encMode = 'Especes'; this.encRef = '';
+    this.encOkMsg.set(''); this.encErrMsg.set('');
+    this.mEncaisser.set(true);
+  }
+
+  confirmerEncaissement() {
+    const d = this.dossierActif();
+    if (!d || !this.encMontant) return;
+    this.encEnvoyant.set(true);
+    this.svc.encaisser(d.contratId, { montant: this.encMontant, mode: this.encMode, reference: this.encRef }).subscribe({
+      next: () => {
+        this.encEnvoyant.set(false);
+        this.encOkMsg.set('Paiement enregistré avec succès !');
+        setTimeout(() => { this.mEncaisser.set(false); this.charger(); }, 1400);
+      },
+      error: (e: any) => { this.encEnvoyant.set(false); this.encErrMsg.set(e?.error?.message ?? 'Erreur.'); }
+    });
+  }
   preparerAudience(d: DossierContentieux)  { alert(`Préparer audience : ${d.locataireNom}`); }
   contacterAvocat(d: DossierContentieux)   { alert(`Contacter avocat pour : ${d.locataireNom}`); }
   preparerAssignation(d: DossierContentieux){ alert(`Assignation : ${d.locataireNom}`); }

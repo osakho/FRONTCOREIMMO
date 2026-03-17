@@ -105,7 +105,7 @@ export class SuiviVersementsService extends ApiService {
     const fd = new FormData();
     fd.append('Reference',        reference);
     fd.append('DateEffective',    new Date().toISOString().split('T')[0]);
-    fd.append('Mode',             'Virement');
+    fd.append('Mode',             'VirementBancaire');
     fd.append('NotifierEmail',    'false');
     fd.append('NotifierWhatsApp', 'false');
     fd.append('NotifierSms',      'false');
@@ -522,6 +522,11 @@ export class SuiviVersementsService extends ApiService {
     </div>
   </div>
 
+  <!-- Toast -->
+  <div class="kdi-toast-sv" [class.visible]="toastVisible" [class.ok]="toastType==='ok'" [class.err]="toastType==='err'">
+    {{ toastMsg }}
+  </div>
+
 </div>
   `,
   styles: [`
@@ -667,6 +672,16 @@ export class SuiviVersementsService extends ApiService {
     @keyframes spin { to { transform: rotate(360deg); } }
     .data-table tr.row-selected td { background: #eff6ff !important; }
     .data-table tr { cursor: pointer; }
+    .kdi-toast-sv {
+      position: fixed; bottom: 28px; right: 28px; z-index: 9999;
+      padding: 13px 20px; border-radius: 12px; font-size: 14px; font-weight: 600;
+      box-shadow: 0 8px 28px rgba(0,0,0,.15); max-width: 400px;
+      transform: translateY(80px); opacity: 0;
+      transition: transform .3s ease, opacity .3s ease; pointer-events: none;
+    }
+    .kdi-toast-sv.visible { transform: translateY(0); opacity: 1; }
+    .kdi-toast-sv.ok  { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+    .kdi-toast-sv.err { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
   `]
 })
 export class SuiviVersementsComponent implements OnInit {
@@ -759,10 +774,23 @@ export class SuiviVersementsComponent implements OnInit {
 
   saving = false;
 
+  toastMsg     = '';
+  toastType    = '';
+  toastVisible = false;
+  private _toastTimer: any;
+
+  private showToast(msg: string, type: 'ok' | 'err') {
+    this.toastMsg = msg;
+    this.toastType = type;
+    this.toastVisible = true;
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => this.toastVisible = false, 4500);
+  }
+
   marquerEffectue() {
     if (!this.selectedPeriode || this.saving) return;
     if (!this.refPaiement.trim()) {
-      alert('Veuillez saisir une référence de paiement.');
+      this.showToast('⚠️ Veuillez saisir une référence de paiement.', 'err'); return;
       return;
     }
     this.saving = true;
@@ -773,8 +801,9 @@ export class SuiviVersementsComponent implements OnInit {
           this.refPaiement = '';
           this.saving = false;
           this.load();
+          this.showToast('✅ Versement marqué comme effectué.', 'ok');
         },
-        error: () => { this.saving = false; alert('Erreur lors du marquage.'); }
+        error: (e: any) => { this.saving = false; const m = e?.error?.message ?? ('Erreur ' + e?.status); this.showToast('❌ ' + m, 'err'); }
       });
     };
     if (this.selectedPeriode.versementId) {
@@ -785,18 +814,18 @@ export class SuiviVersementsComponent implements OnInit {
       const datePrevue = this.selectedPeriode.datePrevue;
       this.svc.preparer(this.selectedPropriete.contratGestionId, periode, datePrevue).subscribe({
         next: (id: string) => doEffectuer(id),
-        error: () => { this.saving = false; alert('Erreur lors de la préparation du versement.'); }
+        error: (e: any) => { this.saving = false; const m = e?.error?.message ?? ('Erreur ' + e?.status); this.showToast('❌ ' + m, 'err'); }
       });
     } else {
       this.saving = false;
-      alert('Impossible de déterminer le contrat de gestion.');
+      this.showToast('❌ Impossible de déterminer le contrat de gestion.', 'err');
     }
   }
 
   accorderDerogation() {
     if (!this.selectedPeriode || !this.motifDerogation.trim() || this.saving) return;
     if (!this.selectedPeriode.versementId) {
-      alert('Ce versement n\'a pas encore été préparé.');
+      this.showToast('⚠️ Ce versement n\'a pas encore été préparé.', 'err'); return;
       return;
     }
     this.saving = true;
@@ -806,18 +835,19 @@ export class SuiviVersementsComponent implements OnInit {
         this.motifDerogation = '';
         this.saving = false;
         this.load();
+        this.showToast('✅ Dérogation accordée.', 'ok');
       },
-      error: () => { this.saving = false; alert('Erreur lors de la dérogation.'); }
+      error: (e: any) => { this.saving = false; const m = e?.error?.message ?? ('Erreur ' + e?.status); this.showToast('❌ ' + m, 'err'); }
     });
   }
 
   envoyer(canal: 'email' | 'whatsapp' | 'sms') {
     if (!this.selectedPeriode || this.saving) return;
-    if (!this.selectedPeriode.versementId) { alert('Versement non préparé.'); return; }
+    if (!this.selectedPeriode.versementId) { this.showToast('⚠️ Versement non préparé.', 'err'); return; }
     this.saving = true;
     this.svc.envoyerBordereau(this.selectedPeriode.versementId, canal).subscribe({
-      next: () => { this.saving = false; alert(`Bordereau envoyé par ${canal}.`); },
-      error: () => { this.saving = false; alert('Erreur lors de l\'envoi.'); }
+      next: () => { this.saving = false; this.showToast(`✅ Bordereau envoyé par ${canal}.`, 'ok'); },
+      error: (e: any) => { this.saving = false; this.showToast('❌ Erreur lors de l\'envoi.', 'err'); }
     });
   }
 

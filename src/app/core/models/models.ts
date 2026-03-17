@@ -835,6 +835,7 @@ export interface SuiviLoyersGlobalDto {
 }
 
 export interface LigneRecouvrementDto {
+  contratId:         string;   // ← ajouté
   collecteurId:      string;
   collecteurNom:     string;
   proprietaireId:    string;

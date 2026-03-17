@@ -11,323 +11,359 @@ import { LocataireListItemDto, PagedList }    from '../../../core/models/models'
   standalone: true,
   imports: [CommonModule, DatePipe, RouterLink, FormsModule, ReactiveFormsModule],
   template: `
+<div class="shell">
 
-<!-- ══════════════════════════════════════════════
-     PAGE
-══════════════════════════════════════════════ -->
-<div class="page">
+  <!-- ══ SIDEBAR STATS ══ -->
+  <aside class="stats-rail">
+    <div class="rail-brand">
+      <span class="rail-icon">🏢</span>
+      <span class="rail-label">Locataires</span>
+    </div>
 
-  <!-- ── En-tête ── -->
-  <div class="page-header">
-    <div>
-      <h2 class="page-title">Locataires</h2>
-      <p class="page-sub">
-        <span class="stat-pill">{{ liste().totalCount }} au total</span>
-        <span class="stat-pill ok">{{ nbActifs() }} actifs</span>
-        <span class="stat-pill warn">{{ nbAJour() }} à jour</span>
-      </p>
+    <div class="rail-kpi">
+      <div class="kpi-num">{{ liste().totalCount }}</div>
+      <div class="kpi-lbl">Au total</div>
     </div>
-    <button class="btn-add" (click)="ouvrirCreation()">＋ Nouveau locataire</button>
-  </div>
+    <div class="rail-kpi ok">
+      <div class="kpi-num">{{ nbActifs() }}</div>
+      <div class="kpi-lbl">Actifs</div>
+    </div>
+    <div class="rail-kpi warn">
+      <div class="kpi-num">{{ nbEnRetard() }}</div>
+      <div class="kpi-lbl">En retard</div>
+    </div>
+    <div class="rail-kpi info">
+      <div class="kpi-num">{{ nbAJour() }}</div>
+      <div class="kpi-lbl">À jour</div>
+    </div>
 
-  <!-- ── Filtres ── -->
-  <div class="filter-bar">
-    <div class="search-wrap">
-      <span class="si">🔍</span>
-      <input type="text" placeholder="Nom, téléphone, email…"
-             [(ngModel)]="searchTerm" (ngModelChange)="onSearch()" />
-      <span *ngIf="searchTerm" class="clear-x" (click)="clearSearch()">✕</span>
-    </div>
-    <div class="chips">
-      <button class="chip" [class.active]="filtreActif===''"     (click)="setFiltre('')">Tous</button>
-      <button class="chip" [class.active]="filtreActif==='true'" (click)="setFiltre('true')">Actifs</button>
-      <button class="chip" [class.active]="filtreActif==='false'"(click)="setFiltre('false')">Inactifs</button>
-    </div>
-    <div class="view-toggle">
-      <button [class.vt-active]="vue==='liste'"  (click)="vue='liste'"  title="Liste">☰</button>
-      <button [class.vt-active]="vue==='cartes'" (click)="vue='cartes'" title="Cartes">⊞</button>
-    </div>
-  </div>
+    <div class="rail-divider"></div>
 
-  <!-- ══════════════════════════════════
-       VUE LISTE
-  ══════════════════════════════════ -->
-  <div class="table-card" *ngIf="vue==='liste' && liste().items.length && !loading()">
-    <table>
-      <thead>
-        <tr>
-          <th>Locataire</th>
-          <th>Téléphone</th>
-          <th>Email</th>
-          <th class="r">Baux actifs</th>
-          <th class="c">Paiement</th>
-          <th class="c">Statut</th>
-          <th class="c">Inscrit le</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let l of liste().items">
-          <td>
-            <div class="cell-locataire">
-              <div class="avatar" [style.background]="avatarColor(l.nomComplet)">
-                {{ initiales(l.nomComplet) }}
-              </div>
-              <div>
-                <div class="l-nom">{{ l.nomComplet }}</div>
-                <div class="l-meta" *ngIf="l.nbContratsActifs > 0">
-                  {{ l.nbContratsActifs }} bail{{ l.nbContratsActifs > 1 ? 's' : '' }} actif{{ l.nbContratsActifs > 1 ? 's' : '' }}
+    <div class="rail-filters">
+      <button class="rf-btn" [class.active]="filtreActif===''"      (click)="setFiltre('')">
+        <span class="rf-dot"></span> Tous
+      </button>
+      <button class="rf-btn" [class.active]="filtreActif==='true'"  (click)="setFiltre('true')">
+        <span class="rf-dot ok"></span> Actifs
+      </button>
+      <button class="rf-btn" [class.active]="filtreActif==='false'" (click)="setFiltre('false')">
+        <span class="rf-dot off"></span> Inactifs
+      </button>
+    </div>
+
+    <div class="rail-spacer"></div>
+
+    <button class="rail-add" (click)="ouvrirCreation()">
+      <span>＋</span> Nouveau locataire
+    </button>
+  </aside>
+
+  <!-- ══ MAIN CONTENT ══ -->
+  <main class="content">
+
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title">Locataires</h1>
+        <div class="breadcrumb">Gestion locative · Liste</div>
+      </div>
+      <div class="topbar-right">
+        <div class="search-box">
+          <svg class="search-ico" viewBox="0 0 20 20" fill="none">
+            <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <input placeholder="Nom, téléphone, email…"
+                 [(ngModel)]="searchTerm" (ngModelChange)="onSearch()" />
+          <button class="search-clear" *ngIf="searchTerm" (click)="clearSearch()">✕</button>
+        </div>
+        <div class="view-btns">
+          <button [class.va]="vue==='liste'"  (click)="vue='liste'"  title="Tableau">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 3h14v2H1zm0 4h14v2H1zm0 4h14v2H1z"/></svg>
+          </button>
+          <button [class.va]="vue==='cartes'" (click)="vue='cartes'" title="Cartes">
+            <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Chargement ── -->
+    <div class="loading-bar" *ngIf="loading()">
+      <div class="lb-fill"></div>
+    </div>
+
+    <!-- ══ VUE TABLEAU ══ -->
+    <div class="table-wrap" *ngIf="vue==='liste' && !loading()">
+      <table *ngIf="liste().items.length; else empty">
+        <thead>
+          <tr>
+            <th style="width:36px"></th>
+            <th>Locataire</th>
+            <th>Contact</th>
+            <th class="c">Baux</th>
+            <th class="c">Paiement</th>
+            <th class="c">Statut</th>
+            <th class="c">Depuis</th>
+            <th style="width:180px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let l of liste().items; let i=index"
+              [style.animation-delay]="(i*30)+'ms'">
+
+            <!-- Rang -->
+            <td class="rank">{{ (page-1)*20 + i + 1 }}</td>
+
+            <!-- Identité -->
+            <td>
+              <div class="id-cell">
+                <div class="av" [style.background]="avatarColor(l.nomComplet)">
+                  {{ initiales(l.nomComplet) }}
+                </div>
+                <div class="id-info">
+                  <div class="id-nom">{{ l.nomComplet }}</div>
+                  <div class="id-sub" *ngIf="l.nbContratsActifs > 0">
+                    {{ l.nbContratsActifs }} bail{{ l.nbContratsActifs > 1 ? 's' : '' }} actif{{ l.nbContratsActifs > 1 ? 's' : '' }}
+                  </div>
                 </div>
               </div>
-            </div>
-          </td>
-          <td class="mono">{{ l.telephone }}</td>
-          <td class="muted sm">{{ l.email || '—' }}</td>
-          <td class="r">
-            <span class="badge-num" [class.blue]="l.nbContratsActifs > 0">
-              {{ l.nbContratsActifs }}
-            </span>
-          </td>
-          <td class="c">
-            <div class="paiement-badge" [class.vert]="estAJour(l)" [class.rouge]="!estAJour(l) && l.nbContratsActifs > 0" [class.gris]="l.nbContratsActifs === 0">
-              <span class="paiement-dot"></span>
-              <span *ngIf="l.nbContratsActifs === 0">—</span>
-              <span *ngIf="l.nbContratsActifs > 0 && estAJour(l)">À jour</span>
-              <span *ngIf="l.nbContratsActifs > 0 && !estAJour(l)">En retard</span>
-            </div>
-          </td>
-          <td class="c">
-            <span class="badge-statut" [class.ok]="l.estActif" [class.off]="!l.estActif">
+            </td>
+
+            <!-- Contact -->
+            <td>
+              <div class="contact-cell">
+                <span class="phone">{{ l.telephone }}</span>
+                <span class="email" *ngIf="l.email">{{ l.email }}</span>
+              </div>
+            </td>
+
+            <!-- Baux -->
+            <td class="c">
+              <span class="badge-n" [class.active]="l.nbContratsActifs > 0">
+                {{ l.nbContratsActifs }}
+              </span>
+            </td>
+
+            <!-- Paiement -->
+            <td class="c">
+              <div class="pay-chip" *ngIf="l.nbContratsActifs > 0"
+                   [class.ok]="estAJour(l)" [class.late]="!estAJour(l)">
+                <span class="pay-dot"></span>
+                {{ estAJour(l) ? 'À jour' : 'En retard' }}
+              </div>
+              <span class="muted-dash" *ngIf="l.nbContratsActifs === 0">—</span>
+            </td>
+
+            <!-- Statut -->
+            <td class="c">
+              <span class="status-pill" [class.on]="l.estActif" [class.off]="!l.estActif">
+                {{ l.estActif ? 'Actif' : 'Inactif' }}
+              </span>
+            </td>
+
+            <!-- Date -->
+            <td class="c date-cell">{{ l.creeLe | date:'dd MMM yyyy' }}</td>
+
+            <!-- Actions -->
+            <td>
+              <div class="acts">
+                <a [routerLink]="['/locataires', l.id]" class="act-btn" title="Dossier">
+                  <svg viewBox="0 0 16 16" fill="none"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 8a5 5 0 01-3.9-1.87C4.26 9.2 6 8.5 8 8.5s3.74.7 3.9 1.63A5 5 0 018 12z" fill="currentColor"/></svg>
+                  Dossier
+                </a>
+                <a [routerLink]="['/locataires', l.id, 'paiements']" class="act-btn blue" title="Paiements">
+                  <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="4" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M1 7h14" stroke="currentColor" stroke-width="1.4"/><path d="M4 10h2m3 0h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                  Paiements
+                </a>
+                <button class="act-del"
+                        [disabled]="l.nbContratsActifs > 0"
+                        [title]="l.nbContratsActifs > 0 ? 'Bail actif' : 'Supprimer'"
+                        (click)="supprimer(l.id, l.nomComplet)">
+                  <svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5 4V2.5A.5.5 0 015.5 2h5a.5.5 0 01.5.5V4M6 7v5m4-5v5M3 4l.8 9.5A.5.5 0 004.3 14h7.4a.5.5 0 00.5-.5L13 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <ng-template #empty>
+        <div class="empty">
+          <div class="empty-illu">🧑‍🤝‍🧑</div>
+          <div class="empty-h">Aucun locataire trouvé</div>
+          <p class="empty-p">Modifiez vos filtres ou ajoutez un nouveau locataire.</p>
+          <button class="rail-add inline" (click)="ouvrirCreation()">＋ Nouveau locataire</button>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- ══ VUE CARTES ══ -->
+    <div class="cards-grid" *ngIf="vue==='cartes' && !loading()">
+      <div class="loc-card" *ngFor="let l of liste().items; let i=index"
+           [style.animation-delay]="(i*40)+'ms'">
+        <div class="lc-top">
+          <div class="av lg" [style.background]="avatarColor(l.nomComplet)">
+            {{ initiales(l.nomComplet) }}
+          </div>
+          <div class="lc-badges">
+            <span class="status-pill sm" [class.on]="l.estActif" [class.off]="!l.estActif">
               {{ l.estActif ? 'Actif' : 'Inactif' }}
             </span>
-          </td>
-          <td class="c muted sm">{{ l.creeLe | date:'dd/MM/yyyy' }}</td>
-          <td>
-            <div class="row-actions">
-              <a [routerLink]="['/locataires', l.id]" class="ra-btn ra-labeled" title="Voir le dossier">
-                👁 <span>Dossier</span>
-              </a>
-              <a [routerLink]="['/locataires', l.id, 'paiements']"
-                 class="ra-btn ra-labeled ra-blue" title="Historique des paiements">
-                💳 <span>Paiements</span>
-              </a>
-              <button class="ra-btn ra-del"
-                      [disabled]="l.nbContratsActifs > 0"
-                      [title]="l.nbContratsActifs > 0 ? 'Bail actif en cours' : 'Supprimer'"
-                      (click)="supprimer(l.id, l.nomComplet)">🗑</button>
+            <div class="pay-chip sm" *ngIf="l.nbContratsActifs > 0"
+                 [class.ok]="estAJour(l)" [class.late]="!estAJour(l)">
+              <span class="pay-dot"></span>
+              {{ estAJour(l) ? 'À jour' : 'Retard' }}
             </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- ══════════════════════════════════
-       VUE CARTES
-  ══════════════════════════════════ -->
-  <div class="cards-grid" *ngIf="vue==='cartes' && liste().items.length && !loading()">
-    <div *ngFor="let l of liste().items" class="loc-card">
-      <div class="lc-head">
-        <div class="avatar lg" [style.background]="avatarColor(l.nomComplet)">
-          {{ initiales(l.nomComplet) }}
+          </div>
         </div>
-        <div class="lc-paiement" [class.vert]="estAJour(l)" [class.rouge]="!estAJour(l) && l.nbContratsActifs > 0" [class.gris]="l.nbContratsActifs === 0">
-          <span class="paiement-dot"></span>
-          <span *ngIf="l.nbContratsActifs === 0">Aucun bail</span>
-          <span *ngIf="l.nbContratsActifs > 0 && estAJour(l)">À jour</span>
-          <span *ngIf="l.nbContratsActifs > 0 && !estAJour(l)">En retard</span>
+        <div class="lc-nom">{{ l.nomComplet }}</div>
+        <div class="lc-contact">
+          <span>📞 {{ l.telephone }}</span>
+          <span *ngIf="l.email" class="lc-email">✉ {{ l.email }}</span>
         </div>
-      </div>
-      <div class="lc-nom">{{ l.nomComplet }}</div>
-      <div class="lc-tel">📞 {{ l.telephone }}</div>
-      <div class="lc-email" *ngIf="l.email">✉ {{ l.email }}</div>
-      <div class="lc-foot">
-        <span class="badge-statut sm" [class.ok]="l.estActif" [class.off]="!l.estActif">
-          {{ l.estActif ? 'Actif' : 'Inactif' }}
-        </span>
-        <span class="badge-num sm" [class.blue]="l.nbContratsActifs > 0">
-          {{ l.nbContratsActifs }} bail{{ l.nbContratsActifs > 1 ? 's' : '' }}
-        </span>
+        <div class="lc-bottom">
+          <span class="badge-n sm" [class.active]="l.nbContratsActifs > 0">
+            {{ l.nbContratsActifs }} bail{{ l.nbContratsActifs > 1 ? 's' : '' }}
+          </span>
+          <div class="lc-actions">
+            <a [routerLink]="['/locataires', l.id]" class="act-btn sm">Dossier</a>
+            <a [routerLink]="['/locataires', l.id, 'paiements']" class="act-btn sm blue">Paiements</a>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- État vide / chargement -->
-  <div class="empty-state" *ngIf="!liste().items.length && !loading()">
-    <div class="empty-icon">🧑‍🤝‍🧑</div>
-    <div class="empty-title">Aucun locataire trouvé</div>
-    <div class="empty-sub">Ajoutez votre premier locataire pour commencer</div>
-    <button class="btn-add" style="margin-top:18px" (click)="ouvrirCreation()">＋ Nouveau locataire</button>
-  </div>
-  <div class="loading-state" *ngIf="loading()">
-    <div class="spinner"></div><p>Chargement…</p>
-  </div>
+    <!-- Pagination -->
+    <div class="pager" *ngIf="liste().totalPages > 1">
+      <button [disabled]="page===1" (click)="goPage(page-1)">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M10 3L5 8l5 5"/></svg>
+      </button>
+      <div class="pager-pages">
+        <span *ngFor="let p of pageRange()"
+              class="pager-dot"
+              [class.cur]="p === page"
+              (click)="goPage(p)">{{ p }}</span>
+      </div>
+      <button [disabled]="!liste().hasNext" (click)="goPage(page+1)">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M6 3l5 5-5 5"/></svg>
+      </button>
+    </div>
 
-  <!-- Pagination -->
-  <div class="pagination" *ngIf="liste().totalPages > 1">
-    <button [disabled]="page===1" (click)="goPage(page-1)">‹</button>
-    <span>Page {{ page }} / {{ liste().totalPages }}</span>
-    <button [disabled]="!liste().hasNext" (click)="goPage(page+1)">›</button>
-  </div>
-
+  </main>
 </div>
 
+<!-- ══ MODAL NOUVEAU LOCATAIRE ══ -->
+<div class="modal-bg" [class.open]="showCreation()" (click)="onOverlayClick($event)">
+  <div class="modal" (click)="$event.stopPropagation()">
 
-<!-- ══════════════════════════════════════════════════════
-     MODAL — NOUVEAU LOCATAIRE
-══════════════════════════════════════════════════════ -->
-<div class="modal-overlay" [class.open]="showCreation()" (click)="onOverlayClick($event)">
-  <div class="nv-modal" (click)="$event.stopPropagation()">
-
-    <!-- En-tête -->
-    <div class="nv-header">
-      <div class="nv-header-left">
-        <div class="nv-icon">🧑</div>
+    <div class="modal-head">
+      <div class="mh-left">
+        <div class="mh-icon">👤</div>
         <div>
-          <div class="nv-title">Nouveau locataire</div>
-          <div class="nv-sub">Enregistrement avec documents obligatoires</div>
+          <div class="mh-title">Nouveau locataire</div>
+          <div class="mh-sub">Étape {{ etape() }} sur 4 · {{ stepLabels[etape()-1] }}</div>
         </div>
       </div>
-      <button class="close-btn" (click)="fermerCreation()">✕</button>
+      <button class="mh-close" (click)="fermerCreation()">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
     </div>
 
-    <!-- Stepper -->
-    <div class="stepper">
-      <ng-container *ngFor="let lbl of stepLabels; let i = index">
-        <div class="stepper-step">
-          <div class="step-dot"
-               [class.step-active]="etape() === i+1"
-               [class.step-done]="etape() > i+1">
-            {{ etape() > i+1 ? '✓' : i+1 }}
-          </div>
-          <div class="step-label">{{ lbl }}</div>
-        </div>
-        <div class="step-line" *ngIf="i < stepLabels.length-1" [class.done]="etape() > i+1"></div>
-      </ng-container>
+    <!-- Progress bar -->
+    <div class="modal-progress">
+      <div class="mp-track">
+        <div class="mp-fill" [style.width]="(etape()/4*100)+'%'"></div>
+      </div>
+      <div class="mp-steps">
+        <span *ngFor="let lbl of stepLabels; let i=index"
+              [class.cur]="etape()===i+1" [class.done]="etape()>i+1">
+          {{ lbl }}
+        </span>
+      </div>
     </div>
 
-    <!-- Corps -->
-    <div class="nv-body" [formGroup]="form">
+    <div class="modal-body" [formGroup]="form">
 
-      <!-- ─── Étape 1 : Identité ─── -->
-      <ng-container *ngIf="etape() === 1">
-        <div class="step-title">👤 Identité</div>
-        <div class="two-col">
-          <div class="fg">
-            <label>Prénom <span class="req">*</span></label>
-            <input type="text" class="fc" placeholder="Aminata" formControlName="prenom" />
-            <span class="err-msg" *ngIf="invalid('prenom')">Obligatoire</span>
-          </div>
-          <div class="fg">
-            <label>Nom <span class="req">*</span></label>
-            <input type="text" class="fc" placeholder="Diallo" formControlName="nom" />
-            <span class="err-msg" *ngIf="invalid('nom')">Obligatoire</span>
-          </div>
-          <div class="fg">
-            <label>Date de naissance</label>
-            <input type="date" class="fc" formControlName="dateNaissance" />
-          </div>
-          <div class="fg">
-            <label>Lieu de naissance</label>
-            <input type="text" class="fc" placeholder="Nouakchott" formControlName="lieuNaissance" />
-          </div>
+      <!-- Étape 1 -->
+      <ng-container *ngIf="etape()===1">
+        <div class="step-head">👤 Identité</div>
+        <div class="fg-grid">
+          <div class="fg"><label>Prénom <em>*</em></label>
+            <input class="fc" type="text" placeholder="Aminata" formControlName="prenom"/>
+            <span class="fe" *ngIf="invalid('prenom')">Obligatoire</span></div>
+          <div class="fg"><label>Nom <em>*</em></label>
+            <input class="fc" type="text" placeholder="Diallo" formControlName="nom"/>
+            <span class="fe" *ngIf="invalid('nom')">Obligatoire</span></div>
+          <div class="fg"><label>Date de naissance</label>
+            <input class="fc" type="date" formControlName="dateNaissance"/></div>
+          <div class="fg"><label>Lieu de naissance</label>
+            <input class="fc" type="text" placeholder="Nouakchott" formControlName="lieuNaissance"/></div>
         </div>
-
-        <!-- Photo identité -->
-        <div class="fg" style="margin-top:4px">
-          <label>Photo d'identité</label>
-          <div class="file-drop" (click)="photoInput.click()"
+        <div class="fg" style="margin-top:4px"><label>Photo d'identité</label>
+          <div class="drop-zone" (click)="photoInput.click()"
                (drop)="onDrop($event)" (dragover)="$event.preventDefault()"
-               [class.has-file]="photoPreview">
-            <input #photoInput type="file" accept="image/*" style="display:none"
-                   (change)="onPhotoChange($event)" />
-            <div *ngIf="!photoPreview" class="fd-empty">
-              <span>📸</span><p>Cliquer ou glisser la photo</p>
-            </div>
-            <img *ngIf="photoPreview" [src]="photoPreview" class="fd-img" />
+               [class.has]="photoPreview">
+            <input #photoInput type="file" accept="image/*" style="display:none" (change)="onPhotoChange($event)"/>
+            <div *ngIf="!photoPreview" class="dz-empty"><span>📸</span><p>Cliquer ou glisser</p></div>
+            <img *ngIf="photoPreview" [src]="photoPreview" class="dz-img"/>
           </div>
         </div>
       </ng-container>
 
-      <!-- ─── Étape 2 : Coordonnées ─── -->
-      <ng-container *ngIf="etape() === 2">
-        <div class="step-title">📞 Coordonnées</div>
-        <div class="two-col">
-          <div class="fg">
-            <label>Téléphone principal <span class="req">*</span></label>
-            <input type="text" class="fc" placeholder="+222 36 XX XX XX" formControlName="telephone" />
-            <span class="err-msg" *ngIf="invalid('telephone')">Obligatoire</span>
-          </div>
-          <div class="fg">
-            <label>Téléphone secondaire</label>
-            <input type="text" class="fc" formControlName="telephoneSecondaire" />
-          </div>
-          <div class="fg">
-            <label>Email</label>
-            <input type="email" class="fc" placeholder="exemple@mail.com" formControlName="email" />
-          </div>
-          <div class="fg">
-            <label>Quartier</label>
-            <input type="text" class="fc" placeholder="Tevragh Zeina" formControlName="quartier" />
-          </div>
-          <div class="fg full">
-            <label>Adresse complète <span class="req">*</span></label>
-            <textarea class="fc ta" rows="2" formControlName="adresse"
-                      placeholder="Avenue principale, Tevragh Zeina…"></textarea>
-            <span class="err-msg" *ngIf="invalid('adresse')">Obligatoire</span>
-          </div>
+      <!-- Étape 2 -->
+      <ng-container *ngIf="etape()===2">
+        <div class="step-head">📞 Coordonnées</div>
+        <div class="fg-grid">
+          <div class="fg"><label>Téléphone <em>*</em></label>
+            <input class="fc" type="text" placeholder="+222 36 XX XX XX" formControlName="telephone"/>
+            <span class="fe" *ngIf="invalid('telephone')">Obligatoire</span></div>
+          <div class="fg"><label>Téléphone secondaire</label>
+            <input class="fc" type="text" formControlName="telephoneSecondaire"/></div>
+          <div class="fg"><label>Email</label>
+            <input class="fc" type="email" placeholder="exemple@mail.com" formControlName="email"/></div>
+          <div class="fg"><label>Quartier</label>
+            <input class="fc" type="text" placeholder="Tevragh Zeina" formControlName="quartier"/></div>
+          <div class="fg span2"><label>Adresse complète <em>*</em></label>
+            <textarea class="fc ta" rows="2" formControlName="adresse" placeholder="Avenue principale…"></textarea>
+            <span class="fe" *ngIf="invalid('adresse')">Obligatoire</span></div>
         </div>
       </ng-container>
 
-      <!-- ─── Étape 3 : Document ─── -->
-      <ng-container *ngIf="etape() === 3">
-        <div class="step-title">🪪 Document officiel</div>
-        <div class="two-col">
-          <div class="fg">
-            <label>Type de document <span class="req">*</span></label>
+      <!-- Étape 3 -->
+      <ng-container *ngIf="etape()===3">
+        <div class="step-head">🪪 Document officiel</div>
+        <div class="fg-grid">
+          <div class="fg"><label>Type de document <em>*</em></label>
             <select class="fc" formControlName="typeDocumentId">
               <option value="CarteNationaleIdentite">Carte nationale d'identité</option>
               <option value="Passeport">Passeport</option>
               <option value="CarteDeSejour">Carte de séjour</option>
               <option value="CarteConsulaire">Carte consulaire</option>
               <option value="Autre">Autre</option>
-            </select>
-            <span class="err-msg" *ngIf="invalid('typeDocumentId')">Obligatoire</span>
-          </div>
-          <div class="fg">
-            <label>Numéro du document <span class="req">*</span></label>
-            <input type="text" class="fc" placeholder="NNI-001-85-MR" formControlName="numeroDocument" />
-            <span class="err-msg" *ngIf="invalid('numeroDocument')">Obligatoire</span>
-          </div>
-          <div class="fg full">
-            <label>Joindre le document</label>
-            <div class="file-drop-sm" (click)="docInput.click()">
-              <input #docInput type="file" accept=".pdf,image/*" style="display:none"
-                     (change)="onDocChange($event)" />
-              <span *ngIf="!docFile">📎 Cliquer pour joindre (PDF ou image)</span>
-              <span *ngIf="docFile" class="fname">✓ {{ docFile.name }}</span>
-            </div>
-          </div>
-          <div class="fg">
-            <label>Profession</label>
-            <input type="text" class="fc" placeholder="Commerçant, Fonctionnaire…" formControlName="profession" />
-          </div>
-          <div class="fg">
-            <label>Employeur</label>
-            <input type="text" class="fc" placeholder="Ministère, Société…" formControlName="employeur" />
-          </div>
-          <div class="fg full">
-            <label>Notes</label>
-            <textarea class="fc ta" rows="2" formControlName="notes"
-                      placeholder="Observations complémentaires…"></textarea>
-          </div>
+            </select></div>
+          <div class="fg"><label>Numéro <em>*</em></label>
+            <input class="fc" type="text" placeholder="NNI-001-85-MR" formControlName="numeroDocument"/>
+            <span class="fe" *ngIf="invalid('numeroDocument')">Obligatoire</span></div>
+          <div class="fg span2"><label>Joindre le document</label>
+            <div class="drop-sm" (click)="docInput.click()">
+              <input #docInput type="file" accept=".pdf,image/*" style="display:none" (change)="onDocChange($event)"/>
+              <span *ngIf="!docFile">📎 PDF ou image</span>
+              <span *ngIf="docFile" class="doc-ok">✓ {{ docFile.name }}</span>
+            </div></div>
+          <div class="fg"><label>Profession</label>
+            <input class="fc" type="text" placeholder="Commerçant…" formControlName="profession"/></div>
+          <div class="fg"><label>Employeur</label>
+            <input class="fc" type="text" placeholder="Société…" formControlName="employeur"/></div>
+          <div class="fg span2"><label>Notes</label>
+            <textarea class="fc ta" rows="2" formControlName="notes" placeholder="Observations…"></textarea></div>
         </div>
       </ng-container>
 
-      <!-- ─── Étape 4 : Récap ─── -->
-      <ng-container *ngIf="etape() === 4">
-        <div class="step-title">✅ Récapitulatif</div>
-        <div class="recap-card">
+      <!-- Étape 4 -->
+      <ng-container *ngIf="etape()===4">
+        <div class="step-head">✅ Récapitulatif</div>
+        <div class="recap">
           <div class="recap-row"><span>Nom complet</span><strong>{{ form.get('prenom')?.value }} {{ form.get('nom')?.value }}</strong></div>
           <div class="recap-row"><span>Téléphone</span><strong>{{ form.get('telephone')?.value }}</strong></div>
           <div class="recap-row" *ngIf="form.get('email')?.value"><span>Email</span><strong>{{ form.get('email')?.value }}</strong></div>
@@ -335,225 +371,562 @@ import { LocataireListItemDto, PagedList }    from '../../../core/models/models'
           <div class="recap-row"><span>Document</span><strong>{{ form.get('typeDocumentId')?.value }} — {{ form.get('numeroDocument')?.value }}</strong></div>
           <div class="recap-row" *ngIf="form.get('profession')?.value"><span>Profession</span><strong>{{ form.get('profession')?.value }}</strong></div>
         </div>
-        <div class="success-banner" *ngIf="successMsg()">✅ {{ successMsg() }}</div>
-        <div class="error-banner"   *ngIf="errorMsg()">⚠️ {{ errorMsg() }}</div>
+        <div class="banner ok" *ngIf="successMsg()">✅ {{ successMsg() }}</div>
+        <div class="banner err" *ngIf="errorMsg()">⚠️ {{ errorMsg() }}</div>
       </ng-container>
 
-    </div><!-- /nv-body -->
+    </div>
 
-    <!-- Pied -->
-    <div class="nv-footer">
-      <button class="btn-ghost" (click)="fermerCreation()">Annuler</button>
-      <div class="foot-right">
-        <button class="btn-sec" *ngIf="etape() > 1" (click)="etapePrev()">← Précédent</button>
-        <button class="btn-primary" *ngIf="etape() < 4" [disabled]="!peutContinuer()" (click)="etapeNext()">
+    <div class="modal-foot">
+      <button class="mf-cancel" (click)="fermerCreation()">Annuler</button>
+      <div class="mf-right">
+        <button class="mf-prev" *ngIf="etape()>1" (click)="etapePrev()">← Précédent</button>
+        <button class="mf-next" *ngIf="etape()<4" [disabled]="!peutContinuer()" (click)="etapeNext()">
           Suivant →
         </button>
-        <button class="btn-submit" *ngIf="etape() === 4" [disabled]="!form.valid || submitting()" (click)="soumettre()">
+        <button class="mf-submit" *ngIf="etape()===4" [disabled]="!form.valid || submitting()" (click)="soumettre()">
           <span *ngIf="!submitting()">✓ Créer le locataire</span>
           <span *ngIf="submitting()" class="spin"></span>
         </button>
       </div>
     </div>
-
   </div>
 </div>
-
   `,
   styles: [`
+    /* ═══════════════════════════════════════
+       TOKENS
+    ═══════════════════════════════════════ */
     :host {
-      --gold:    #C9A84C; --gold-l:  #E8C96A; --gold-d:  #8B6914;
-      --ink:     #0D0D0D; --ink-mid: #1A1A2E; --ink-soft:#2D2D4A;
-      --cream:   #F8F4ED; --cream-dk:#EDE8DF; --muted:   #8A8899;
-      --ok:      #1A7A4A; --ok-bg:   #E6F5EE;
-      --warn:    #D4850A; --warn-bg: #FEF3E2;
-      --danger:  #C0392B; --danger-bg:#FDECEA;
-      --blue:    #1D4ED8; --blue-bg: #DBEAFE;
-      --r: 12px;
+      --navy:   #0D1B2A;
+      --navy2:  #1B2B3A;
+      --navy3:  #243447;
+      --gold:   #C9A84C;
+      --gold-l: #E8C96A;
+      --gold-d: #9A7A2E;
+      --ok:     #16a34a;
+      --ok-bg:  #dcfce7;
+      --late:   #dc2626;
+      --late-bg:#fee2e2;
+      --blue:   #1d4ed8;
+      --blue-bg:#dbeafe;
+      --surf:   #F5F7FA;
+      --surf2:  #EEF1F6;
+      --bord:   #E2E8F0;
+      --t1:     #0F172A;
+      --t2:     #475569;
+      --t3:     #94a3b8;
+      --r:      10px;
+      --r2:     14px;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+      display: block;
+      height: 100%;
     }
 
-    /* ─ Page ─ */
-    .page { max-width:1200px; margin:0 auto; }
+    /* ═══════════════════════════════════════
+       LAYOUT PLEIN ÉCRAN
+    ═══════════════════════════════════════ */
+    .shell {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--surf);
+      font-family: 'DM Sans', 'Segoe UI', sans-serif;
+    }
 
-    /* En-tête */
-    .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:22px; flex-wrap:wrap; gap:12px; }
-    .page-title  { font-size:24px; font-weight:800; color:var(--ink-mid); margin:0 0 6px; font-family:'Playfair Display',Georgia,serif; }
-    .page-sub    { display:flex; gap:7px; flex-wrap:wrap; margin:0; }
-    .stat-pill   { padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; background:var(--cream-dk); color:var(--muted); }
-    .stat-pill.ok{ background:var(--ok-bg); color:var(--ok); }
-    .stat-pill.warn { background:var(--warn-bg); color:var(--warn); }
+    /* ── Rail latéral ── */
+    .stats-rail {
+      background: var(--navy);
+      display: flex;
+      flex-direction: column;
+      padding: 24px 16px 0;
+      gap: 6px;
+      overflow-y: auto;
+      border-right: 1px solid rgba(255,255,255,.05);
+    }
+    .rail-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 4px 20px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      margin-bottom: 10px;
+    }
+    .rail-icon  { font-size: 20px; }
+    .rail-label { font-size: 15px; font-weight: 700; color: var(--gold-l); letter-spacing: .3px; }
 
-    .btn-add { padding:10px 22px; background:var(--ink-mid); color:var(--gold-l); border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; transition:all .18s; }
-    .btn-add:hover { background:var(--ink-soft); box-shadow:0 4px 14px rgba(26,26,46,.25); }
+    .rail-kpi {
+      background: rgba(255,255,255,.05);
+      border-radius: var(--r);
+      padding: 12px 14px;
+      border-left: 3px solid transparent;
+      transition: background .15s;
+    }
+    .rail-kpi.ok   { border-left-color: var(--ok);   }
+    .rail-kpi.warn { border-left-color: var(--late);  }
+    .rail-kpi.info { border-left-color: var(--blue);  }
+    .kpi-num { font-size: 22px; font-weight: 800; color: #fff; line-height: 1; }
+    .kpi-lbl { font-size: 11px; color: var(--t3); margin-top: 3px; text-transform: uppercase; letter-spacing: .5px; }
 
-    /* Filtres */
-    .filter-bar { display:flex; align-items:center; gap:12px; margin-bottom:18px; flex-wrap:wrap; }
-    .search-wrap { flex:1; min-width:240px; display:flex; align-items:center; gap:10px; background:#fff; border:1.5px solid var(--cream-dk); border-radius:10px; padding:9px 14px; transition:border-color .18s; }
-    .search-wrap:focus-within { border-color:var(--gold); }
-    .si { font-size:15px; flex-shrink:0; }
-    .search-wrap input { flex:1; border:none; outline:none; font-size:13.5px; font-family:inherit; background:transparent; }
-    .search-wrap input::placeholder { color:#c0bcc8; }
-    .clear-x { color:var(--muted); cursor:pointer; font-size:12px; }
-    .clear-x:hover { color:var(--danger); }
-    .chips { display:flex; gap:7px; }
-    .chip { padding:7px 14px; border-radius:20px; border:1.5px solid var(--cream-dk); background:#fff; font-size:12.5px; font-weight:600; color:var(--muted); cursor:pointer; transition:all .15s; }
-    .chip.active { background:var(--ink-mid); color:var(--gold-l); border-color:var(--ink-mid); }
-    .chip:hover:not(.active) { border-color:var(--ink-mid); color:var(--ink-mid); }
-    .view-toggle { display:flex; border:1.5px solid var(--cream-dk); border-radius:8px; overflow:hidden; background:#fff; }
-    .view-toggle button { padding:7px 12px; border:none; background:transparent; cursor:pointer; font-size:15px; color:var(--muted); transition:all .15s; }
-    .view-toggle button.vt-active { background:var(--ink-mid); color:var(--gold-l); }
+    .rail-divider { height: 1px; background: rgba(255,255,255,.08); margin: 10px 0; }
 
-    /* ─ Tableau ─ */
-    .table-card { background:#fff; border-radius:var(--r); overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,.07); }
-    table { width:100%; border-collapse:collapse; }
-    thead th { padding:11px 16px; background:#f8f9fc; font-size:11px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--cream-dk); text-align:left; }
-    th.r { text-align:right; } th.c { text-align:center; }
-    tbody td { padding:13px 16px; border-bottom:1px solid var(--cream-dk); vertical-align:middle; }
-    tbody tr:last-child td { border-bottom:none; }
-    /* lignes non cliquables — hover subtil uniquement */
-    td.r { text-align:right; } td.c { text-align:center; }
-    td.muted { color:var(--muted); } td.sm { font-size:12.5px; } td.mono { font-family:monospace; font-size:13px; }
+    .rail-filters { display: flex; flex-direction: column; gap: 3px; }
+    .rf-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--t3);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .15s;
+      font-family: inherit;
+      text-align: left;
+    }
+    .rf-btn:hover { background: rgba(255,255,255,.07); color: #fff; }
+    .rf-btn.active { background: rgba(201,168,76,.15); color: var(--gold-l); }
+    .rf-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--t3); flex-shrink: 0; }
+    .rf-dot.ok  { background: var(--ok); }
+    .rf-dot.off { background: var(--t3); }
 
-    /* Cellule locataire */
-    .cell-locataire { display:flex; align-items:center; gap:11px; }
-    .avatar { width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; flex-shrink:0; font-family:'Playfair Display',Georgia,serif; }
-    .avatar.lg { width:46px; height:46px; font-size:16px; border-radius:11px; }
-    .l-nom  { font-weight:600; font-size:13.5px; color:var(--ink-mid); }
-    .l-meta { font-size:11.5px; color:var(--muted); margin-top:1px; }
+    .rail-spacer { flex: 1; min-height: 12px; }
 
-    /* Badges */
-    .badge-num   { display:inline-flex; width:24px; height:24px; border-radius:6px; align-items:center; justify-content:center; font-size:12px; font-weight:700; background:var(--cream-dk); color:var(--muted); }
-    .badge-num.blue { background:var(--blue-bg); color:var(--blue); }
-    .badge-num.sm { width:20px; height:20px; font-size:10.5px; border-radius:5px; }
-    .badge-statut { display:inline-flex; padding:3px 10px; border-radius:20px; font-size:11.5px; font-weight:700; }
-    .badge-statut.ok  { background:var(--ok-bg); color:var(--ok); }
-    .badge-statut.off { background:var(--cream-dk); color:var(--muted); }
-    .badge-statut.sm  { font-size:10.5px; padding:2px 8px; }
+    .rail-add {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 12px;
+      background: var(--gold);
+      color: var(--navy);
+      border: none;
+      border-radius: var(--r) var(--r) 0 0;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .18s;
+      font-family: inherit;
+      position: sticky;
+      bottom: 0;
+      margin: 0 -16px;
+      width: calc(100% + 32px);
+    }
+    .rail-add:hover { background: var(--gold-l); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(201,168,76,.4); }
+    .rail-add.inline { margin-top: 16px; }
 
-    /* Badge paiement */
-    .paiement-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; font-size:11.5px; font-weight:700; }
-    .paiement-badge.vert  { background:var(--ok-bg);   color:var(--ok); }
-    .paiement-badge.rouge { background:var(--danger-bg); color:var(--danger); }
-    .paiement-badge.gris  { background:var(--cream-dk);  color:var(--muted); }
-    .paiement-dot { width:6px; height:6px; border-radius:50%; background:currentColor; flex-shrink:0; }
+    /* ── Contenu principal ── */
+    .content {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 0;
+    }
 
-    /* Actions ligne */
-    .row-actions { display:flex; gap:5px; justify-content:flex-end; }
-    .ra-btn { height:30px; border-radius:7px; border:none; background:var(--cream); color:var(--muted); font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; text-decoration:none; transition:all .14s; padding:0 8px; gap:5px; white-space:nowrap; }
-    .ra-btn:hover { background:var(--cream-dk); color:var(--ink); }
-    .ra-labeled { font-weight:600; font-size:12px; }
-    .ra-labeled:hover { background:var(--ink-mid); color:var(--gold-l); }
-    .ra-blue { background:var(--blue-bg); color:var(--blue); }
-    .ra-blue:hover { background:var(--blue); color:#fff; }
-    .ra-del:hover:not(:disabled) { background:var(--danger-bg); color:var(--danger); }
-    .ra-del:disabled { opacity:.3; cursor:not-allowed; }
+    /* Top bar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 28px 14px;
+      background: #fff;
+      border-bottom: 1px solid var(--bord);
+      flex-shrink: 0;
+      gap: 16px;
+    }
+    .page-title  { font-size: 20px; font-weight: 800; color: var(--t1); margin: 0; }
+    .breadcrumb  { font-size: 11.5px; color: var(--t3); margin-top: 2px; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
 
-    /* ─ Vue cartes ─ */
-    .cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; }
-    .loc-card { background:#fff; border-radius:var(--r); padding:18px; box-shadow:0 2px 10px rgba(0,0,0,.07); cursor:pointer; transition:all .15s; border:1.5px solid transparent; }
-    .loc-card:hover { border-color:var(--gold); box-shadow:0 4px 18px rgba(0,0,0,.1); transform:translateY(-2px); }
-    .lc-head  { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
-    .lc-nom   { font-size:14.5px; font-weight:700; color:var(--ink-mid); margin-bottom:5px; }
-    .lc-tel   { font-size:12.5px; color:var(--muted); margin-bottom:3px; font-family:monospace; }
-    .lc-email { font-size:12px; color:var(--muted); margin-bottom:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .lc-foot  { display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:10px; border-top:1px solid var(--cream-dk); }
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surf);
+      border: 1.5px solid var(--bord);
+      border-radius: 9px;
+      padding: 8px 12px;
+      width: 280px;
+      transition: border-color .15s;
+    }
+    .search-box:focus-within { border-color: var(--gold); background: #fff; }
+    .search-ico { width: 15px; height: 15px; color: var(--t3); flex-shrink: 0; }
+    .search-box input { flex: 1; border: none; outline: none; font-size: 13px; background: transparent; font-family: inherit; color: var(--t1); }
+    .search-box input::placeholder { color: var(--t3); }
+    .search-clear { background: none; border: none; color: var(--t3); cursor: pointer; font-size: 11px; padding: 0; }
 
-    /* États */
-    .empty-state { text-align:center; padding:60px 20px; }
-    .empty-icon  { font-size:48px; margin-bottom:12px; }
-    .empty-title { font-size:17px; font-weight:700; color:var(--ink); margin-bottom:6px; }
-    .empty-sub   { font-size:13px; color:var(--muted); }
-    .loading-state { display:flex; flex-direction:column; align-items:center; padding:60px; gap:14px; color:var(--muted); }
-    .spinner { width:30px; height:30px; border:3px solid var(--cream-dk); border-top-color:var(--ink-mid); border-radius:50%; animation:spin .8s linear infinite; }
+    .view-btns {
+      display: flex;
+      border: 1.5px solid var(--bord);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .view-btns button {
+      width: 34px; height: 34px;
+      border: none; background: #fff;
+      color: var(--t3); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .14s;
+    }
+    .view-btns button svg { width: 15px; height: 15px; }
+    .view-btns button.va { background: var(--navy); color: var(--gold-l); }
 
-    /* Pagination */
-    .pagination { display:flex; align-items:center; justify-content:center; gap:16px; margin-top:18px; font-size:13px; color:var(--muted); }
-    .pagination button { width:30px; height:30px; border-radius:7px; border:1.5px solid var(--cream-dk); background:#fff; cursor:pointer; font-size:14px; }
-    .pagination button:disabled { opacity:.4; cursor:not-allowed; }
+    /* Loading bar */
+    .loading-bar {
+      height: 3px;
+      background: var(--bord);
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .lb-fill {
+      height: 100%;
+      width: 40%;
+      background: var(--gold);
+      animation: slide 1.2s ease-in-out infinite;
+    }
+    @keyframes slide {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(350%); }
+    }
+
+    /* ── Tableau ── */
+    .table-wrap {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 28px;
+    }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: var(--r2); overflow: hidden; box-shadow: var(--shadow); }
+    thead th {
+      padding: 11px 14px;
+      background: var(--navy);
+      color: rgba(255,255,255,.5);
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      text-align: left;
+      white-space: nowrap;
+    }
+    th.c { text-align: center; }
+    tbody tr {
+      border-bottom: 1px solid var(--surf2);
+      animation: fadeUp .3s ease both;
+      transition: background .12s;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surf); }
+    tbody td { padding: 12px 14px; vertical-align: middle; }
+    td.c { text-align: center; }
+
+    .rank { font-size: 11px; color: var(--t3); font-weight: 600; width: 36px; text-align: center; }
+
+    .id-cell { display: flex; align-items: center; gap: 11px; }
+    .av {
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800; color: #fff; flex-shrink: 0;
+      font-family: 'DM Serif Display', Georgia, serif;
+    }
+    .av.lg { width: 48px; height: 48px; font-size: 16px; border-radius: 12px; }
+    .id-nom { font-size: 13.5px; font-weight: 700; color: var(--t1); }
+    .id-sub { font-size: 11.5px; color: var(--t3); margin-top: 1px; }
+
+    .contact-cell { display: flex; flex-direction: column; gap: 2px; }
+    .phone { font-size: 12.5px; font-family: 'DM Mono', monospace; color: var(--t2); }
+    .email { font-size: 11.5px; color: var(--t3); }
+
+    .badge-n {
+      display: inline-flex; width: 26px; height: 26px;
+      align-items: center; justify-content: center;
+      border-radius: 7px; font-size: 12px; font-weight: 700;
+      background: var(--surf2); color: var(--t3);
+    }
+    .badge-n.active { background: var(--blue-bg); color: var(--blue); }
+    .badge-n.sm { width: 22px; height: 22px; font-size: 11px; border-radius: 5px; }
+
+    .pay-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 11.5px; font-weight: 700;
+    }
+    .pay-chip.ok   { background: var(--ok-bg);   color: var(--ok); }
+    .pay-chip.late { background: var(--late-bg);  color: var(--late); }
+    .pay-chip.sm   { padding: 3px 8px; font-size: 10.5px; }
+    .pay-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+    .muted-dash { color: var(--t3); }
+
+    .status-pill {
+      display: inline-flex; padding: 4px 11px;
+      border-radius: 20px; font-size: 11.5px; font-weight: 700;
+    }
+    .status-pill.on  { background: var(--ok-bg);   color: var(--ok); }
+    .status-pill.off { background: var(--surf2);    color: var(--t3); }
+    .status-pill.sm  { padding: 3px 8px; font-size: 10.5px; }
+
+    .date-cell { font-size: 12px; color: var(--t2); white-space: nowrap; }
+
+    .acts { display: flex; align-items: center; gap: 5px; justify-content: flex-end; }
+    .act-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      height: 30px; padding: 0 10px;
+      border-radius: 7px; border: 1.5px solid var(--bord);
+      background: #fff; color: var(--t2);
+      font-size: 11.5px; font-weight: 600;
+      text-decoration: none; cursor: pointer;
+      transition: all .14s; white-space: nowrap;
+    }
+    .act-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+    .act-btn:hover { background: var(--navy); color: var(--gold-l); border-color: var(--navy); }
+    .act-btn.blue { background: var(--blue-bg); color: var(--blue); border-color: transparent; }
+    .act-btn.blue:hover { background: var(--blue); color: #fff; }
+    .act-btn.sm { height: 26px; padding: 0 9px; font-size: 11px; }
+    .act-del {
+      width: 30px; height: 30px;
+      border-radius: 7px; border: 1.5px solid var(--bord);
+      background: #fff; color: var(--t3);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all .14s; flex-shrink: 0;
+    }
+    .act-del svg { width: 13px; height: 13px; }
+    .act-del:hover:not(:disabled) { background: var(--late-bg); color: var(--late); border-color: transparent; }
+    .act-del:disabled { opacity: .3; cursor: not-allowed; }
+
+    /* ── Vue cartes ── */
+    .cards-grid {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 28px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+      align-content: start;
+    }
+    .loc-card {
+      background: #fff;
+      border-radius: var(--r2);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      border: 1.5px solid transparent;
+      transition: all .18s;
+      animation: fadeUp .35s ease both;
+    }
+    .loc-card:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,.1); }
+    .lc-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+    .lc-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .lc-nom { font-size: 14px; font-weight: 700; color: var(--t1); margin-bottom: 6px; }
+    .lc-contact { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--t3); font-family: monospace; }
+    .lc-email { font-family: sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+    .lc-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--surf2); }
+    .lc-actions { display: flex; gap: 5px; }
+
+    /* ── États vides ── */
+    .empty { text-align: center; padding: 60px 20px; }
+    .empty-illu { font-size: 52px; margin-bottom: 14px; }
+    .empty-h { font-size: 17px; font-weight: 700; color: var(--t1); margin-bottom: 7px; }
+    .empty-p { font-size: 13px; color: var(--t3); margin: 0; }
+
+    /* ── Pagination ── */
+    .pager {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 16px; flex-shrink: 0;
+      border-top: 1px solid var(--bord); background: #fff;
+    }
+    .pager button {
+      width: 32px; height: 32px;
+      border-radius: 8px; border: 1.5px solid var(--bord);
+      background: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .14s;
+    }
+    .pager button svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .pager button:hover:not(:disabled) { background: var(--navy); color: var(--gold-l); border-color: var(--navy); }
+    .pager button:disabled { opacity: .35; cursor: not-allowed; }
+    .pager-pages { display: flex; gap: 5px; }
+    .pager-dot {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; font-size: 13px; font-weight: 600;
+      color: var(--t2); cursor: pointer; transition: all .12s;
+    }
+    .pager-dot:hover { background: var(--surf2); }
+    .pager-dot.cur { background: var(--navy); color: var(--gold-l); }
 
     /* ══════════════════════════════════════
        MODAL
     ══════════════════════════════════════ */
-    .modal-overlay { position:fixed; inset:0; background:rgba(13,13,13,.55); backdrop-filter:blur(4px); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity .22s; }
-    .modal-overlay.open { opacity:1; pointer-events:all; }
-    .nv-modal { background:#fff; border-radius:18px; width:100%; max-width:600px; max-height:90vh; box-shadow:0 24px 80px rgba(13,13,13,.22), 0 0 0 1px rgba(201,168,76,.15); display:flex; flex-direction:column; overflow:hidden; transform:translateY(16px) scale(.97); transition:transform .25s; }
-    .modal-overlay.open .nv-modal { transform:translateY(0) scale(1); }
+    .modal-bg {
+      position: fixed; inset: 0;
+      background: rgba(13,27,42,.6);
+      backdrop-filter: blur(5px);
+      z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s;
+    }
+    .modal-bg.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: #fff;
+      border-radius: 18px;
+      width: 100%; max-width: 580px; max-height: 92vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 30px 80px rgba(0,0,0,.25);
+      transform: translateY(20px) scale(.96);
+      transition: transform .25s;
+      overflow: hidden;
+    }
+    .modal-bg.open .modal { transform: none; }
 
-    /* En-tête modal */
-    .nv-header { padding:20px 24px 16px; background:linear-gradient(to right,var(--ink-mid),var(--ink-soft)); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
-    .nv-header-left { display:flex; align-items:center; gap:12px; }
-    .nv-icon { width:42px; height:42px; border-radius:11px; background:rgba(201,168,76,.18); border:1.5px solid rgba(201,168,76,.35); display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0; }
-    .nv-title { font-size:17px; font-weight:700; color:var(--gold-l); font-family:'Playfair Display',Georgia,serif; }
-    .nv-sub   { font-size:11.5px; color:rgba(255,255,255,.4); margin-top:2px; }
-    .close-btn { width:30px; height:30px; border-radius:7px; border:none; background:rgba(255,255,255,.1); color:rgba(255,255,255,.6); font-size:13px; cursor:pointer; transition:all .15s; display:flex; align-items:center; justify-content:center; }
-    .close-btn:hover { background:rgba(192,57,43,.3); color:#fff; }
+    .modal-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 22px 16px;
+      background: var(--navy);
+      flex-shrink: 0;
+    }
+    .mh-left { display: flex; align-items: center; gap: 12px; }
+    .mh-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: rgba(201,168,76,.18); border: 1.5px solid rgba(201,168,76,.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .mh-title { font-size: 16px; font-weight: 700; color: var(--gold-l); }
+    .mh-sub   { font-size: 11.5px; color: rgba(255,255,255,.4); margin-top: 2px; }
+    .mh-close {
+      width: 28px; height: 28px; border-radius: 7px;
+      border: none; background: rgba(255,255,255,.1); color: rgba(255,255,255,.5);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all .14s; flex-shrink: 0;
+    }
+    .mh-close svg { width: 13px; height: 13px; }
+    .mh-close:hover { background: rgba(192,57,43,.4); color: #fff; }
 
-    /* Stepper */
-    .stepper { display:flex; align-items:center; padding:14px 24px 10px; background:var(--cream); border-bottom:1px solid var(--cream-dk); flex-shrink:0; }
-    .stepper-step { display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; }
-    .step-dot { width:26px; height:26px; border-radius:50%; background:#fff; border:2px solid var(--cream-dk); display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:700; color:var(--muted); transition:all .2s; }
-    .step-active { background:var(--gold); border-color:var(--gold); color:#fff; box-shadow:0 0 0 4px rgba(201,168,76,.2); }
-    .step-done   { background:var(--ok);   border-color:var(--ok);   color:#fff; }
-    .step-label  { font-size:10.5px; font-weight:600; color:var(--muted); text-align:center; }
-    .step-line   { flex:1; height:2px; background:var(--cream-dk); margin:0 4px 14px; border-radius:2px; transition:background .3s; }
-    .step-line.done { background:var(--ok); }
+    /* Progress */
+    .modal-progress { padding: 14px 22px 10px; background: var(--surf); border-bottom: 1px solid var(--bord); flex-shrink: 0; }
+    .mp-track { height: 4px; background: var(--bord); border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
+    .mp-fill  { height: 100%; background: var(--gold); border-radius: 4px; transition: width .3s ease; }
+    .mp-steps { display: flex; justify-content: space-between; }
+    .mp-steps span {
+      font-size: 10.5px; font-weight: 600; color: var(--t3);
+      transition: color .2s;
+    }
+    .mp-steps span.cur  { color: var(--gold-d); }
+    .mp-steps span.done { color: var(--ok); }
 
-    /* Corps modal */
-    .nv-body { flex:1; overflow-y:auto; padding:20px 24px; }
-    .nv-body::-webkit-scrollbar { width:4px; }
-    .nv-body::-webkit-scrollbar-thumb { background:var(--cream-dk); border-radius:4px; }
-    .step-title { font-size:13px; font-weight:700; color:var(--ink-soft); margin-bottom:16px; padding-bottom:10px; border-bottom:1px solid var(--cream-dk); }
+    /* Corps */
+    .modal-body { flex: 1; overflow-y: auto; padding: 20px 22px; }
+    .modal-body::-webkit-scrollbar { width: 4px; }
+    .modal-body::-webkit-scrollbar-thumb { background: var(--bord); border-radius: 4px; }
+    .step-head {
+      font-size: 12.5px; font-weight: 700; color: var(--navy);
+      padding-bottom: 12px; margin-bottom: 16px;
+      border-bottom: 1px solid var(--surf2);
+    }
+    .fg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+    .fg { display: flex; flex-direction: column; gap: 5px; }
+    .fg.span2 { grid-column: 1 / -1; }
+    label { font-size: 11.5px; font-weight: 700; color: var(--t2); }
+    label em { color: var(--late); font-style: normal; margin-left: 2px; }
+    .fc {
+      padding: 9px 11px; border: 1.5px solid var(--bord);
+      border-radius: 8px; font-size: 13px; color: var(--t1);
+      font-family: inherit; outline: none;
+      transition: border-color .15s, box-shadow .15s;
+      background: #fff;
+    }
+    .fc:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,.1); }
+    .fc::placeholder { color: var(--t3); }
+    .ta { resize: none; }
+    .fe { font-size: 11px; color: var(--late); }
 
-    /* Champs */
-    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-    .fg { display:flex; flex-direction:column; gap:5px; margin-bottom:2px; }
-    .fg.full { grid-column:1/-1; }
-    label { font-size:12px; font-weight:700; color:var(--ink-soft); letter-spacing:.2px; }
-    .req { color:var(--danger); margin-left:2px; }
-    .fc { padding:10px 12px; border:1.5px solid var(--cream-dk); border-radius:9px; font-size:13px; color:var(--ink); font-family:inherit; outline:none; transition:border-color .18s; background:#fff; }
-    .fc:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(201,168,76,.1); }
-    .fc::placeholder { color:#c0bcc8; }
-    .ta { resize:none; }
-    .err-msg { font-size:11.5px; color:var(--danger); }
+    .drop-zone {
+      border: 2px dashed var(--bord); border-radius: 10px;
+      padding: 22px; text-align: center; cursor: pointer;
+      transition: all .18s; margin-top: 2px;
+    }
+    .drop-zone:hover, .drop-zone.has { border-color: var(--gold); background: rgba(201,168,76,.03); }
+    .dz-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--t3); font-size: 13px; }
+    .dz-empty span { font-size: 26px; }
+    .dz-empty p { margin: 0; }
+    .dz-img { max-height: 110px; border-radius: 8px; }
+    .drop-sm {
+      border: 1.5px dashed var(--bord); border-radius: 8px;
+      padding: 10px 13px; cursor: pointer; font-size: 13px; color: var(--t3);
+      transition: all .16s;
+    }
+    .drop-sm:hover { border-color: var(--gold); }
+    .doc-ok { color: var(--ok); font-weight: 600; }
 
-    /* Photo drop */
-    .file-drop { border:2px dashed var(--cream-dk); border-radius:10px; padding:20px; text-align:center; cursor:pointer; transition:all .18s; margin-top:2px; }
-    .file-drop:hover,.file-drop.has-file { border-color:var(--gold); background:rgba(201,168,76,.03); }
-    .fd-empty { display:flex; flex-direction:column; align-items:center; gap:6px; color:var(--muted); font-size:13px; }
-    .fd-empty span { font-size:28px; }
-    .fd-empty p { margin:0; }
-    .fd-img  { max-height:120px; border-radius:8px; }
-    .file-drop-sm { border:1.5px dashed var(--cream-dk); border-radius:8px; padding:11px 14px; cursor:pointer; font-size:13px; color:var(--muted); transition:all .18s; }
-    .file-drop-sm:hover { border-color:var(--gold); }
-    .fname { color:var(--ok); font-weight:600; }
+    .recap { background: var(--surf); border-radius: 10px; padding: 14px 16px; border: 1px solid var(--bord); }
+    .recap-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--bord); font-size: 13px; }
+    .recap-row:last-child { border: none; }
+    .recap-row span { color: var(--t3); font-size: 12px; }
+    .recap-row strong { color: var(--t1); font-weight: 600; }
 
-    /* Récap */
-    .recap-card { background:var(--cream); border-radius:10px; padding:16px 18px; border:1px solid var(--cream-dk); }
-    .recap-row  { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--cream-dk); font-size:13px; }
-    .recap-row:last-child { border:none; }
-    .recap-row span { color:var(--muted); font-size:12px; }
-    .recap-row strong { color:var(--ink-mid); font-weight:600; }
-    .success-banner { display:flex; align-items:center; gap:8px; background:var(--ok-bg); border:1px solid var(--ok); border-radius:9px; padding:11px 14px; font-size:13px; color:var(--ok); font-weight:600; margin-top:12px; }
-    .error-banner   { display:flex; align-items:center; gap:8px; background:var(--danger-bg); border:1px solid var(--danger); border-radius:9px; padding:11px 14px; font-size:13px; color:var(--danger); font-weight:600; margin-top:12px; }
+    .banner { display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-radius: 9px; font-size: 13px; font-weight: 600; margin-top: 12px; }
+    .banner.ok  { background: var(--ok-bg);   border: 1px solid var(--ok);   color: var(--ok); }
+    .banner.err { background: var(--late-bg);  border: 1px solid var(--late); color: var(--late); }
 
     /* Pied modal */
-    .nv-footer { padding:14px 24px; border-top:1px solid var(--cream-dk); background:var(--cream); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
-    .foot-right { display:flex; gap:9px; }
-    .btn-ghost   { background:none; border:none; cursor:pointer; font-size:13px; color:var(--muted); padding:8px 2px; font-family:inherit; }
-    .btn-ghost:hover { color:var(--danger); }
-    .btn-sec     { padding:8px 16px; border-radius:8px; background:#fff; color:var(--ink-soft); border:1.5px solid var(--cream-dk); font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
-    .btn-primary { padding:8px 20px; border-radius:8px; background:var(--ink-mid); color:var(--gold-l); border:none; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; transition:background .15s; }
-    .btn-primary:disabled { opacity:.4; cursor:not-allowed; }
-    .btn-submit  { padding:8px 22px; border-radius:8px; background:linear-gradient(135deg,var(--gold-d),var(--gold)); color:#fff; border:none; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; min-width:160px; display:flex; align-items:center; justify-content:center; transition:all .18s; }
-    .btn-submit:disabled { opacity:.4; cursor:not-allowed; }
-    .spin { width:16px; height:16px; border:2.5px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; display:inline-block; }
-    @keyframes spin { to { transform:rotate(360deg); } }
+    .modal-foot {
+      padding: 13px 22px;
+      border-top: 1px solid var(--bord);
+      background: var(--surf);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .mf-right { display: flex; gap: 8px; }
+    .mf-cancel { background: none; border: none; cursor: pointer; font-size: 13px; color: var(--t3); padding: 8px; font-family: inherit; }
+    .mf-cancel:hover { color: var(--late); }
+    .mf-prev {
+      padding: 9px 16px; border-radius: 8px;
+      background: #fff; color: var(--t2); border: 1.5px solid var(--bord);
+      font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+      transition: all .14s;
+    }
+    .mf-prev:hover { border-color: var(--navy); color: var(--navy); }
+    .mf-next {
+      padding: 9px 20px; border-radius: 8px;
+      background: var(--navy); color: var(--gold-l); border: none;
+      font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+      transition: all .15s;
+    }
+    .mf-next:disabled { opacity: .4; cursor: not-allowed; }
+    .mf-next:not(:disabled):hover { background: var(--navy2); }
+    .mf-submit {
+      padding: 9px 22px; border-radius: 8px; min-width: 155px;
+      background: linear-gradient(135deg, var(--gold-d), var(--gold));
+      color: #fff; border: none;
+      font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .18s;
+    }
+    .mf-submit:disabled { opacity: .4; cursor: not-allowed; }
+    .mf-submit:not(:disabled):hover { box-shadow: 0 4px 14px rgba(201,168,76,.45); transform: translateY(-1px); }
 
-    @media(max-width:600px) {
-      .two-col { grid-template-columns:1fr; }
-      .nv-modal { border-radius:14px 14px 0 0; }
-      .modal-overlay { align-items:flex-end; padding:0; }
-      .cards-grid { grid-template-columns:1fr 1fr; }
+    .spin {
+      width: 16px; height: 16px;
+      border: 2.5px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: rot .7s linear infinite;
+      display: inline-block;
+    }
+    @keyframes rot { to { transform: rotate(360deg); } }
+
+    @media (max-width: 768px) {
+      .shell { grid-template-columns: 1fr; }
+      .stats-rail { display: none; }
+      .fg-grid { grid-template-columns: 1fr; }
     }
   `]
 })
@@ -563,17 +936,15 @@ export class LocatairesListComponent implements OnInit {
   private http = inject(HttpClient);
   private fb   = inject(FormBuilder);
 
-  // ── Liste ────────────────────────────────────────
   liste   = signal<PagedList<LocataireListItemDto>>({ items:[], totalCount:0, page:1, pageSize:20, totalPages:0, hasNext:false, hasPrevious:false });
   loading = signal(false);
   page    = 1; searchTerm = ''; filtreActif = ''; vue: 'liste'|'cartes' = 'liste';
   private timer: any;
 
-  // Stats
-  nbActifs() { return this.liste().items.filter(l => l.estActif).length; }
-  nbAJour()  { return this.liste().items.filter(l => this.estAJour(l)).length; }
+  nbActifs()   { return this.liste().items.filter(l => l.estActif).length; }
+  nbAJour()    { return this.liste().items.filter(l => this.estAJour(l)).length; }
+  nbEnRetard() { return this.liste().items.filter(l => l.estActif && l.nbContratsActifs > 0 && !this.estAJour(l)).length; }
 
-  // ── Modal création ────────────────────────────────
   showCreation = signal(false);
   etape        = signal(1);
   submitting   = signal(false);
@@ -599,10 +970,8 @@ export class LocatairesListComponent implements OnInit {
     notes:              [''],
   });
 
-  // ── Lifecycle ────────────────────────────────────
   ngOnInit() { this.load(); }
 
-  // ── Liste ────────────────────────────────────────
   load() {
     this.loading.set(true);
     const actif = this.filtreActif === '' ? undefined : this.filtreActif === 'true';
@@ -617,6 +986,13 @@ export class LocatairesListComponent implements OnInit {
   setFiltre(v:string){ this.filtreActif=v; this.page=1; this.load(); }
   goPage(p:number)   { this.page=p; this.load(); }
 
+  pageRange(): number[] {
+    const t = this.liste().totalPages;
+    const c = this.page;
+    const r: number[] = [];
+    for (let i = Math.max(1, c-2); i <= Math.min(t, c+2); i++) r.push(i);
+    return r;
+  }
 
   supprimer(id:string, nom:string) {
     if (!confirm(`Supprimer définitivement ${nom} ?`)) return;
@@ -630,14 +1006,12 @@ export class LocatairesListComponent implements OnInit {
     });
   }
 
-  // Paiement : à jour si nbContratsActifs > 0 (simulé — à remplacer par champ API si disponible)
   estAJour(l: LocataireListItemDto): boolean {
     return l.estActif && l.nbContratsActifs > 0;
   }
 
-  // Avatar couleur déterministe
   avatarColor(nom: string): string {
-    const colors = ['#1A1A2E','#16213E','#0F3460','#533483','#2B4865','#1A4731','#7B3F00'];
+    const colors = ['#0D1B2A','#1B3A5C','#0F3460','#1A4731','#533483','#7B3F00','#2B4865'];
     let h = 0; for (const c of nom) h = (h*31 + c.charCodeAt(0)) & 0xFFFFFF;
     return colors[Math.abs(h) % colors.length];
   }
@@ -645,7 +1019,6 @@ export class LocatairesListComponent implements OnInit {
     return nom.split(' ').map((w:string) => w[0]).join('').toUpperCase().slice(0,2);
   }
 
-  // ── Modal création ────────────────────────────────
   ouvrirCreation() {
     this.form.reset({ typeDocumentId:'CarteNationaleIdentite' });
     this.photoFile=undefined; this.photoPreview=undefined; this.docFile=undefined;
@@ -653,7 +1026,7 @@ export class LocatairesListComponent implements OnInit {
     this.showCreation.set(true);
   }
   fermerCreation() { this.showCreation.set(false); }
-  onOverlayClick(e:Event) { if ((e.target as HTMLElement).classList.contains('modal-overlay')) this.fermerCreation(); }
+  onOverlayClick(e:Event) { if ((e.target as HTMLElement).classList.contains('modal-bg')) this.fermerCreation(); }
 
   etapePrev() { this.etape.update(e => e-1); }
   etapeNext() { if (this.peutContinuer()) this.etape.update(e => e+1); }

@@ -1,15 +1,17 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, Injectable } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SuiviLoyersService } from '../../core/services/api.services';
-import { SuiviLoyersGlobalDto, RecapFinancierContratDto } from '../../core/models/models';
-import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { SuiviLoyersService, RecouvrementService } from '../../core/services/api.services';
+import { SuiviLoyersGlobalDto, RecapFinancierContratDto } from '../../core/models/models';
 import { ApiService } from '../../core/services/api.services';
 
+// ── Service de notification locataire (caution / avance) ──────────────────────
+// Branche sur le endpoint dédié ; si ton backend ne l'a pas encore,
+// ajoute : POST /contrats-location/{id}/notifier-locataire  { canal, type }
 @Injectable({ providedIn: 'root' })
-export class CautionAvanceService extends ApiService {
-  envoyerNotification(contratId: string, canal: string, type: string): Observable<void> {
+export class NotificationLocataireService extends ApiService {
+  notifier(contratId: string, canal: string, type: string): Observable<void> {
     return this.post<void>(`/contrats-location/${contratId}/notifier-locataire`, { canal, type });
   }
 }
@@ -185,11 +187,13 @@ export class CautionAvanceService extends ApiService {
             <option value="mise_en_demeure">Mise en demeure</option>
           </select>
           <div class="notif-btns">
-            <button class="btn btn-envoi btn-email"    (click)="relancerLocataire('email')">📧 Email</button>
-            <button class="btn btn-envoi btn-whatsapp" (click)="relancerLocataire('whatsapp')">💬 WhatsApp</button>
-            <button class="btn btn-envoi btn-sms"      (click)="relancerLocataire('sms')">📱 SMS</button>
+            <!-- ✅ Utilise RecouvrementService.envoyerRelance (endpoint existant) -->
+            <button class="btn btn-envoi btn-email"    [disabled]="relanceEnCours" (click)="relancerLocataire('email')">📧 Email</button>
+            <button class="btn btn-envoi btn-whatsapp" [disabled]="relanceEnCours" (click)="relancerLocataire('whatsapp')">💬 WhatsApp</button>
+            <button class="btn btn-envoi btn-sms"      [disabled]="relanceEnCours" (click)="relancerLocataire('sms')">📱 SMS</button>
           </div>
           <div class="notif-confirm" *ngIf="relanceConfirm">✅ {{ relanceConfirm }}</div>
+          <div class="notif-error"   *ngIf="relanceErreur">❌ {{ relanceErreur }}</div>
         </div>
 
         <!-- CAUTION & AVANCE (informatif) -->
@@ -221,6 +225,8 @@ export class CautionAvanceService extends ApiService {
             </div>
             <div class="ca-note ca-note-proprio">👤 Affectée au propriétaire comme 1er mois</div>
           </div>
+
+          <!-- ✅ Section notification caution/avance — branchée sur NotificationLocataireService -->
           <div class="notif-section">
             <div class="notif-title">Notifier le locataire — Caution/Avance</div>
             <select class="select-notif" [(ngModel)]="typeNotif" style="margin-bottom:7px">
@@ -229,11 +235,12 @@ export class CautionAvanceService extends ApiService {
               <option value="avance">Avance uniquement</option>
             </select>
             <div class="notif-btns">
-              <button class="btn btn-envoi btn-email"    (click)="notifier('email')">📧 Email</button>
-              <button class="btn btn-envoi btn-whatsapp" (click)="notifier('whatsapp')">💬 WhatsApp</button>
-              <button class="btn btn-envoi btn-sms"      (click)="notifier('sms')">📱 SMS</button>
+              <button class="btn btn-envoi btn-email"    [disabled]="notifEnCours" (click)="notifier('email')">📧 Email</button>
+              <button class="btn btn-envoi btn-whatsapp" [disabled]="notifEnCours" (click)="notifier('whatsapp')">💬 WhatsApp</button>
+              <button class="btn btn-envoi btn-sms"      [disabled]="notifEnCours" (click)="notifier('sms')">📱 SMS</button>
             </div>
             <div class="notif-confirm" *ngIf="notifConfirm">✅ {{ notifConfirm }}</div>
+            <div class="notif-error"   *ngIf="notifErreur">❌ {{ notifErreur }}</div>
           </div>
         </div>
 
@@ -356,8 +363,11 @@ export class CautionAvanceService extends ApiService {
     .notif-btns{display:flex;gap:5px}
     .select-notif{width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#fff;color:#0e1c38;cursor:pointer}
     .btn-envoi{flex:1;padding:7px 4px;border-radius:8px;border:none;cursor:pointer;font-size:11px;font-weight:600;transition:opacity .15s}
-    .btn-envoi:hover{opacity:.85}.btn-email{background:#dbeafe;color:#1e40af}.btn-whatsapp{background:#d1fae5;color:#065f46}.btn-sms{background:#fef3c7;color:#92400e}
+    .btn-envoi:hover:not(:disabled){opacity:.85}
+    .btn-envoi:disabled{opacity:.45;cursor:not-allowed}
+    .btn-email{background:#dbeafe;color:#1e40af}.btn-whatsapp{background:#d1fae5;color:#065f46}.btn-sms{background:#fef3c7;color:#92400e}
     .notif-confirm{font-size:11px;color:#16a34a;margin-top:6px;text-align:center}
+    .notif-error{font-size:11px;color:#dc2626;margin-top:6px;text-align:center}
     .kpi-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;padding:10px 14px;border-bottom:1px solid #f1f5f9}
     .kpi{background:#f8fafc;border-radius:8px;padding:9px 5px;text-align:center;border:1px solid #e2e8f0}
     .kpi-ok{border-color:#86efac!important;background:#f0fdf4}.kpi-ko{border-color:#fca5a5!important;background:#fef2f2}
@@ -378,7 +388,7 @@ export class CautionAvanceService extends ApiService {
     .mc-montant{font-size:7px;color:#64748b}
     .mois-legend{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
     .leg{font-size:9px;color:#64748b;display:flex;align-items:center;gap:3px}
-    .leg::before{content:\'\';display:inline-block;width:7px;height:7px;border-radius:2px}
+    .leg::before{content:'';display:inline-block;width:7px;height:7px;border-radius:2px}
     .leg-paye::before{background:#d1fae5}.leg-partiel::before{background:#fef3c7}.leg-impaye::before{background:#fee2e2}.leg-avance::before{background:#dbeafe}.leg-futur::before{background:#f1f5f9}
     .last-payment{padding:9px 14px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:6px}
     .rp-actions{padding:12px 14px}
@@ -392,19 +402,26 @@ export class CautionAvanceService extends ApiService {
   `]
 })
 export class SuiviLoyersComponent implements OnInit {
-  private svc   = inject(SuiviLoyersService);
-  private caSvc = inject(CautionAvanceService);
+  private svc      = inject(SuiviLoyersService);
+  private recSvc   = inject(RecouvrementService);      // ✅ pour les relances loyer en retard
+  private notifSvc = inject(NotificationLocataireService); // ✅ pour les notifications caution/avance
 
   loading  = true;
   data:     SuiviLoyersGlobalDto | null = null;
   filtre   = '';
   selected: RecapFinancierContratDto | null = null;
 
-  typeNotif:      string = 'caution_avance';
-  notifConfirm    = '';
+  // Notification caution/avance
+  typeNotif    = 'caution_avance';
+  notifEnCours = false;
+  notifConfirm = '';
+  notifErreur  = '';
+
+  // Relance loyer en retard
   messageRelance  = 'relance_simple';
   relanceEnCours  = false;
   relanceConfirm  = '';
+  relanceErreur   = '';
 
   ngOnInit(): void { this.load(); }
 
@@ -421,8 +438,11 @@ export class SuiviLoyersComponent implements OnInit {
   selectContrat(c: RecapFinancierContratDto): void {
     this.selected       = this.selected?.contratId === c.contratId ? null : c;
     this.notifConfirm   = '';
+    this.notifErreur    = '';
     this.relanceConfirm = '';
+    this.relanceErreur  = '';
     this.relanceEnCours = false;
+    this.notifEnCours   = false;
   }
 
   contratsFiltres(): RecapFinancierContratDto[] {
@@ -431,35 +451,52 @@ export class SuiviLoyersComponent implements OnInit {
     return this.data.contrats.filter(c => c.statutLoyer === this.filtre);
   }
 
+  // ── Notification caution / avance ─────────────────────────────────────────
+  // Appelle POST /contrats-location/{id}/notifier-locataire  { canal, type }
+  // ➜ Ajouter cet endpoint dans ton backend si pas encore présent.
   notifier(canal: string): void {
-    if (!this.selected) return;
+    if (!this.selected || this.notifEnCours) return;
+    this.notifEnCours = true;
     this.notifConfirm = '';
-    const id = this.selected.contratId;
-    this.caSvc.envoyerNotification(id, canal, this.typeNotif).subscribe({
+    this.notifErreur  = '';
+
+    this.notifSvc.notifier(this.selected.contratId, canal, this.typeNotif).subscribe({
       next: () => {
-        const labels: Record<string, string> = { email: 'email', whatsapp: 'WhatsApp', sms: 'SMS' };
-        const types: Record<string, string>  = { caution_avance: 'Caution & Avance', caution: 'Caution', avance: 'Avance' };
-        this.notifConfirm = (types[this.typeNotif] ?? this.typeNotif) + ' envoyée par ' + (labels[canal] ?? canal);
+        const labels: Record<string, string> = { email: 'Email', whatsapp: 'WhatsApp', sms: 'SMS' };
+        const types:  Record<string, string> = { caution_avance: 'Caution & Avance', caution: 'Caution', avance: 'Avance' };
+        this.notifConfirm = `${types[this.typeNotif] ?? this.typeNotif} envoyé(e) par ${labels[canal] ?? canal}`;
+        this.notifEnCours = false;
         setTimeout(() => { this.notifConfirm = ''; }, 4000);
       },
-      error: () => alert('Erreur lors de l\'envoi')
+      error: (err) => {
+        this.notifEnCours = false;
+        this.notifErreur  = err?.error?.message ?? 'Erreur lors de l\'envoi';
+        setTimeout(() => { this.notifErreur = ''; }, 5000);
+      }
     });
   }
 
+  // ── Relance loyer en retard ────────────────────────────────────────────────
+  // ✅ Utilise RecouvrementService.envoyerRelance → POST /recouvrement/{id}/relancer
   relancerLocataire(canal: string): void {
     if (!this.selected || this.relanceEnCours) return;
     this.relanceEnCours = true;
     this.relanceConfirm = '';
-    const id = this.selected.contratId;
-    this.caSvc.envoyerNotification(id, canal, this.messageRelance).subscribe({
+    this.relanceErreur  = '';
+
+    this.recSvc.envoyerRelance(this.selected.contratId, this.messageRelance, canal).subscribe({
       next: () => {
-        const labels: Record<string, string> = { email: 'email', whatsapp: 'WhatsApp', sms: 'SMS' };
-        const msgs: Record<string, string>   = { relance_simple: 'Relance simple', relance_urgente: 'Relance urgente', mise_en_demeure: 'Mise en demeure' };
-        this.relanceConfirm = (msgs[this.messageRelance] ?? this.messageRelance) + ' envoyée par ' + (labels[canal] ?? canal);
+        const labels: Record<string, string> = { email: 'Email', whatsapp: 'WhatsApp', sms: 'SMS' };
+        const msgs:   Record<string, string> = { relance_simple: 'Relance simple', relance_urgente: 'Relance urgente', mise_en_demeure: 'Mise en demeure' };
+        this.relanceConfirm = `${msgs[this.messageRelance] ?? this.messageRelance} envoyée par ${labels[canal] ?? canal}`;
         this.relanceEnCours = false;
         setTimeout(() => { this.relanceConfirm = ''; }, 4000);
       },
-      error: () => { this.relanceEnCours = false; alert('Erreur lors de l\'envoi'); }
+      error: (err) => {
+        this.relanceEnCours = false;
+        this.relanceErreur  = err?.error?.message ?? 'Erreur lors de l\'envoi';
+        setTimeout(() => { this.relanceErreur = ''; }, 5000);
+      }
     });
   }
 

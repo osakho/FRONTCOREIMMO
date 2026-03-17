@@ -1,7 +1,8 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule, DatePipe }             from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { TachesService }                       from '../../../core/services/api.services';
+import { TachesService, ProprietesService, PersonnelService, ProduitsService } from '../../../core/services/api.services';
+import { ProprieteListItemDto, PersonnelListItemDto, ProduitListItemDto } from '../../../core/models/models';
 import { TacheDto, StatutTache, PrioriteTache, CategorieTache } from '../../../core/models/models';
 
 @Component({
@@ -146,13 +147,15 @@ import { TacheDto, StatutTache, PrioriteTache, CategorieTache } from '../../../c
 
   <!-- ── Modal nouvelle tâche ── -->
   <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
-    <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal modal-lg" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <div class="modal-title">✔️ Nouvelle tâche</div>
         <button class="modal-close" (click)="closeModal()">×</button>
       </div>
       <form [formGroup]="form" (ngSubmit)="submit()">
         <div class="modal-body">
+
+          <!-- Titre + Catégorie -->
           <div class="form-row">
             <div class="form-group">
               <label>Titre *</label>
@@ -166,13 +169,51 @@ import { TacheDto, StatutTache, PrioriteTache, CategorieTache } from '../../../c
                 <option value="Administration">Administration</option>
                 <option value="Contentieux">Contentieux</option>
                 <option value="Finance">Finance</option>
+                <option value="Autre">Autre</option>
               </select>
             </div>
           </div>
+
+          <!-- Émetteur + Assigné à -->
+          <div class="form-row">
+            <div class="form-group">
+              <label>Émetteur (assigné par)</label>
+              <input formControlName="emetteur" class="form-control" placeholder="Nom de l'émetteur…">
+            </div>
+            <div class="form-group">
+              <label>Assigné à</label>
+              <select formControlName="assigneId" class="form-control">
+                <option value="">— Sélectionner —</option>
+                <option *ngFor="let p of personnel" [value]="p.id">{{ p.nomComplet }}</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Propriété + Produit locatif -->
+          <div class="form-row">
+            <div class="form-group">
+              <label>Propriété</label>
+              <select formControlName="proprieteId" class="form-control" (change)="onProprieteChange()">
+                <option value="">— Sélectionner —</option>
+                <option *ngFor="let p of proprietes" [value]="p.id">{{ p.libelle }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Produit locatif</label>
+              <select formControlName="produitId" class="form-control">
+                <option value="">— Sélectionner —</option>
+                <option *ngFor="let p of produits" [value]="p.id">{{ p.code }} — {{ p.type }}</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Description -->
           <div class="form-group">
             <label>Description</label>
-            <textarea formControlName="description" class="form-control" rows="3" placeholder="Détails…"></textarea>
+            <textarea formControlName="description" class="form-control" rows="3" placeholder="Détails de la tâche, instructions…"></textarea>
           </div>
+
+          <!-- Priorité + Type tâche -->
           <div class="form-row">
             <div class="form-group">
               <label>Priorité *</label>
@@ -183,10 +224,33 @@ import { TacheDto, StatutTache, PrioriteTache, CategorieTache } from '../../../c
               </select>
             </div>
             <div class="form-group">
-              <label>Date d'échéance</label>
+              <label>Avancement initial (%)</label>
+              <input formControlName="avancement" type="number" min="0" max="100" class="form-control" placeholder="0">
+            </div>
+          </div>
+
+          <!-- Dates -->
+          <div class="form-row">
+            <div class="form-group">
+              <label>Date de début prévisionnelle</label>
+              <input formControlName="dateDebut" type="date" class="form-control">
+            </div>
+            <div class="form-group">
+              <label>Date de fin prévisionnelle (échéance)</label>
               <input formControlName="dateEcheance" type="date" class="form-control">
             </div>
           </div>
+
+          <!-- Barre de progression preview -->
+          <div class="form-group" *ngIf="avancementValue > 0">
+            <label>Aperçu progression</label>
+            <div class="progress-wrap">
+              <div class="progress-bar"><div class="progress-fill" [style.width.%]="avancementValue"></div></div>
+              <span class="progress-pct">{{ form.get('avancement')!.value }}%</span>
+            </div>
+          </div>
+
+          <div class="form-err" *ngIf="submitErr">⚠️ {{ submitErr }}</div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" (click)="closeModal()">Annuler</button>
@@ -198,10 +262,15 @@ import { TacheDto, StatutTache, PrioriteTache, CategorieTache } from '../../../c
     </div>
   </div>
 
+  <!-- ── Toast notification ── -->
+  <div class="toast-notif" [class.visible]="notifVisible()">
+    {{ notif() }}
+  </div>
+
 </div>
   `,
   styles: [`
-    .page { max-width: 1200px; margin: 0 auto; }
+    .page { max-width: 100%; }
     .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
     .page-title { font-size: 24px; font-weight: 700; color: #0c1a35; margin: 0 0 4px; }
     .page-subtitle { font-size: 14px; color: #64748b; margin: 0; }
@@ -292,14 +361,29 @@ import { TacheDto, StatutTache, PrioriteTache, CategorieTache } from '../../../c
     .tl-date { font-size: 11px; color: #94a3b8; margin-bottom: 2px; }
     .tl-desc { font-size: 13px; color: #334155; }
 
+    .modal-lg { width: 680px; }
+    .form-err { background:#fef2f2; color:#dc2626; border:1px solid #fca5a5; border-radius:8px; padding:10px 14px; font-size:13px; margin-top:8px; }
     /* Empty */
     .empty-state { display: flex; flex-direction: column; align-items: center; padding: 60px; gap: 12px; color: #94a3b8; text-align: center; background: #fff; border-radius: 12px; }
     .empty-icon { font-size: 48px; }
+
+    /* Toast notification */
+    .toast-notif {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      background: #0c1a35; color: #fff; padding: 14px 20px; border-radius: 12px;
+      font-size: 14px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,.2);
+      transform: translateY(80px); opacity: 0; transition: all .3s ease;
+      max-width: 360px; display: flex; align-items: center; gap: 8px;
+    }
+    .toast-notif.visible { transform: translateY(0); opacity: 1; }
   `]
 })
 export class TachesComponent implements OnInit {
-  private svc  = inject(TachesService);
-  private fb   = inject(FormBuilder);
+  private svc         = inject(TachesService);
+  private propSvc     = inject(ProprietesService);
+  private personnelSvc = inject(PersonnelService);
+  private produitsSvc = inject(ProduitsService);
+  private fb          = inject(FormBuilder);
 
   taches:          TacheDto[] = [];
   filtreStatut     = '';
@@ -307,7 +391,13 @@ export class TachesComponent implements OnInit {
   selectedTache:   TacheDto | null = null;
   showModal        = false;
   submitting       = false;
+  submitErr        = '';
 
+  proprietes:  ProprieteListItemDto[]  = [];
+  personnel:   PersonnelListItemDto[]  = [];
+  produits:    ProduitListItemDto[]    = [];
+
+  get avancementValue(): number { return +(this.form.get('avancement')?.value ?? 0); }
   get total()      { return this.taches.length; }
   get nbEnCours()  { return this.taches.filter(t => t.statut === 'EnCours').length; }
   get nbCloturees(){ return this.taches.filter(t => t.statut === 'Cloturee').length; }
@@ -317,13 +407,32 @@ export class TachesComponent implements OnInit {
     titre:         ['', Validators.required],
     categorie:     ['TravauxChantier', Validators.required],
     description:   [''],
+    emetteur:      [''],
     priorite:      ['Moyenne', Validators.required],
-    dateEcheance:  [''],
     assigneId:     [''],
-    proprieteId:   ['']
+    proprieteId:   [''],
+    produitId:     [''],
+    dateDebut:     [''],
+    dateEcheance:  [''],
+    avancement:    [0],
   });
 
-  ngOnInit() { this.load(); }
+  ngOnInit() {
+    this.load();
+    this.propSvc.getAll(1, 100).subscribe({ next: r => this.proprietes = r.items, error: () => {} });
+    this.personnelSvc.getAll(1).subscribe({ next: r => this.personnel = r.items, error: () => {} });
+  }
+
+  onProprieteChange() {
+    const propId = this.form.get('proprieteId')?.value;
+    this.form.patchValue({ produitId: '' });
+    if (propId) {
+      this.produitsSvc.getAll({ proprieteId: propId, pageSize: 50 })
+        .subscribe({ next: r => this.produits = r.items, error: () => {} });
+    } else {
+      this.produits = [];
+    }
+  }
 
   load() {
     this.svc.getAll({ statut: this.filtreStatut as StatutTache || undefined })
@@ -340,24 +449,50 @@ export class TachesComponent implements OnInit {
     if (t.statut !== 'Cloturee') this.cloture(t);
   }
 
-  openModal()  { this.showModal = true; }
-  closeModal() { this.showModal = false; this.form.reset({ categorie: 'TravauxChantier', priorite: 'Moyenne' }); }
+  openModal() {
+    this.showModal = true;
+    this.submitErr = '';
+    this.produits = [];
+    this.form.reset({ categorie: 'TravauxChantier', priorite: 'Moyenne', avancement: 0 });
+  }
+  closeModal() { this.showModal = false; this.submitErr = ''; this.form.reset({ categorie: 'TravauxChantier', priorite: 'Moyenne', avancement: 0 }); }
 
   submit() {
     if (this.form.invalid) return;
-    this.submitting = true;
+    this.submitting = true; this.submitErr = '';
     const v = this.form.value as any;
-    // Convertir les chaînes vides en null pour les champs Guid? optionnels
     const payload = {
       ...v,
       assigneId:    v.assigneId    || null,
       proprieteId:  v.proprieteId  || null,
+      produitId:    v.produitId    || null,
+      dateDebut:    v.dateDebut    || null,
       dateEcheance: v.dateEcheance || null,
+      avancement:   v.avancement   ?? 0,
     };
     this.svc.create(payload).subscribe({
-      next: () => { this.submitting = false; this.closeModal(); this.load(); },
-      error: () => { this.submitting = false; }
+      next: () => {
+        this.submitting = false;
+        this.closeModal();
+        this.load();
+        // Notification si tâche urgente ou date proche
+        if (v.priorite === 'Urgente') {
+          this.showNotif('🚨 Tâche urgente créée : ' + v.titre);
+        } else if (v.dateEcheance) {
+          const diff = (new Date(v.dateEcheance).getTime() - Date.now()) / 86400000;
+          if (diff <= 3) this.showNotif('⚠️ Échéance proche (J+' + Math.ceil(diff) + ') : ' + v.titre);
+        }
+      },
+      error: (e: any) => { this.submitting = false; this.submitErr = e?.error?.message ?? 'Erreur lors de la création.'; }
     });
+  }
+
+  notif        = signal('');
+  notifVisible = signal(false);
+  showNotif(msg: string) {
+    this.notif.set(msg);
+    this.notifVisible.set(true);
+    setTimeout(() => this.notifVisible.set(false), 5000);
   }
 
   prioriteClass(p: string) {

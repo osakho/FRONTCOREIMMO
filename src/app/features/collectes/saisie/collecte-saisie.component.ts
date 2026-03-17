@@ -294,7 +294,12 @@ interface ContratAvecCollecte {
           </button>
         </div>
       </div>
-    </div>
+      <!-- ── Toast notification ── -->
+  <div class="kdi-toast" [class.visible]="toastVisible()" [class.ok]="toastType()==='ok'" [class.err]="toastType()==='err'">
+    {{ toastMsg() }}
+  </div>
+
+</div>
   `,
   styles: [`
     /* ── Contrat cards ── */
@@ -317,6 +322,19 @@ interface ContratAvecCollecte {
     .cc-saisie  { border-color: var(--wa);  border-left-width: 3px; }
     .cc-rejetee { border-color: var(--er);  border-left-width: 3px; }
     .cc-asaisir { border-color: var(--bord2); border-left-width: 3px; }
+
+    /* Toast */
+    .kdi-toast {
+      position: fixed; bottom: 28px; right: 28px; z-index: 9999;
+      padding: 14px 22px; border-radius: 12px; font-size: 14px; font-weight: 600;
+      box-shadow: 0 8px 28px rgba(0,0,0,.18); max-width: 380px;
+      transform: translateY(80px); opacity: 0;
+      transition: transform .3s ease, opacity .3s ease;
+      pointer-events: none;
+    }
+    .kdi-toast.visible  { transform: translateY(0); opacity: 1; }
+    .kdi-toast.ok  { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+    .kdi-toast.err { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
 
     /* Dot indicateur */
     .cc-dot {
@@ -343,7 +361,17 @@ export class CollecteSaisieComponent implements OnInit {
   // ── State ──
   loading    = signal(true);
   soumission = signal(false);
-  submitting = signal(false);
+  submitting  = signal(false);
+  toastMsg    = signal('');
+  toastType   = signal<'ok'|'err'>('ok');
+  toastVisible = signal(false);
+
+  private showToast(msg: string, type: 'ok'|'err') {
+    this.toastMsg.set(msg);
+    this.toastType.set(type);
+    this.toastVisible.set(true);
+    setTimeout(() => this.toastVisible.set(false), 4000);
+  }
 
   periodeMois = new Date().toISOString().slice(0, 7);
 
@@ -496,8 +524,13 @@ export class CollecteSaisieComponent implements OnInit {
         this.submitting.set(false);
         this.fermerModal();
         this.charger();
+        this.showToast('✅ Collecte enregistrée avec succès', 'ok');
       },
-      error: () => this.submitting.set(false)
+      error: (err: any) => {
+        this.submitting.set(false);
+        const msg = err?.error?.message ?? err?.message ?? 'Une erreur est survenue';
+        this.showToast('❌ ' + msg, 'err');
+      }
     });
   }
 
