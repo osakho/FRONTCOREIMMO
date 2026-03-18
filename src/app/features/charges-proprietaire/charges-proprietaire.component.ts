@@ -8,8 +8,10 @@ import {
   ChargesProprietaireService,
   ChargeProprietaireDto,
   FeuilleChargesDto,
-  TypeCharge
-}  from '../../core/services/api.services';;
+  TypeCharge,
+  MotifsPretService,
+  MotifPretDto
+} from '../../core/services/api.services';
 
 // ── COMPOSANT ────────────────────────────────────────────────────────────────
 @Component({
@@ -242,7 +244,7 @@ import {
 
     <div class="type-grid">
       <button class="type-btn" [class.selected]="form.type==='Avance'"  (click)="form.type='Avance';  form.libelle=''">
-        <span class="ti">💰</span><span class="tl">Avance</span>
+        <span class="ti">💰</span><span class="tl">Prêt agence</span>
       </button>
       <button class="type-btn" [class.selected]="form.type==='Impot'"   (click)="form.type='Impot';   form.libelle=''">
         <span class="ti">🏛️</span><span class="tl">Impôt/Taxe</span>
@@ -257,30 +259,40 @@ import {
 
     <div class="modal-body">
 
-      <!-- AVANCE -->
+      <!-- PRÊT AGENCE -->
       <ng-container *ngIf="form.type==='Avance'">
+        <div class="pret-info-banner">
+          <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4"/><path d="M8 7v4M8 5.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Le propriétaire emprunte à l'agence. Le remboursement sera <strong>déduit automatiquement</strong> de ses versements mensuels.
+        </div>
         <div class="fg">
-          <label>Locataire concerné <span class="req">*</span></label>
-          <select class="fc" [(ngModel)]="form.locataireId">
-            <option value="">— Sélectionner —</option>
-            <option *ngFor="let l of feuille?.locataires" [value]="l.id">{{ l.nom }} ({{ l.produitCode }})</option>
+          <label>Objet du prêt <span class="req">*</span></label>
+          <select class="fc" [(ngModel)]="form.libelle" [disabled]="motifsPretLoading">
+            <option value="">{{ motifsPretLoading ? "Chargement…" : "— Sélectionner le motif —" }}</option>
+            <ng-container *ngFor="let groupe of motifsPretGroupes()">
+              <optgroup [label]="groupe.nom">
+                <option *ngFor="let m of groupe.motifs" [value]="m.libelle">{{ m.libelle }}</option>
+              </optgroup>
+            </ng-container>
           </select>
+          <span class="fg-hint">Le motif apparaîtra sur les bordereaux de versement.</span>
         </div>
         <div class="two-col">
           <div class="fg">
-            <label>Montant total avance <span class="req">*</span></label>
+            <label>Montant du prêt <span class="req">*</span></label>
             <div class="input-sfx"><input type="number" class="fc" [(ngModel)]="form.montant" placeholder="15 000"><span class="sfx">MRU</span></div>
           </div>
           <div class="fg">
-            <label>Remboursement mensuel <span class="req">*</span></label>
-            <div class="input-sfx"><input type="number" class="fc" [(ngModel)]="form.remboursementMensuel" placeholder="3 000"><span class="sfx">MRU/mois</span></div>
+            <label>Remboursement / versement <span class="req">*</span></label>
+            <div class="input-sfx"><input type="number" class="fc" [(ngModel)]="form.remboursementMensuel" placeholder="3 000"><span class="sfx">MRU</span></div>
           </div>
         </div>
         <div class="avance-preview">
           <div class="ap-title">📅 Aperçu de l'échéancier</div>
           <div class="ap-row"><span>Montant total</span><span class="ap-val">{{ form.montant | number:'1.0-0' }} MRU</span></div>
           <div class="ap-row"><span>Remboursement mensuel</span><span class="ap-val">{{ form.remboursementMensuel | number:'1.0-0' }} MRU</span></div>
-          <div class="ap-row"><span>Durée estimée</span><span class="ap-val violet">{{ dureeAvance() }} mois</span></div>
+          <div class="ap-row"><span>Nombre de mois</span><span class="ap-val violet fw-bold">{{ dureeAvance() }} mois</span></div>
+          <div class="ap-row" *ngIf="dureeAvance() > 0"><span>Amputé du versement dès approbation</span><span class="ap-val">−{{ form.remboursementMensuel | number:'1.0-0' }} MRU/versement</span></div>
         </div>
         <div class="fg"><label>Notes</label><textarea class="fc" [(ngModel)]="form.notes" rows="2" style="resize:none" placeholder="Raison de l'avance…"></textarea></div>
       </ng-container>
@@ -493,6 +505,16 @@ import {
     .input-sfx:focus-within { border-color:var(--gold); box-shadow:0 0 0 3px rgba(201,169,110,.1); }
     .input-sfx .fc { border:none; box-shadow:none; flex:1; border-radius:0; }
     .sfx { padding:0 11px; background:var(--surf2); color:var(--muted); font-size:11px; font-weight:700; border-left:1px solid var(--border); display:flex; align-items:center; white-space:nowrap; }
+    .pret-info-banner { display:flex; align-items:flex-start; gap:9px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:9px; padding:11px 13px; margin-bottom:12px; font-size:12.5px; color:#1e40af; line-height:1.5; }
+    .pret-info-banner svg { width:15px; height:15px; flex-shrink:0; margin-top:1px; color:#1d4ed8; }
+    .pret-info-banner strong { font-weight:700; }
+    .fg-hint { font-size:11px; color:#94a3b8; margin-top:3px; }
+    .fg-link { color:var(--blue, #1d4ed8); cursor:pointer; text-decoration:underline; margin-left:6px; }
+    .avance-nb-mois { display:flex; align-items:center; gap:10px; background:var(--violet-bg); border:1px solid rgba(124,58,237,.15); border-radius:8px; padding:10px 14px; }
+    .nb-mois-val { font-size:24px; font-weight:800; color:var(--violet); line-height:1; }
+    .nb-mois-lbl { font-size:13px; font-weight:600; color:var(--violet); }
+    .nb-mois-detail { font-size:11.5px; color:#64748b; margin-left:auto; }
+    .fw-bold { font-weight:800 !important; }
     .avance-preview { background:var(--violet-bg); border-radius:10px; padding:11px 14px; border:1px solid rgba(124,58,237,.12); margin-bottom:12px; }
     .ap-title { font-size:11.5px; font-weight:700; color:var(--violet); margin-bottom:7px; }
     .ap-row { display:flex; justify-content:space-between; font-size:12px; padding:3px 0; color:var(--muted); }
@@ -523,7 +545,8 @@ import {
   `]
 })
 export class ChargesProprietaireComponent implements OnInit {
-  private svc  = inject(ChargesProprietaireService);
+  private svc       = inject(ChargesProprietaireService);
+  private motifsSvc = inject(MotifsPretService);
   private auth = inject(AuthService);
   private proprietairesSvc = inject(ProprietairesService);
 
@@ -538,16 +561,45 @@ export class ChargesProprietaireComponent implements OnInit {
   form: any = this.resetForm();
   selectedChantiers: { id: string; montant: number }[] = [];
 
-//   ngOnInit() {
-//     this.svc.getFeuille('', this.periodeMois).subscribe({
-//     next: (f: FeuilleChargesDto) => {
-//         this.proprietaires = f.proprietaires;
-//     },
-//     error: () => this.showToast('Erreur chargement')
-//     });
-//   }
-  // APRÈS
+  motifsPret:        MotifPretDto[] = [];
+  motifsPretLoading  = false;
+  readonly MOTIFS_FALLBACK: MotifPretDto[] = [
+    { id: '1',  groupe: 'Travaux & Réparations', libelle: 'Avance travaux urgents (toiture)',       ordre: 10 },
+    { id: '2',  groupe: 'Travaux & Réparations', libelle: 'Avance travaux urgents (plomberie)',     ordre: 20 },
+    { id: '3',  groupe: 'Travaux & Réparations', libelle: 'Avance travaux urgents (électricité)',   ordre: 30 },
+    { id: '4',  groupe: 'Travaux & Réparations', libelle: 'Avance travaux urgents (climatisation)', ordre: 40 },
+    { id: '5',  groupe: 'Travaux & Réparations', libelle: 'Avance travaux de rénovation',           ordre: 50 },
+    { id: '6',  groupe: 'Travaux & Réparations', libelle: 'Avance remplacement équipement',         ordre: 60 },
+    { id: '7',  groupe: 'Travaux & Aménagement', libelle: 'Avance branchement eau',                 ordre: 10 },
+    { id: '8',  groupe: 'Travaux & Aménagement', libelle: 'Avance branchement électricité',         ordre: 20 },
+    { id: '9',  groupe: 'Travaux & Aménagement', libelle: 'Avance permis de construire',            ordre: 30 },
+    { id: '10', groupe: 'Trésorerie & Fiscal',   libelle: 'Avance sur loyers futurs',               ordre: 10 },
+    { id: '11', groupe: 'Trésorerie & Fiscal',   libelle: 'Avance dépannage trésorerie',            ordre: 20 },
+    { id: '12', groupe: 'Trésorerie & Fiscal',   libelle: 'Avance règlement impôt foncier',         ordre: 30 },
+    { id: '13', groupe: 'Trésorerie & Fiscal',   libelle: 'Avance règlement taxe habitation',       ordre: 40 },
+    { id: '14', groupe: 'Trésorerie & Fiscal',   libelle: 'Avance frais notaire / juridiques',      ordre: 50 },
+    { id: '15', groupe: 'Charges courantes',     libelle: 'Avance charges de copropriété',          ordre: 10 },
+    { id: '16', groupe: 'Charges courantes',     libelle: 'Avance assurance immeuble',              ordre: 20 },
+    { id: '17', groupe: 'Charges courantes',     libelle: 'Avance frais de gardiennage',            ordre: 30 },
+    { id: '18', groupe: 'Charges courantes',     libelle: 'Avance entretien espaces communs',       ordre: 40 },
+  ];
+
+  motifsPretGroupes(): { nom: string; motifs: MotifPretDto[] }[] {
+    const groupes = [...new Set(this.motifsPret.map(m => m.groupe))];
+    return groupes.map(nom => ({ nom, motifs: this.motifsPret.filter(m => m.groupe === nom) }));
+  }
+
+  ouvrirGestionMotifs() {
+    // Navigation vers la page paramètres > motifs (à implémenter)
+    alert('Gestion des motifs disponible dans Paramètres > Motifs de prêt');
+  }
+
 ngOnInit(): void {
+  this.motifsPretLoading = true;
+  this.motifsSvc.getAll().subscribe({
+    next:  (m: MotifPretDto[]) => { this.motifsPret = m.length ? m : this.MOTIFS_FALLBACK; this.motifsPretLoading = false; },
+    error: ()                  => { this.motifsPret = this.MOTIFS_FALLBACK;                this.motifsPretLoading = false; }
+  });
   this.proprietairesSvc.getAll(1, 100).subscribe({
     next: (r: any) => {
       this.proprietaires = r.items.map((p: any) => ({ id: p.id, nom: p.nomComplet ?? p.nom }));
@@ -557,13 +609,6 @@ ngOnInit(): void {
     }
   });
 }
-//   load() {
-//     if (!this.proprietaireId) return;
-//     this.svc.getFeuille(this.proprietaireId, this.periodeMois).subscribe({
-//       next: f => { this.feuille = f; },
-//       error: () => this.showToast('❌ Erreur chargement')
-//     });
-//   }
   load(): void {
   
   if (!this.proprietaireId) {
@@ -641,7 +686,17 @@ totalType(t: string): number {
           .subscribe({ next: () => this.load(), error: () => this.showToast('❌ Erreur') })
       );
     } else {
-      this.svc.creer({ ...this.form, proprietaireId: this.proprietaireId })
+      const payload = this.form.type === 'Avance'
+        ? {
+            type:                 this.form.type,
+            libelle:              this.form.libelle,
+            montant:              this.form.montant,
+            remboursementMensuel: this.form.remboursementMensuel,
+            notes:                this.form.notes,
+            proprietaireId:       this.proprietaireId
+          }
+        : { ...this.form, proprietaireId: this.proprietaireId };
+      this.svc.creer(payload)
         .subscribe({ next: () => this.load(), error: () => this.showToast('❌ Erreur') });
     }
     this.closeModal();
@@ -650,6 +705,8 @@ totalType(t: string): number {
 
   formValide(): boolean {
     if (this.form.type === 'Travaux') return this.selectedChantiers.length > 0;
+    if (this.form.type === 'Avance')
+      return !!(this.form.montant > 0 && this.form.libelle && this.form.remboursementMensuel > 0);
     return !!(this.form.montant > 0 && (this.form.libelle || this.form.locataireId));
   }
 

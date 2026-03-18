@@ -936,3 +936,82 @@ export interface SalaireMoisDto {
   statut:         'Verse' | 'EnAttente' | 'Partiel';
   dateVersement?: string;
 }
+
+export interface LigneProduitVersementDto {
+  produitCode:      string;
+  proprieteLibelle: string;
+  statutProduit:    'Loue' | 'Vacant' | 'LoyersEnAttente';
+  montantEncaisse:  number;
+  montantAttendu:   number;
+  nbCollectes:      number;
+}
+
+export interface DeductionVersementDto {
+  type:    string;
+  libelle: string;
+  montant: number;
+}
+
+export interface PeriodeVersementDto {
+  periodeId:      string;
+  versementId?:   string;  // GUID du versement en base
+  moisConcernes:  string[];
+  datePrevue:     string;
+  dateEffective?: string;
+  montantBrut:    number;
+  montantReporte: number;
+  commission:     number;
+  retenueTravaux: number;
+  retenueAvance:  number;
+  montantNet:     number;
+  statut:         'Planifie' | 'EnAttente' | 'Effectue' | 'EnRetard' | 'Annule' | 'Derogation';
+  statutLabel:    string;
+  reference?:     string;
+  lignes:         LigneProduitVersementDto[];
+  deductions:     DeductionVersementDto[];
+}
+
+export interface SuiviVersementProprieteDto {
+  proprieteId:       string;
+  contratGestionId:  string;  // pour preparer versement
+  proprieteLibelle:  string;
+  proprieteAdresse:  string;
+  periodicite:       string;
+  periodiciteLabel:  string;
+  tauxCommission:    number;
+  totalBrut:         number;
+  totalNet:          number;
+  nbProduitsLoues:   number;
+  nbProduitsVacants: number;
+  periodes:          PeriodeVersementDto[];
+}
+
+export interface SuiviVersementProprietaireDto {
+  proprietaireId:             string;
+  proprietaireNom:            string;
+  proprietaireTel:            string;
+  proprietes:                 SuiviVersementProprieteDto[];
+  totalBrutGlobal:            number;
+  totalNetGlobal:             number;
+  totalCommissionGlobal:      number;
+  totalRetenueTravauxGlobal:  number;
+  nbPeriodesEnRetard:         number;
+  nbPeriodesTotalPeriodes:    number;
+}
+
+export interface SuiviVersementsGlobalDto {
+  totalBrutGlobal:         number;
+  totalNetGlobal:          number;
+  totalCommissionGlobal:   number;
+  nbProprietaires:         number;
+  nbPeriodesTotalEnRetard: number;
+  nbPeriodesTotalAVenir:   number;
+  proprietaires:           SuiviVersementProprietaireDto[];
+}
+
+export interface MotifPretDto {
+  id:      string;
+  groupe:  string;
+  libelle: string;
+  ordre:   number;
+}

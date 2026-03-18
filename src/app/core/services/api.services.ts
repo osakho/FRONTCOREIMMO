@@ -596,3 +596,26 @@ export class ChargesProprietaireService extends ApiService {
   approuver(id: string): Observable<void>              { return this.post<void>(`/charges-proprietaire/${id}/approuver`, {}); }
   refuser(id: string, motif: string): Observable<void> { return this.post<void>(`/charges-proprietaire/${id}/refuser`, { motif }); }
 }
+
+// =====================================================================================================================================================
+//  MOTIFS PRÊT SERVICE  — table de référence des motifs de prêt agence
+// =====================================================================================================================================================
+export interface MotifPretDto {
+  id:      string;
+  groupe:  string;
+  libelle: string;
+  ordre:   number;
+}
+
+@Injectable({ providedIn: 'root' })
+export class MotifsPretService extends ApiService {
+  getAll(): Observable<MotifPretDto[]> {
+    return this.get<MotifPretDto[]>('/motifs-pret');
+  }
+  creer(groupe: string, libelle: string): Observable<string> {
+    return this.post<string>('/motifs-pret', { groupe, libelle });
+  }
+  desactiver(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/motifs-pret/${id}`);
+  }
+}
