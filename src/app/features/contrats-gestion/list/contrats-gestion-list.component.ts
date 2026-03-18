@@ -11,94 +11,267 @@ import { kdiConfirm } from '../../../core/utils/confirm-modal';
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule],
   template: `
-    <div class="page-enter">
-      <div class="page-header">
-        <div>
-          <div class="page-title"><span class="mi">handshake</span> Contrats de gestion</div>
-          <div class="page-subtitle">Mandats de gestion agence ↔ propriétaire — Accès Direction</div>
-        </div>
-        <div class="header-actions">
-          <button class="btn btn-gold" (click)="ouvrirModal()">
-            <span class="mi">add</span> Nouveau contrat
-          </button>
-        </div>
-      </div>
+<div class="page-enter">
 
-      <div class="filter-bar" style="margin-bottom:16px">
-        <button class="filter-chip" [class.active]="filtreStatut===''"          (click)="setFiltre('')">Tous les statuts</button>
-        <button class="filter-chip" [class.active]="filtreStatut==='Brouillon'" (click)="setFiltre('Brouillon')">Brouillon</button>
-        <button class="filter-chip" [class.active]="filtreStatut==='Actif'"     (click)="setFiltre('Actif')">Actif</button>
-        <button class="filter-chip" [class.active]="filtreStatut==='Suspendu'"  (click)="setFiltre('Suspendu')">Suspendu</button>
-        <button class="filter-chip" [class.active]="filtreStatut==='Termine'"   (click)="setFiltre('Termine')">Terminé</button>
-      </div>
-
-      <div class="table-card">
-        <table class="data-table" *ngIf="liste().items.length; else empty">
-          <thead><tr>
-            <th>N° Contrat</th><th>Propriété</th><th>Période</th>
-            <th class="text-right" *ngIf="isDirection()">Commission</th>
-            <th class="text-center">Checklist</th>
-            <th class="text-center">Statut</th>
-            <th>Actions</th>
-          </tr></thead>
-          <tbody>
-            <tr *ngFor="let c of liste().items">
-              <td><span class="num-badge">{{ c.numero }}</span></td>
-              <td><div class="cell-main">{{ c.proprieteLibelle }}</div></td>
-              <td class="text-muted">
-                {{ c.dateDebut | date:'dd/MM/yyyy' }}
-                <span *ngIf="c.dateFin"> → {{ c.dateFin | date:'dd/MM/yyyy' }}</span>
-              </td>
-              <td class="text-right" style="font-weight:600" *ngIf="isDirection()">
-                {{ c.tauxCommission * 100 | number:'1.0-1' }}%
-              </td>
-              <td class="text-center">
-                <div class="checklist-dots">
-                  <span class="dot" [class.ok]="c.docIdentiteOk">ID</span>
-                  <span class="dot" [class.ok]="c.photosEdlOk"><span class="mi" style="font-size:10px">photo_camera</span></span>
-                  <span class="dot" [class.ok]="c.docAutorisationOk"><span class="mi" style="font-size:10px">description</span></span>
-                </div>
-              </td>
-              <td class="text-center">
-                <span class="badge"
-                  [class.badge-green]="c.statutLabel==='Actif'"
-                  [class.badge-amber]="c.statutLabel==='Suspendu'"
-                  [class.badge-gray]="c.statutLabel==='Brouillon'"
-                  [class.badge-red]="c.statutLabel==='Termine'">{{ c.statutLabel }}</span>
-              </td>
-              <td>
-                <div class="row-actions">
-                  <button *ngIf="c.peutEtreActive && c.statutLabel!=='Actif'"
-                          class="btn btn-secondary btn-sm" (click)="activer(c)">
-                    <span class="mi">check_circle</span> Activer
-                  </button>
-                  <button *ngIf="c.statutLabel==='Actif'"
-                          class="btn btn-secondary btn-sm" (click)="ouvrirAvenant(c)">
-                    <span class="mi">edit_document</span> Avenant
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <ng-template #empty>
-          <div class="empty-state">
-            <span class="mi">handshake</span>
-            <div class="empty-title">Aucun contrat de gestion</div>
-            <div class="empty-sub">Créez le premier mandat de gestion</div>
-            <button class="btn btn-gold" style="margin-top:8px" (click)="ouvrirModal()">
-              <span class="mi">add</span> Nouveau contrat
-            </button>
-          </div>
-        </ng-template>
-      </div>
+  <!-- ══ HEADER ══ -->
+  <div class="cg-header">
+    <div class="cg-header-left">
+      <h1 class="cg-title">
+        <svg class="cg-title-ico" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+          <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+        </svg>
+        Contrats de gestion
+      </h1>
+      <p class="cg-sub">Mandats de gestion agence ↔ propriétaire — Accès Direction</p>
     </div>
+    <button class="cg-btn-new" (click)="ouvrirModal()">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 010 2H9v4a1 1 0 01-2 0V9H3a1 1 0 010-2h4V3a1 1 0 011-1z"/></svg>
+      Nouveau contrat
+    </button>
+  </div>
+
+  <!-- ══ FILTRES ══ -->
+  <div class="cg-filters">
+    <button class="cg-chip" [class.active]="filtreStatut===''"          (click)="setFiltre('')">Tous les statuts</button>
+    <button class="cg-chip draft"    [class.active]="filtreStatut==='Brouillon'" (click)="setFiltre('Brouillon')">
+      <span class="cg-dot"></span>Brouillon
+    </button>
+    <button class="cg-chip act"     [class.active]="filtreStatut==='Actif'"     (click)="setFiltre('Actif')">
+      <span class="cg-dot"></span>Actif
+    </button>
+    <button class="cg-chip suspend"  [class.active]="filtreStatut==='Suspendu'"  (click)="setFiltre('Suspendu')">
+      <span class="cg-dot"></span>Suspendu
+    </button>
+    <button class="cg-chip ended"    [class.active]="filtreStatut==='Termine'"   (click)="setFiltre('Termine')">
+      <span class="cg-dot"></span>Terminé
+    </button>
+  </div>
+
+  <!-- ══ TABLEAU ══ -->
+  <div class="cg-table-wrap">
+    <table *ngIf="liste().items.length; else empty">
+      <thead>
+        <tr>
+          <th>N° Contrat</th>
+          <th>Propriété</th>
+          <th>Période</th>
+          <th class="r" *ngIf="isDirection()">Commission</th>
+          <th class="c">Checklist</th>
+          <th class="c">Statut</th>
+          <th class="r">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let c of liste().items; let i=index" [style.animation-delay]="(i*25)+'ms'">
+
+          <!-- N° contrat -->
+          <td>
+            <span class="cg-num">{{ c.numero }}</span>
+          </td>
+
+          <!-- Propriété -->
+          <td>
+            <div class="prop-cell">
+              <div class="prop-icon">🏘</div>
+              <div class="prop-nom">{{ c.proprieteLibelle }}</div>
+            </div>
+          </td>
+
+          <!-- Période -->
+          <td>
+            <div class="period-cell">
+              <span class="period-start">{{ c.dateDebut | date:'dd MMM yyyy' }}</span>
+              <span class="period-arrow" *ngIf="c.dateFin">
+                <svg viewBox="0 0 16 8" fill="none"><path d="M0 4h14M11 1l3 3-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                {{ c.dateFin | date:'dd MMM yyyy' }}
+              </span>
+              <span class="period-open" *ngIf="!c.dateFin">Durée indéterminée</span>
+            </div>
+          </td>
+
+          <!-- Commission -->
+          <td class="r" *ngIf="isDirection()">
+            <span class="commission-val">{{ c.tauxCommission * 100 | number:'1.0-1' }}<span class="pct">%</span></span>
+          </td>
+
+          <!-- Checklist -->
+          <td class="c">
+            <div class="checklist">
+              <span class="ck-item" [class.ok]="c.docIdentiteOk" title="Document identité">
+                <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4 6h2m-2 2.5h6M8 6h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                ID
+              </span>
+              <span class="ck-item" [class.ok]="c.photosEdlOk" title="Photos état des lieux">
+                <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><circle cx="7" cy="7.5" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 3l.8-1.5h2.4L9 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                EDL
+              </span>
+              <span class="ck-item" [class.ok]="c.docAutorisationOk" title="Autorisation">
+                <svg viewBox="0 0 14 14" fill="none"><path d="M3 2h8a1 1 0 011 1v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.3"/><path d="M4 5h6M4 7.5h6M4 10h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                Auth
+              </span>
+            </div>
+          </td>
+
+          <!-- Statut -->
+          <td class="c">
+            <span class="cg-statut"
+              [class.s-actif]="c.statutLabel==='Actif'"
+              [class.s-brouillon]="c.statutLabel==='Brouillon'"
+              [class.s-suspendu]="c.statutLabel==='Suspendu'"
+              [class.s-termine]="c.statutLabel==='Termine'">
+              {{ c.statutLabel }}
+            </span>
+          </td>
+
+          <!-- Actions -->
+          <td>
+            <div class="cg-acts">
+              <button *ngIf="c.peutEtreActive && c.statutLabel!=='Actif'"
+                      class="cg-act-btn green" (click)="activer(c)">
+                <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.4"/><path d="M4.5 7l2 2 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Activer
+              </button>
+              <button *ngIf="c.statutLabel==='Actif'"
+                      class="cg-act-btn blue" (click)="ouvrirAvenant(c)">
+                <svg viewBox="0 0 14 14" fill="none"><path d="M9.5 2l2.5 2.5L5 11.5H2.5V9L9.5 2z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Avenant
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <ng-template #empty>
+      <div class="cg-empty">
+        <div class="cg-empty-ico">🤝</div>
+        <div class="cg-empty-h">Aucun contrat de gestion</div>
+        <p class="cg-empty-p">Créez le premier mandat de gestion agence ↔ propriétaire</p>
+        <button class="cg-btn-new" (click)="ouvrirModal()">+ Nouveau contrat</button>
+      </div>
+    </ng-template>
+  </div>
+
+</div>
   `,
   styles: [`
-    .num-badge { font-family:monospace; background:var(--surf2); padding:3px 8px; border-radius:6px; font-size:.78rem; color:var(--navy); font-weight:700; }
-    .checklist-dots { display:flex; gap:6px; justify-content:center; }
-    .dot { padding:2px 6px; border-radius:6px; font-size:.7rem; font-weight:700; background:#fee2e2; color:#991b1b; display:flex; align-items:center; gap:2px; }
-    .dot.ok { background:#d1fae5; color:#065f46; }
+
+    :host {
+      --navy:  #0D1B2A; --navy2: #1B2B3A;
+      --gold:  #C9A84C; --gold-l: #E8C96A;
+      --ok:    #16a34a; --ok-bg: #dcfce7;
+      --late:  #dc2626; --late-bg: #fee2e2;
+      --blue:  #1d4ed8; --blue-bg: #dbeafe;
+      --amber: #d97706; --amber-bg: #fef3c7;
+      --surf:  #F5F7FA; --surf2: #EEF1F6; --bord: #E2E8F0;
+      --t1: #0F172A; --t2: #475569; --t3: #94a3b8;
+      --r: 10px; --r2: 14px;
+      --shadow: 0 1px 3px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.05);
+      font-family: 'DM Sans','Segoe UI',sans-serif;
+      display: block;
+    }
+
+    /* HEADER */
+    .cg-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:18px; gap:16px; flex-wrap:wrap; }
+    .cg-title { display:flex; align-items:center; gap:10px; font-size:21px; font-weight:800; color:var(--t1); margin:0 0 4px; }
+    .cg-title-ico { width:22px; height:22px; color:var(--gold); flex-shrink:0; }
+    .cg-sub { font-size:12.5px; color:var(--t3); margin:0; }
+    .cg-btn-new {
+      display:inline-flex; align-items:center; gap:7px;
+      padding:10px 18px; background:var(--gold); color:var(--navy);
+      border:none; border-radius:var(--r); font-size:13px; font-weight:700;
+      cursor:pointer; font-family:inherit; transition:all .18s; white-space:nowrap; flex-shrink:0;
+    }
+    .cg-btn-new svg { width:14px; height:14px; }
+    .cg-btn-new:hover { background:var(--gold-l); box-shadow:0 4px 14px rgba(201,168,76,.4); transform:translateY(-1px); }
+
+    /* FILTRES */
+    .cg-filters { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
+    .cg-chip {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:7px 14px; border-radius:20px;
+      border:1.5px solid var(--bord); background:#fff;
+      font-size:12.5px; font-weight:600; color:var(--t2);
+      cursor:pointer; transition:all .14s; font-family:inherit;
+    }
+    .cg-chip:hover:not(.active) { border-color:var(--navy); color:var(--navy); }
+    .cg-chip.active { background:var(--navy); color:var(--gold-l); border-color:var(--navy); }
+    .cg-dot { width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.6; flex-shrink:0; }
+    .cg-chip.draft.active  { background:#64748b; border-color:#64748b; color:#fff; }
+    .cg-chip.act.active    { background:var(--ok); border-color:var(--ok); color:#fff; }
+    .cg-chip.suspend.active{ background:var(--amber); border-color:var(--amber); color:#fff; }
+    .cg-chip.ended.active  { background:var(--late); border-color:var(--late); color:#fff; }
+
+    /* TABLEAU */
+    .cg-table-wrap { background:#fff; border-radius:var(--r2); box-shadow:var(--shadow); overflow:hidden; }
+    table { width:100%; border-collapse:collapse; }
+    thead th {
+      padding:11px 14px; background:var(--navy);
+      color:rgba(255,255,255,.45); font-size:10.5px; font-weight:700;
+      text-transform:uppercase; letter-spacing:.7px; text-align:left; white-space:nowrap;
+    }
+    th.r { text-align:right; } th.c { text-align:center; }
+    tbody tr { border-bottom:1px solid var(--surf2); transition:background .1s; animation:fadeUp .28s ease both; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
+    tbody tr:last-child { border-bottom:none; }
+    tbody tr:hover { background:var(--surf); }
+    tbody td { padding:13px 14px; vertical-align:middle; }
+    td.r { text-align:right; } td.c { text-align:center; }
+
+    .cg-num { font-family:monospace; font-size:12px; font-weight:700; background:var(--surf2); color:var(--navy); padding:3px 9px; border-radius:6px; white-space:nowrap; }
+
+    .prop-cell { display:flex; align-items:center; gap:9px; }
+    .prop-icon { font-size:16px; flex-shrink:0; }
+    .prop-nom { font-size:13.5px; font-weight:600; color:var(--t1); }
+
+    .period-cell { display:flex; flex-direction:column; gap:3px; }
+    .period-start { font-size:12.5px; font-weight:600; color:var(--t1); }
+    .period-arrow { display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--t3); }
+    .period-arrow svg { width:14px; height:7px; color:var(--t3); }
+    .period-open { font-size:11px; color:var(--t3); font-style:italic; }
+
+    .commission-val { font-size:15px; font-weight:800; color:var(--t1); }
+    .pct { font-size:11px; font-weight:500; color:var(--t3); }
+
+    /* Checklist */
+    .checklist { display:flex; gap:5px; justify-content:center; }
+    .ck-item {
+      display:inline-flex; align-items:center; gap:3px;
+      padding:3px 8px; border-radius:6px; font-size:10.5px; font-weight:700;
+      background:var(--late-bg); color:var(--late);
+      transition:all .14s;
+    }
+    .ck-item svg { width:11px; height:11px; flex-shrink:0; }
+    .ck-item.ok { background:var(--ok-bg); color:var(--ok); }
+
+    /* Statut */
+    .cg-statut { display:inline-flex; padding:4px 11px; border-radius:20px; font-size:11.5px; font-weight:700; white-space:nowrap; }
+    .s-actif     { background:var(--ok-bg);    color:var(--ok); }
+    .s-brouillon { background:var(--surf2);     color:var(--t2); }
+    .s-suspendu  { background:var(--amber-bg);  color:var(--amber); }
+    .s-termine   { background:var(--late-bg);   color:var(--late); }
+
+    /* Actions */
+    .cg-acts { display:flex; align-items:center; gap:5px; justify-content:flex-end; }
+    .cg-act-btn {
+      display:inline-flex; align-items:center; gap:5px;
+      height:30px; padding:0 11px; border-radius:7px;
+      border:1.5px solid transparent; font-size:11.5px; font-weight:600;
+      cursor:pointer; transition:all .13s; font-family:inherit; white-space:nowrap;
+    }
+    .cg-act-btn svg { width:12px; height:12px; }
+    .cg-act-btn.green { background:var(--ok-bg); color:var(--ok); border-color:#86efac; }
+    .cg-act-btn.green:hover { background:var(--ok); color:#fff; border-color:var(--ok); }
+    .cg-act-btn.blue  { background:var(--blue-bg); color:var(--blue); border-color:#93c5fd; }
+    .cg-act-btn.blue:hover  { background:var(--blue); color:#fff; border-color:var(--blue); }
+
+    /* Empty */
+    .cg-empty { text-align:center; padding:60px 20px; }
+    .cg-empty-ico { font-size:52px; margin-bottom:14px; }
+    .cg-empty-h { font-size:17px; font-weight:700; color:var(--t1); margin-bottom:7px; }
+    .cg-empty-p { font-size:13px; color:var(--t3); margin:0 0 18px; }
+
   `]
 })
 export class ContratsGestionListComponent implements OnInit, OnDestroy {

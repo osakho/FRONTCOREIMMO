@@ -72,7 +72,7 @@ export const routes: Routes = [
       { path: 'devis-travaux',    loadComponent: () => import('./features/travaux/devis/devis-travaux.component').then(m => m.DevisTravauxComponent) },
       { path: 'chantiers',        loadComponent: () => import('./features/travaux/chantiers/chantiers.component').then(m => m.ChantiersComponent) },
       { path: 'agenda',           loadComponent: () => import('./features/travaux/agenda/agenda.component').then(m => m.AgendaComponent) },
-
+      
       // Dashboard propriétaires (remplace ou complète la liste simple)
       { path: 'proprietaires/dashboard', loadComponent: () => import('./features/proprietaires/dashboard/proprietaires-dashboard.component').then(m => m.ProprietairesDashboardComponent),
         canActivate: [directionGuard]
@@ -80,8 +80,8 @@ export const routes: Routes = [
       { path: 'suivi-loyers', loadComponent: () => import('./features/suivi-loyers/suivi-loyers.component').then(m => m.SuiviLoyersComponent) },
       { path: 'suivi-collecteur', loadComponent: () => import('./features/suivi-collecteur/suivi-collecteur.component').then(m => m.SuiviCollecteurComponent) },
       { path: 'charges-proprietaire', loadComponent: () => import('./features/charges-proprietaire/charges-proprietaire.component').then(m => m.ChargesProprietaireComponent) },
-      { path: 'reversements', loadComponent: () => import('./features/reversements/reversements.component').then(m => m.ReversementsComponent) }
-    ]
+      { path: 'reversements', loadComponent: () => import('./features/reversements/reversements.component').then(m => m.ReversementsComponent) },
+      { path: 'tableau-bord-agence', loadComponent: () => import('./features/tableau-bord-agence/tableau-bord-agence.component') .then(m => m.TableauBordAgenceComponent), canActivate: [directionGuard] }    ]
   },
 
   { path: '**', redirectTo: 'dashboard' }

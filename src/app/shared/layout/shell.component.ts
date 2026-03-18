@@ -450,6 +450,7 @@ export class ShellComponent implements OnInit {
           { label: 'Recouvrement',         route: '/recouvrement',         icon: this.svg(ICONS.refresh) },
           { label: 'Charges propriétaires', route: '/charges-proprietaire', icon: this.svg(ICONS.wallet) },
           { label: 'Suivi collecteur',     route: '/suivi-collecteur', icon: this.svg(ICONS.clipboardList) },
+          { label: 'Bord financier agence', route: '/tableau-bord-agence', icon: this.svg(ICONS.barChart) },
           
         ]
       },
@@ -506,6 +507,7 @@ export class ShellComponent implements OnInit {
     '/personnel':             'Personnel',
     '/rapports':              'Rapports',
     '/parametres':            'Paramètres',
+    '/tableau-bord-agence':   'Tableau de bord financier',
   };
 
   private findTitle(url: string): string {

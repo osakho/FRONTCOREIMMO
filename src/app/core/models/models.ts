@@ -861,3 +861,78 @@ export interface FeuilleRecouvrementDto {
   proprietaires: { id: string; nom: string }[];
   proprietes:    { id: string; nom: string }[];
 }
+
+// ══════════════════════════════════════════════════════════════
+//  TABLEAU DE BORD FINANCIER AGENCE
+// ══════════════════════════════════════════════════════════════
+
+export interface TableauBordAgenceDto {
+  mois:                  string;
+  loyersCollectesMois:   number;
+  commissionsbrutesMois: number;
+  fraisGestionMois:      number;
+  commissionsNettesMois: number;
+  nbContratsActifs:      number;
+  tauxCommissionMoyen:   number;
+  netAReverserMois:      number;
+  chargesSalaires:       number;
+  chargesFrais:          number;
+  resultatNet:           number;
+  commissionsParContrat: CommissionContratAgenceDto[];
+  fraisAgence:           FraisAgenceDto[];
+  creancesProprietaires: CreanceProprietaireDto[];
+  salairesMois:          SalaireMoisDto[];
+}
+
+export interface CommissionContratAgenceDto {
+  contratId:        string;
+  contratNumero:    string;
+  proprieteLibelle: string;
+  proprietaireNom:  string;
+  loyer:            number;
+  tauxCommission:   number;
+  commissionBrute:  number;
+  fraisImputes:     number;
+  commissionNette:  number;
+}
+
+export interface FraisAgenceDto {
+  id:           string;
+  categorie:    string;
+  libelle:      string;
+  montant:      number;
+  statut:       'Paye' | 'EnAttente' | 'Impaye';
+  dateEcheance?: string;
+}
+
+export interface CreanceProprietaireDto {
+  id:                    string;
+  proprietaireId:        string;
+  proprietaireNom:       string;
+  proprietaireInitiales: string;
+  proprietaireColor:     string;
+  proprietes:            string[];
+  motif:                 string;
+  typeMotif:             'AvanceFrais' | 'TropPercu' | 'CommissionNonVersee' | 'Autre';
+  montantTotal:          number;
+  montantPaye:           number;
+  montantRestant:        number;
+  nbEcheances:           number;
+  echeancesPaye:         number;
+  montantEcheance:       number;
+  dateCreation:          string;
+  dateDernierPaiement?:  string;
+  statut:                'EnCours' | 'Solde' | 'EnAttente' | 'EnRetard';
+}
+
+export interface SalaireMoisDto {
+  personnelId:    string;
+  nomComplet:     string;
+  initiales:      string;
+  avatarColor:    string;
+  poste:          string;
+  typeContrat:    string;
+  montant:        number;
+  statut:         'Verse' | 'EnAttente' | 'Partiel';
+  dateVersement?: string;
+}

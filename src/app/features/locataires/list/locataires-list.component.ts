@@ -11,82 +11,50 @@ import { LocataireListItemDto, PagedList }    from '../../../core/models/models'
   standalone: true,
   imports: [CommonModule, DatePipe, RouterLink, FormsModule, ReactiveFormsModule],
   template: `
-<div class="shell">
+<div class="page-enter">
 
-  <!-- ══ SIDEBAR STATS ══ -->
-  <aside class="stats-rail">
-    <div class="rail-brand">
-      <span class="rail-icon">🏢</span>
-      <span class="rail-label">Locataires</span>
+  <!-- ══ HEADER ══ -->
+  <div class="pg-header">
+    <div class="pg-header-left">
+      <h1 class="page-title">Locataires</h1>
+      <div class="kpi-pills">
+        <span class="kpi-pill">{{ liste().totalCount }} au total</span>
+        <span class="kpi-pill ok">{{ nbActifs() }} actifs</span>
+        <span class="kpi-pill late" *ngIf="nbEnRetard() > 0">{{ nbEnRetard() }} en retard</span>
+        <span class="kpi-pill info">{{ nbAJour() }} à jour</span>
+      </div>
     </div>
-
-    <div class="rail-kpi">
-      <div class="kpi-num">{{ liste().totalCount }}</div>
-      <div class="kpi-lbl">Au total</div>
-    </div>
-    <div class="rail-kpi ok">
-      <div class="kpi-num">{{ nbActifs() }}</div>
-      <div class="kpi-lbl">Actifs</div>
-    </div>
-    <div class="rail-kpi warn">
-      <div class="kpi-num">{{ nbEnRetard() }}</div>
-      <div class="kpi-lbl">En retard</div>
-    </div>
-    <div class="rail-kpi info">
-      <div class="kpi-num">{{ nbAJour() }}</div>
-      <div class="kpi-lbl">À jour</div>
-    </div>
-
-    <div class="rail-divider"></div>
-
-    <div class="rail-filters">
-      <button class="rf-btn" [class.active]="filtreActif===''"      (click)="setFiltre('')">
-        <span class="rf-dot"></span> Tous
-      </button>
-      <button class="rf-btn" [class.active]="filtreActif==='true'"  (click)="setFiltre('true')">
-        <span class="rf-dot ok"></span> Actifs
-      </button>
-      <button class="rf-btn" [class.active]="filtreActif==='false'" (click)="setFiltre('false')">
-        <span class="rf-dot off"></span> Inactifs
-      </button>
-    </div>
-
-    <div class="rail-spacer"></div>
-
-    <button class="rail-add" (click)="ouvrirCreation()">
-      <span>＋</span> Nouveau locataire
+    <button class="btn-new" (click)="ouvrirCreation()">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 010 2H9v4a1 1 0 01-2 0V9H3a1 1 0 010-2h4V3a1 1 0 011-1z"/></svg>
+      Nouveau locataire
     </button>
-  </aside>
+  </div>
 
-  <!-- ══ MAIN CONTENT ══ -->
-  <main class="content">
-
-    <!-- Top bar -->
-    <div class="topbar">
-      <div class="topbar-left">
-        <h1 class="page-title">Locataires</h1>
-        <div class="breadcrumb">Gestion locative · Liste</div>
-      </div>
-      <div class="topbar-right">
-        <div class="search-box">
-          <svg class="search-ico" viewBox="0 0 20 20" fill="none">
-            <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6"/>
-            <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-          </svg>
-          <input placeholder="Nom, téléphone, email…"
-                 [(ngModel)]="searchTerm" (ngModelChange)="onSearch()" />
-          <button class="search-clear" *ngIf="searchTerm" (click)="clearSearch()">✕</button>
-        </div>
-        <div class="view-btns">
-          <button [class.va]="vue==='liste'"  (click)="vue='liste'"  title="Tableau">
-            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 3h14v2H1zm0 4h14v2H1zm0 4h14v2H1z"/></svg>
-          </button>
-          <button [class.va]="vue==='cartes'" (click)="vue='cartes'" title="Cartes">
-            <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
-          </button>
-        </div>
-      </div>
+  <!-- ══ BARRE OUTILS ══ -->
+  <div class="toolbar">
+    <div class="search-box">
+      <svg class="search-ico" viewBox="0 0 20 20" fill="none">
+        <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      <input placeholder="Nom, téléphone, email…"
+             [(ngModel)]="searchTerm" (ngModelChange)="onSearch()" />
+      <button class="search-clear" *ngIf="searchTerm" (click)="clearSearch()">✕</button>
     </div>
+    <div class="filter-chips">
+      <button class="fchip" [class.active]="filtreActif===''"      (click)="setFiltre('')">Tous</button>
+      <button class="fchip" [class.active]="filtreActif==='true'"  (click)="setFiltre('true')">Actifs</button>
+      <button class="fchip" [class.active]="filtreActif==='false'" (click)="setFiltre('false')">Inactifs</button>
+    </div>
+    <div class="view-btns">
+      <button [class.va]="vue==='liste'"  (click)="vue='liste'"  title="Tableau">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 3h14v2H1zm0 4h14v2H1zm0 4h14v2H1z"/></svg>
+      </button>
+      <button [class.va]="vue==='cartes'" (click)="vue='cartes'" title="Cartes">
+        <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+      </button>
+    </div>
+  </div>
 
     <!-- ── Chargement ── -->
     <div class="loading-bar" *ngIf="loading()">
@@ -193,7 +161,7 @@ import { LocataireListItemDto, PagedList }    from '../../../core/models/models'
           <div class="empty-illu">🧑‍🤝‍🧑</div>
           <div class="empty-h">Aucun locataire trouvé</div>
           <p class="empty-p">Modifiez vos filtres ou ajoutez un nouveau locataire.</p>
-          <button class="rail-add inline" (click)="ouvrirCreation()">＋ Nouveau locataire</button>
+          <button class="btn-new" (click)="ouvrirCreation()">＋ Nouveau locataire</button>
         </div>
       </ng-template>
     </div>
@@ -250,7 +218,6 @@ import { LocataireListItemDto, PagedList }    from '../../../core/models/models'
       </button>
     </div>
 
-  </main>
 </div>
 
 <!-- ══ MODAL NOUVEAU LOCATAIRE ══ -->
@@ -394,13 +361,10 @@ import { LocataireListItemDto, PagedList }    from '../../../core/models/models'
 </div>
   `,
   styles: [`
-    /* ═══════════════════════════════════════
-       TOKENS
-    ═══════════════════════════════════════ */
+    /* ══ TOKENS ══ */
     :host {
       --navy:   #0D1B2A;
       --navy2:  #1B2B3A;
-      --navy3:  #243447;
       --gold:   #C9A84C;
       --gold-l: #E8C96A;
       --gold-d: #9A7A2E;
@@ -420,154 +384,73 @@ import { LocataireListItemDto, PagedList }    from '../../../core/models/models'
       --r2:     14px;
       --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
       display: block;
-      height: 100%;
-    }
-
-    /* ═══════════════════════════════════════
-       LAYOUT PLEIN ÉCRAN
-    ═══════════════════════════════════════ */
-    .shell {
-      display: grid;
-      grid-template-columns: 220px 1fr;
-      height: 100vh;
-      overflow: hidden;
-      background: var(--surf);
       font-family: 'DM Sans', 'Segoe UI', sans-serif;
     }
 
-    /* ── Rail latéral ── */
-    .stats-rail {
-      background: var(--navy);
+    /* ══ HEADER ══ */
+    .pg-header {
       display: flex;
-      flex-direction: column;
-      padding: 24px 16px 0;
-      gap: 6px;
-      overflow-y: auto;
-      border-right: 1px solid rgba(255,255,255,.05);
-    }
-    .rail-brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 0 4px 20px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      margin-bottom: 10px;
-    }
-    .rail-icon  { font-size: 20px; }
-    .rail-label { font-size: 15px; font-weight: 700; color: var(--gold-l); letter-spacing: .3px; }
-
-    .rail-kpi {
-      background: rgba(255,255,255,.05);
-      border-radius: var(--r);
-      padding: 12px 14px;
-      border-left: 3px solid transparent;
-      transition: background .15s;
-    }
-    .rail-kpi.ok   { border-left-color: var(--ok);   }
-    .rail-kpi.warn { border-left-color: var(--late);  }
-    .rail-kpi.info { border-left-color: var(--blue);  }
-    .kpi-num { font-size: 22px; font-weight: 800; color: #fff; line-height: 1; }
-    .kpi-lbl { font-size: 11px; color: var(--t3); margin-top: 3px; text-transform: uppercase; letter-spacing: .5px; }
-
-    .rail-divider { height: 1px; background: rgba(255,255,255,.08); margin: 10px 0; }
-
-    .rail-filters { display: flex; flex-direction: column; gap: 3px; }
-    .rf-btn {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: none;
-      background: transparent;
-      color: var(--t3);
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all .15s;
-      font-family: inherit;
-      text-align: left;
-    }
-    .rf-btn:hover { background: rgba(255,255,255,.07); color: #fff; }
-    .rf-btn.active { background: rgba(201,168,76,.15); color: var(--gold-l); }
-    .rf-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--t3); flex-shrink: 0; }
-    .rf-dot.ok  { background: var(--ok); }
-    .rf-dot.off { background: var(--t3); }
-
-    .rail-spacer { flex: 1; min-height: 12px; }
-
-    .rail-add {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 13px 12px;
-      background: var(--gold);
-      color: var(--navy);
-      border: none;
-      border-radius: var(--r) var(--r) 0 0;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all .18s;
-      font-family: inherit;
-      position: sticky;
-      bottom: 0;
-      margin: 0 -16px;
-      width: calc(100% + 32px);
-    }
-    .rail-add:hover { background: var(--gold-l); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(201,168,76,.4); }
-    .rail-add.inline { margin-top: 16px; }
-
-    /* ── Contenu principal ── */
-    .content {
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      padding: 0;
-    }
-
-    /* Top bar */
-    .topbar {
-      display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
-      padding: 18px 28px 14px;
-      background: #fff;
-      border-bottom: 1px solid var(--bord);
-      flex-shrink: 0;
+      margin-bottom: 18px;
       gap: 16px;
+      flex-wrap: wrap;
     }
-    .page-title  { font-size: 20px; font-weight: 800; color: var(--t1); margin: 0; }
-    .breadcrumb  { font-size: 11.5px; color: var(--t3); margin-top: 2px; }
-    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .page-title { font-size: 22px; font-weight: 800; color: var(--t1); margin: 0 0 8px; }
+    .kpi-pills  { display: flex; gap: 7px; flex-wrap: wrap; }
+    .kpi-pill {
+      padding: 3px 11px; border-radius: 20px;
+      font-size: 12px; font-weight: 600;
+      background: var(--surf2); color: var(--t3);
+    }
+    .kpi-pill.ok   { background: var(--ok-bg);   color: var(--ok); }
+    .kpi-pill.late { background: var(--late-bg);  color: var(--late); }
+    .kpi-pill.info { background: var(--blue-bg);  color: var(--blue); }
 
+    .btn-new {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px;
+      background: var(--navy); color: var(--gold-l);
+      border: none; border-radius: var(--r);
+      font-size: 13.5px; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      transition: all .18s; white-space: nowrap; flex-shrink: 0;
+    }
+    .btn-new svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .btn-new:hover { background: var(--navy2); box-shadow: 0 4px 14px rgba(13,27,42,.25); transform: translateY(-1px); }
+
+    /* ══ TOOLBAR ══ */
+    .toolbar {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px; flex-wrap: wrap;
+    }
     .search-box {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--surf);
-      border: 1.5px solid var(--bord);
-      border-radius: 9px;
-      padding: 8px 12px;
-      width: 280px;
+      display: flex; align-items: center; gap: 8px;
+      background: #fff; border: 1.5px solid var(--bord);
+      border-radius: 9px; padding: 8px 13px;
+      flex: 1; min-width: 220px; max-width: 340px;
       transition: border-color .15s;
     }
-    .search-box:focus-within { border-color: var(--gold); background: #fff; }
+    .search-box:focus-within { border-color: var(--gold); }
     .search-ico { width: 15px; height: 15px; color: var(--t3); flex-shrink: 0; }
     .search-box input { flex: 1; border: none; outline: none; font-size: 13px; background: transparent; font-family: inherit; color: var(--t1); }
     .search-box input::placeholder { color: var(--t3); }
     .search-clear { background: none; border: none; color: var(--t3); cursor: pointer; font-size: 11px; padding: 0; }
-
+    .filter-chips { display: flex; gap: 6px; }
+    .fchip {
+      padding: 7px 14px; border-radius: 20px;
+      border: 1.5px solid var(--bord); background: #fff;
+      font-size: 12.5px; font-weight: 600; color: var(--t2);
+      cursor: pointer; transition: all .14s; font-family: inherit;
+    }
+    .fchip:hover  { border-color: var(--navy); color: var(--navy); }
+    .fchip.active { background: var(--navy); color: var(--gold-l); border-color: var(--navy); }
     .view-btns {
-      display: flex;
-      border: 1.5px solid var(--bord);
-      border-radius: 8px;
-      overflow: hidden;
+      display: flex; border: 1.5px solid var(--bord);
+      border-radius: 8px; overflow: hidden; margin-left: auto;
     }
     .view-btns button {
-      width: 34px; height: 34px;
-      border: none; background: #fff;
+      width: 34px; height: 34px; border: none; background: #fff;
       color: var(--t3); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       transition: all .14s;
@@ -576,149 +459,69 @@ import { LocataireListItemDto, PagedList }    from '../../../core/models/models'
     .view-btns button.va { background: var(--navy); color: var(--gold-l); }
 
     /* Loading bar */
-    .loading-bar {
-      height: 3px;
-      background: var(--bord);
-      flex-shrink: 0;
-      overflow: hidden;
-    }
-    .lb-fill {
-      height: 100%;
-      width: 40%;
-      background: var(--gold);
-      animation: slide 1.2s ease-in-out infinite;
-    }
-    @keyframes slide {
-      0%   { transform: translateX(-100%); }
-      100% { transform: translateX(350%); }
-    }
+    .loading-bar { height: 3px; background: var(--bord); border-radius: 3px; overflow: hidden; margin-bottom: 16px; }
+    .lb-fill { height: 100%; width: 40%; background: var(--gold); animation: slide 1.2s ease-in-out infinite; }
+    @keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
 
-    /* ── Tableau ── */
-    .table-wrap {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px 28px;
-    }
-    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: var(--r2); overflow: hidden; box-shadow: var(--shadow); }
+    /* ══ TABLEAU ══ */
+    .table-wrap { background: #fff; border-radius: var(--r2); box-shadow: var(--shadow); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
     thead th {
       padding: 11px 14px;
-      background: var(--navy);
-      color: rgba(255,255,255,.5);
-      font-size: 10.5px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .7px;
-      text-align: left;
-      white-space: nowrap;
+      background: var(--navy); color: rgba(255,255,255,.5);
+      font-size: 10.5px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .7px;
+      text-align: left; white-space: nowrap;
     }
     th.c { text-align: center; }
-    tbody tr {
-      border-bottom: 1px solid var(--surf2);
-      animation: fadeUp .3s ease both;
-      transition: background .12s;
-    }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(6px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
+    tbody tr { border-bottom: 1px solid var(--surf2); animation: fadeUp .3s ease both; transition: background .12s; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     tbody tr:last-child { border-bottom: none; }
     tbody tr:hover { background: var(--surf); }
     tbody td { padding: 12px 14px; vertical-align: middle; }
     td.c { text-align: center; }
-
     .rank { font-size: 11px; color: var(--t3); font-weight: 600; width: 36px; text-align: center; }
-
     .id-cell { display: flex; align-items: center; gap: 11px; }
     .av {
-      width: 38px; height: 38px;
-      border-radius: 10px;
+      width: 38px; height: 38px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
       font-size: 13px; font-weight: 800; color: #fff; flex-shrink: 0;
-      font-family: 'DM Serif Display', Georgia, serif;
     }
     .av.lg { width: 48px; height: 48px; font-size: 16px; border-radius: 12px; }
     .id-nom { font-size: 13.5px; font-weight: 700; color: var(--t1); }
     .id-sub { font-size: 11.5px; color: var(--t3); margin-top: 1px; }
-
     .contact-cell { display: flex; flex-direction: column; gap: 2px; }
-    .phone { font-size: 12.5px; font-family: 'DM Mono', monospace; color: var(--t2); }
+    .phone { font-size: 12.5px; font-family: monospace; color: var(--t2); }
     .email { font-size: 11.5px; color: var(--t3); }
-
-    .badge-n {
-      display: inline-flex; width: 26px; height: 26px;
-      align-items: center; justify-content: center;
-      border-radius: 7px; font-size: 12px; font-weight: 700;
-      background: var(--surf2); color: var(--t3);
-    }
+    .badge-n { display: inline-flex; width: 26px; height: 26px; align-items: center; justify-content: center; border-radius: 7px; font-size: 12px; font-weight: 700; background: var(--surf2); color: var(--t3); }
     .badge-n.active { background: var(--blue-bg); color: var(--blue); }
     .badge-n.sm { width: 22px; height: 22px; font-size: 11px; border-radius: 5px; }
-
-    .pay-chip {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 4px 10px; border-radius: 20px;
-      font-size: 11.5px; font-weight: 700;
-    }
+    .pay-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 700; }
     .pay-chip.ok   { background: var(--ok-bg);   color: var(--ok); }
     .pay-chip.late { background: var(--late-bg);  color: var(--late); }
     .pay-chip.sm   { padding: 3px 8px; font-size: 10.5px; }
     .pay-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
     .muted-dash { color: var(--t3); }
-
-    .status-pill {
-      display: inline-flex; padding: 4px 11px;
-      border-radius: 20px; font-size: 11.5px; font-weight: 700;
-    }
-    .status-pill.on  { background: var(--ok-bg);   color: var(--ok); }
-    .status-pill.off { background: var(--surf2);    color: var(--t3); }
+    .status-pill { display: inline-flex; padding: 4px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; }
+    .status-pill.on  { background: var(--ok-bg);  color: var(--ok); }
+    .status-pill.off { background: var(--surf2);   color: var(--t3); }
     .status-pill.sm  { padding: 3px 8px; font-size: 10.5px; }
-
     .date-cell { font-size: 12px; color: var(--t2); white-space: nowrap; }
-
     .acts { display: flex; align-items: center; gap: 5px; justify-content: flex-end; }
-    .act-btn {
-      display: inline-flex; align-items: center; gap: 5px;
-      height: 30px; padding: 0 10px;
-      border-radius: 7px; border: 1.5px solid var(--bord);
-      background: #fff; color: var(--t2);
-      font-size: 11.5px; font-weight: 600;
-      text-decoration: none; cursor: pointer;
-      transition: all .14s; white-space: nowrap;
-    }
+    .act-btn { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 10px; border-radius: 7px; border: 1.5px solid var(--bord); background: #fff; color: var(--t2); font-size: 11.5px; font-weight: 600; text-decoration: none; cursor: pointer; transition: all .14s; white-space: nowrap; }
     .act-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
     .act-btn:hover { background: var(--navy); color: var(--gold-l); border-color: var(--navy); }
     .act-btn.blue { background: var(--blue-bg); color: var(--blue); border-color: transparent; }
     .act-btn.blue:hover { background: var(--blue); color: #fff; }
     .act-btn.sm { height: 26px; padding: 0 9px; font-size: 11px; }
-    .act-del {
-      width: 30px; height: 30px;
-      border-radius: 7px; border: 1.5px solid var(--bord);
-      background: #fff; color: var(--t3);
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; transition: all .14s; flex-shrink: 0;
-    }
+    .act-del { width: 30px; height: 30px; border-radius: 7px; border: 1.5px solid var(--bord); background: #fff; color: var(--t3); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .14s; flex-shrink: 0; }
     .act-del svg { width: 13px; height: 13px; }
     .act-del:hover:not(:disabled) { background: var(--late-bg); color: var(--late); border-color: transparent; }
     .act-del:disabled { opacity: .3; cursor: not-allowed; }
 
-    /* ── Vue cartes ── */
-    .cards-grid {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px 28px;
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 14px;
-      align-content: start;
-    }
-    .loc-card {
-      background: #fff;
-      border-radius: var(--r2);
-      padding: 18px;
-      box-shadow: var(--shadow);
-      border: 1.5px solid transparent;
-      transition: all .18s;
-      animation: fadeUp .35s ease both;
-    }
+    /* ══ VUE CARTES ══ */
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+    .loc-card { background: #fff; border-radius: var(--r2); padding: 18px; box-shadow: var(--shadow); border: 1.5px solid transparent; transition: all .18s; animation: fadeUp .35s ease both; }
     .loc-card:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,.1); }
     .lc-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
     .lc-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
@@ -728,41 +531,24 @@ import { LocataireListItemDto, PagedList }    from '../../../core/models/models'
     .lc-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--surf2); }
     .lc-actions { display: flex; gap: 5px; }
 
-    /* ── États vides ── */
+    /* États vides */
     .empty { text-align: center; padding: 60px 20px; }
     .empty-illu { font-size: 52px; margin-bottom: 14px; }
     .empty-h { font-size: 17px; font-weight: 700; color: var(--t1); margin-bottom: 7px; }
     .empty-p { font-size: 13px; color: var(--t3); margin: 0; }
 
-    /* ── Pagination ── */
-    .pager {
-      display: flex; align-items: center; justify-content: center; gap: 10px;
-      padding: 16px; flex-shrink: 0;
-      border-top: 1px solid var(--bord); background: #fff;
-    }
-    .pager button {
-      width: 32px; height: 32px;
-      border-radius: 8px; border: 1.5px solid var(--bord);
-      background: #fff; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: all .14s;
-    }
+    /* Pagination */
+    .pager { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px 0 4px; }
+    .pager button { width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid var(--bord); background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .14s; }
     .pager button svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .pager button:hover:not(:disabled) { background: var(--navy); color: var(--gold-l); border-color: var(--navy); }
     .pager button:disabled { opacity: .35; cursor: not-allowed; }
     .pager-pages { display: flex; gap: 5px; }
-    .pager-dot {
-      width: 32px; height: 32px;
-      display: flex; align-items: center; justify-content: center;
-      border-radius: 8px; font-size: 13px; font-weight: 600;
-      color: var(--t2); cursor: pointer; transition: all .12s;
-    }
+    .pager-dot { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--t2); cursor: pointer; transition: all .12s; }
     .pager-dot:hover { background: var(--surf2); }
     .pager-dot.cur { background: var(--navy); color: var(--gold-l); }
 
-    /* ══════════════════════════════════════
-       MODAL
-    ══════════════════════════════════════ */
+    /* ══ MODAL ══ */
     .modal-bg {
       position: fixed; inset: 0;
       background: rgba(13,27,42,.6);
@@ -810,124 +596,60 @@ import { LocataireListItemDto, PagedList }    from '../../../core/models/models'
     .mh-close svg { width: 13px; height: 13px; }
     .mh-close:hover { background: rgba(192,57,43,.4); color: #fff; }
 
-    /* Progress */
     .modal-progress { padding: 14px 22px 10px; background: var(--surf); border-bottom: 1px solid var(--bord); flex-shrink: 0; }
     .mp-track { height: 4px; background: var(--bord); border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
     .mp-fill  { height: 100%; background: var(--gold); border-radius: 4px; transition: width .3s ease; }
     .mp-steps { display: flex; justify-content: space-between; }
-    .mp-steps span {
-      font-size: 10.5px; font-weight: 600; color: var(--t3);
-      transition: color .2s;
-    }
+    .mp-steps span { font-size: 10.5px; font-weight: 600; color: var(--t3); transition: color .2s; }
     .mp-steps span.cur  { color: var(--gold-d); }
     .mp-steps span.done { color: var(--ok); }
 
-    /* Corps */
     .modal-body { flex: 1; overflow-y: auto; padding: 20px 22px; }
     .modal-body::-webkit-scrollbar { width: 4px; }
     .modal-body::-webkit-scrollbar-thumb { background: var(--bord); border-radius: 4px; }
-    .step-head {
-      font-size: 12.5px; font-weight: 700; color: var(--navy);
-      padding-bottom: 12px; margin-bottom: 16px;
-      border-bottom: 1px solid var(--surf2);
-    }
+    .step-head { font-size: 12.5px; font-weight: 700; color: var(--navy); padding-bottom: 12px; margin-bottom: 16px; border-bottom: 1px solid var(--surf2); }
     .fg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
     .fg { display: flex; flex-direction: column; gap: 5px; }
     .fg.span2 { grid-column: 1 / -1; }
     label { font-size: 11.5px; font-weight: 700; color: var(--t2); }
     label em { color: var(--late); font-style: normal; margin-left: 2px; }
-    .fc {
-      padding: 9px 11px; border: 1.5px solid var(--bord);
-      border-radius: 8px; font-size: 13px; color: var(--t1);
-      font-family: inherit; outline: none;
-      transition: border-color .15s, box-shadow .15s;
-      background: #fff;
-    }
+    .fc { padding: 9px 11px; border: 1.5px solid var(--bord); border-radius: 8px; font-size: 13px; color: var(--t1); font-family: inherit; outline: none; transition: border-color .15s, box-shadow .15s; background: #fff; }
     .fc:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,.1); }
     .fc::placeholder { color: var(--t3); }
     .ta { resize: none; }
     .fe { font-size: 11px; color: var(--late); }
-
-    .drop-zone {
-      border: 2px dashed var(--bord); border-radius: 10px;
-      padding: 22px; text-align: center; cursor: pointer;
-      transition: all .18s; margin-top: 2px;
-    }
+    .drop-zone { border: 2px dashed var(--bord); border-radius: 10px; padding: 22px; text-align: center; cursor: pointer; transition: all .18s; margin-top: 2px; }
     .drop-zone:hover, .drop-zone.has { border-color: var(--gold); background: rgba(201,168,76,.03); }
     .dz-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--t3); font-size: 13px; }
     .dz-empty span { font-size: 26px; }
     .dz-empty p { margin: 0; }
     .dz-img { max-height: 110px; border-radius: 8px; }
-    .drop-sm {
-      border: 1.5px dashed var(--bord); border-radius: 8px;
-      padding: 10px 13px; cursor: pointer; font-size: 13px; color: var(--t3);
-      transition: all .16s;
-    }
+    .drop-sm { border: 1.5px dashed var(--bord); border-radius: 8px; padding: 10px 13px; cursor: pointer; font-size: 13px; color: var(--t3); transition: all .16s; }
     .drop-sm:hover { border-color: var(--gold); }
     .doc-ok { color: var(--ok); font-weight: 600; }
-
     .recap { background: var(--surf); border-radius: 10px; padding: 14px 16px; border: 1px solid var(--bord); }
     .recap-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--bord); font-size: 13px; }
     .recap-row:last-child { border: none; }
     .recap-row span { color: var(--t3); font-size: 12px; }
     .recap-row strong { color: var(--t1); font-weight: 600; }
-
     .banner { display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-radius: 9px; font-size: 13px; font-weight: 600; margin-top: 12px; }
-    .banner.ok  { background: var(--ok-bg);   border: 1px solid var(--ok);   color: var(--ok); }
-    .banner.err { background: var(--late-bg);  border: 1px solid var(--late); color: var(--late); }
+    .banner.ok  { background: var(--ok-bg);  border: 1px solid var(--ok);   color: var(--ok); }
+    .banner.err { background: var(--late-bg); border: 1px solid var(--late); color: var(--late); }
 
-    /* Pied modal */
-    .modal-foot {
-      padding: 13px 22px;
-      border-top: 1px solid var(--bord);
-      background: var(--surf);
-      display: flex; align-items: center; justify-content: space-between;
-      flex-shrink: 0;
-    }
+    .modal-foot { padding: 13px 22px; border-top: 1px solid var(--bord); background: var(--surf); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
     .mf-right { display: flex; gap: 8px; }
     .mf-cancel { background: none; border: none; cursor: pointer; font-size: 13px; color: var(--t3); padding: 8px; font-family: inherit; }
     .mf-cancel:hover { color: var(--late); }
-    .mf-prev {
-      padding: 9px 16px; border-radius: 8px;
-      background: #fff; color: var(--t2); border: 1.5px solid var(--bord);
-      font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
-      transition: all .14s;
-    }
+    .mf-prev { padding: 9px 16px; border-radius: 8px; background: #fff; color: var(--t2); border: 1.5px solid var(--bord); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .14s; }
     .mf-prev:hover { border-color: var(--navy); color: var(--navy); }
-    .mf-next {
-      padding: 9px 20px; border-radius: 8px;
-      background: var(--navy); color: var(--gold-l); border: none;
-      font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
-      transition: all .15s;
-    }
+    .mf-next { padding: 9px 20px; border-radius: 8px; background: var(--navy); color: var(--gold-l); border: none; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .15s; }
     .mf-next:disabled { opacity: .4; cursor: not-allowed; }
     .mf-next:not(:disabled):hover { background: var(--navy2); }
-    .mf-submit {
-      padding: 9px 22px; border-radius: 8px; min-width: 155px;
-      background: linear-gradient(135deg, var(--gold-d), var(--gold));
-      color: #fff; border: none;
-      font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
-      display: flex; align-items: center; justify-content: center;
-      transition: all .18s;
-    }
+    .mf-submit { padding: 9px 22px; border-radius: 8px; min-width: 155px; background: linear-gradient(135deg, var(--gold-d), var(--gold)); color: #fff; border: none; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; display: flex; align-items: center; justify-content: center; transition: all .18s; }
     .mf-submit:disabled { opacity: .4; cursor: not-allowed; }
     .mf-submit:not(:disabled):hover { box-shadow: 0 4px 14px rgba(201,168,76,.45); transform: translateY(-1px); }
-
-    .spin {
-      width: 16px; height: 16px;
-      border: 2.5px solid rgba(255,255,255,.3);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: rot .7s linear infinite;
-      display: inline-block;
-    }
+    .spin { width: 16px; height: 16px; border: 2.5px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: rot .7s linear infinite; display: inline-block; }
     @keyframes rot { to { transform: rotate(360deg); } }
-
-    @media (max-width: 768px) {
-      .shell { grid-template-columns: 1fr; }
-      .stats-rail { display: none; }
-      .fg-grid { grid-template-columns: 1fr; }
-    }
   `]
 })
 export class LocatairesListComponent implements OnInit {

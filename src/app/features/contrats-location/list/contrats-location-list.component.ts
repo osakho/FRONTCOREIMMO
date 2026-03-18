@@ -52,106 +52,149 @@ export class RecapContratService extends ApiService {
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, DecimalPipe, DatePipe],
   template: `
-<div class="layout" [class.panel-open]="recap !== null || recapLoading">
+<div class="cl-layout" [class.panel-open]="recap !== null || recapLoading">
 
   <!-- ══ LISTE ══ -->
-  <div class="list-pane page-enter">
-    <div class="page-header">
-      <div>
-        <div class="page-title"><span class="mi">key</span> Contrats de location</div>
-        <div class="page-subtitle">Baux locatifs — gestion des locations en cours</div>
+  <div class="cl-list page-enter">
+
+    <!-- Header -->
+    <div class="cl-header">
+      <div class="cl-header-left">
+        <h1 class="cl-title">
+          <svg class="cl-title-ico" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a1 1 0 00-.894.553L7.382 6H4a1 1 0 000 2v10a1 1 0 001 1h10a1 1 0 001-1V8a1 1 0 000-2h-3.382l-1.724-3.447A1 1 0 0010 2zm0 2.236L11.382 7H8.618L10 4.236zM6 9h8v8H6V9z"/></svg>
+          Contrats de location
+        </h1>
+        <p class="cl-sub">Baux locatifs — gestion des locations en cours</p>
       </div>
-      <div class="header-actions">
-        <button class="btn btn-gold" (click)="ouvrirModal()">
-          <span class="mi">add</span> Nouveau bail
-        </button>
-      </div>
+      <button class="cl-btn-new" (click)="ouvrirModal()">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 010 2H9v4a1 1 0 01-2 0V9H3a1 1 0 010-2h4V3a1 1 0 011-1z"/></svg>
+        Nouveau bail
+      </button>
     </div>
 
-    <div class="filter-bar" style="margin-bottom:16px">
-      <button class="filter-chip" [class.active]="filtreStatut===''"          (click)="setFiltre('')">Tous</button>
-      <button class="filter-chip" [class.active]="filtreStatut==='Brouillon'" (click)="setFiltre('Brouillon')">Brouillon</button>
-      <button class="filter-chip" [class.active]="filtreStatut==='Actif'"     (click)="setFiltre('Actif')">Actif</button>
-      <button class="filter-chip" [class.active]="filtreStatut==='Suspendu'"  (click)="setFiltre('Suspendu')">Suspendu</button>
-      <button class="filter-chip" [class.active]="filtreStatut==='Termine'"   (click)="setFiltre('Termine')">Terminé</button>
+    <!-- Filtres -->
+    <div class="cl-filters">
+      <button class="cl-chip" [class.active]="filtreStatut===''"          (click)="setFiltre('')">Tous</button>
+      <button class="cl-chip draft"    [class.active]="filtreStatut==='Brouillon'" (click)="setFiltre('Brouillon')">
+        <span class="cl-chip-dot"></span>Brouillon
+      </button>
+      <button class="cl-chip active-c" [class.active]="filtreStatut==='Actif'"     (click)="setFiltre('Actif')">
+        <span class="cl-chip-dot"></span>Actif
+      </button>
+      <button class="cl-chip suspend"  [class.active]="filtreStatut==='Suspendu'"  (click)="setFiltre('Suspendu')">
+        <span class="cl-chip-dot"></span>Suspendu
+      </button>
+      <button class="cl-chip ended"    [class.active]="filtreStatut==='Termine'"   (click)="setFiltre('Termine')">
+        <span class="cl-chip-dot"></span>Terminé
+      </button>
     </div>
 
-    <div class="table-card">
-      <table class="data-table" *ngIf="liste().items.length; else empty">
-        <thead><tr>
-          <th>N° Bail</th>
-          <th>Bien locatif</th>
-          <th>Locataire</th>
-          <th class="text-right">Loyer</th>
-          <th>Entrée</th>
-          <th class="text-center">Retard</th>
-          <th class="text-center">Statut</th>
-          <th>Actions</th>
-        </tr></thead>
+    <!-- Tableau -->
+    <div class="cl-table-wrap">
+      <table *ngIf="liste().items.length; else empty">
+        <thead>
+          <tr>
+            <th>N° Bail</th>
+            <th>Bien</th>
+            <th>Locataire</th>
+            <th class="r">Loyer</th>
+            <th>Entrée</th>
+            <th class="c">Statut</th>
+            <th class="r">Actions</th>
+          </tr>
+        </thead>
         <tbody>
-          <tr *ngFor="let c of liste().items"
-              [class.row-selected]="recap?.contratId === c.id || (recapLoading && selectedId === c.id)"
+          <tr *ngFor="let c of liste().items; let i=index"
+              [class.selected]="recap?.contratId === c.id || (recapLoading && selectedId === c.id)"
+              [style.animation-delay]="(i*25)+'ms'"
               (click)="toggleRecap(c)">
-            <td><span class="num-badge">{{ c.numero }}</span></td>
-            <td><div class="cell-main">{{ c.produitCode }}</div></td>
-            <td><div class="cell-main">{{ c.locataireNom }}</div></td>
-            <td class="text-right" style="font-weight:600">
-              {{ c.loyer | number:'1.0-0' }} <span style="font-size:.72rem;color:#8a97b0">MRU</span>
+
+            <!-- N° Bail -->
+            <td>
+              <span class="bail-num">{{ c.numero }}</span>
             </td>
-            <td class="text-muted">{{ c.dateEntree | date:'dd/MM/yyyy' }}</td>
-            <td class="text-center">
-              <span *ngIf="c.estEnRetard" class="badge badge-red">Retard</span>
-              <span *ngIf="!c.estEnRetard" style="color:#8a97b0;font-size:.75rem">—</span>
+
+            <!-- Bien -->
+            <td>
+              <div class="bien-cell">
+                <div class="bien-code">{{ c.produitCode }}</div>
+              </div>
             </td>
-            <td class="text-center">
-              <span class="badge"
-                [class.badge-green]="c.statutLabel==='Actif'"
-                [class.badge-amber]="c.statutLabel==='Suspendu'"
-                [class.badge-gray]="c.statutLabel==='Brouillon'"
-                [class.badge-red]="c.statutLabel==='Termine' || c.statutLabel==='Resilie'">
+
+            <!-- Locataire -->
+            <td>
+              <div class="loc-cell">
+                <div class="loc-av" [style.background]="avatarColor(c.locataireNom)">
+                  {{ initiales(c.locataireNom) }}
+                </div>
+                <div class="loc-nom">{{ c.locataireNom }}</div>
+              </div>
+            </td>
+
+            <!-- Loyer -->
+            <td class="r">
+              <div class="loyer-val">{{ c.loyer | number:'1.0-0' }} <span class="mru">MRU</span></div>
+              <div class="retard-tag" *ngIf="c.estEnRetard">⚠ Retard</div>
+            </td>
+
+            <!-- Date entrée -->
+            <td>
+              <span class="date-val">{{ c.dateEntree | date:'dd MMM yyyy' }}</span>
+            </td>
+
+            <!-- Statut -->
+            <td class="c">
+              <span class="statut-pill"
+                [class.s-actif]="c.statutLabel==='Actif'"
+                [class.s-brouillon]="c.statutLabel==='Brouillon'"
+                [class.s-suspendu]="c.statutLabel==='Suspendu'"
+                [class.s-termine]="c.statutLabel==='Termine' || c.statutLabel==='Resilie'">
                 {{ c.statutLabel }}
               </span>
             </td>
+
+            <!-- Actions -->
             <td (click)="$event.stopPropagation()">
-              <div class="row-actions">
-                <button class="btn btn-secondary btn-sm" (click)="toggleRecap(c)" title="Récap financier">
-                  <span class="mi">analytics</span>
+              <div class="cl-acts">
+                <button class="cl-act" title="Récap financier" (click)="toggleRecap(c)">
+                  <svg viewBox="0 0 16 16" fill="none"><path d="M2 12h2v2H2zm3-4h2v6H5zm3-3h2v9H8zm3-3h2v12h-2z" fill="currentColor"/></svg>
                 </button>
-                <button *ngIf="c.statutLabel==='Brouillon'"
-                        class="btn btn-secondary btn-sm" (click)="activer(c)">
-                  <span class="mi">check_circle</span> Activer
+                <button *ngIf="c.statutLabel==='Brouillon'" class="cl-act-label green" (click)="activer(c)">
+                  <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 8l2 2 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  Activer
                 </button>
                 <ng-container *ngIf="c.statutLabel==='Actif'">
-                  <button class="btn btn-secondary btn-sm" (click)="ouvrirAvenant(c)">
-                    <span class="mi">edit_document</span> Avenant
+                  <button class="cl-act-label blue" (click)="ouvrirAvenant(c)">
+                    <svg viewBox="0 0 16 16" fill="none"><path d="M11 2l3 3-8 8H3v-3l8-8z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Avenant
                   </button>
-                  <button *ngIf="peutResilier()" class="btn btn-danger btn-sm" (click)="ouvrirResiliation(c)">
-                    <span class="mi">cancel</span> Résilier
+                  <button *ngIf="peutResilier()" class="cl-act-label red" (click)="ouvrirResiliation(c)">
+                    <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    Résilier
                   </button>
                 </ng-container>
-                <span *ngIf="c.statutLabel==='Resilie' || c.statutLabel==='Termine'"
-                      style="font-size:.75rem;color:#94a3b8;padding:4px 8px">
-                  <span class="mi" style="font-size:14px">lock</span> Clôturé
+                <span *ngIf="c.statutLabel==='Resilie' || c.statutLabel==='Termine'" class="cl-closed">
+                  <svg viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 7V5a3 3 0 016 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                  Clôturé
                 </span>
               </div>
             </td>
           </tr>
         </tbody>
       </table>
+
       <ng-template #empty>
-        <div class="empty-state">
-          <span class="mi">key</span>
-          <div class="empty-title">Aucun contrat de location</div>
-          <div class="empty-sub">Créez le premier bail locatif</div>
-          <button class="btn btn-gold" style="margin-top:8px" (click)="ouvrirModal()">
-            <span class="mi">add</span> Nouveau bail
-          </button>
+        <div class="cl-empty">
+          <div class="cl-empty-ico">🔑</div>
+          <div class="cl-empty-h">Aucun contrat de location</div>
+          <p class="cl-empty-p">Créez le premier bail locatif</p>
+          <button class="cl-btn-new" (click)="ouvrirModal()">+ Nouveau bail</button>
         </div>
       </ng-template>
     </div>
   </div>
 
-  <!-- ══ PANNEAU RÉCAP FINANCIER ══ -->
+  <!-- ══ PANNEAU RÉCAP ══ -->
   <div class="recap-pane" *ngIf="recap !== null || recapLoading">
     <div class="rp-header">
       <div class="rp-title-block">
@@ -215,9 +258,7 @@ export class RecapContratService extends ApiService {
           <span class="si-label">Total payé</span>
           <span class="si-val si-ok">{{ recap.montantPaye | number:'1.0-0' }} MRU</span>
         </div>
-        <div class="solde-item"
-             [class.solde-positif]="recap.solde >= 0"
-             [class.solde-negatif]="recap.solde < 0">
+        <div class="solde-item" [class.solde-positif]="recap.solde >= 0" [class.solde-negatif]="recap.solde < 0">
           <span class="si-label">Solde</span>
           <span class="si-val">{{ recap.solde >= 0 ? '+' : '' }}{{ recap.solde | number:'1.0-0' }} MRU</span>
         </div>
@@ -235,9 +276,7 @@ export class RecapContratService extends ApiService {
                  m.statut === 'Impaye'  ? '✗' :
                  m.statut === 'Avance'  ? '★' : '·' }}
             </div>
-            <div class="mc-montant" *ngIf="m.statut !== 'Futur'">
-              {{ m.montantPaye | number:'1.0-0' }}
-            </div>
+            <div class="mc-montant" *ngIf="m.statut !== 'Futur'">{{ m.montantPaye | number:'1.0-0' }}</div>
           </div>
         </div>
         <div class="mois-legend">
@@ -249,13 +288,10 @@ export class RecapContratService extends ApiService {
         </div>
       </div>
       <div class="last-payment" *ngIf="recap.dernierPaiement">
-        <span>🕐</span>
-        Dernier paiement : <strong>{{ recap.dernierPaiement | date:'dd/MM/yyyy' }}</strong>
+        <span>🕐</span> Dernier paiement : <strong>{{ recap.dernierPaiement | date:'dd/MM/yyyy' }}</strong>
       </div>
       <div class="rp-actions">
-        <button class="btn btn-gold btn-full" (click)="ouvrirSaisieLoyer()">
-          💰 Saisir un loyer
-        </button>
+        <button class="cl-btn-new full" (click)="ouvrirSaisieLoyer()">💰 Saisir un loyer</button>
       </div>
     </ng-container>
   </div>
@@ -263,77 +299,196 @@ export class RecapContratService extends ApiService {
 </div>
   `,
   styles: [`
-    .layout { display: grid; grid-template-columns: 1fr; gap: 20px; }
-    .layout.panel-open { grid-template-columns: 1fr 360px; align-items: start; }
+
+    /* ══ TOKENS ══ */
+    :host {
+      --navy:   #0D1B2A;
+      --navy2:  #1B2B3A;
+      --gold:   #C9A84C;
+      --gold-l: #E8C96A;
+      --ok:     #16a34a; --ok-bg: #dcfce7;
+      --late:   #dc2626; --late-bg: #fee2e2;
+      --blue:   #1d4ed8; --blue-bg: #dbeafe;
+      --amber:  #d97706; --amber-bg: #fef3c7;
+      --surf:   #F5F7FA; --surf2: #EEF1F6; --bord: #E2E8F0;
+      --t1: #0F172A; --t2: #475569; --t3: #94a3b8;
+      --r: 10px; --r2: 14px;
+      --shadow: 0 1px 3px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.05);
+      font-family: 'DM Sans','Segoe UI',sans-serif;
+      display: block;
+    }
+
+    /* ══ LAYOUT ══ */
+    .cl-layout { display: grid; grid-template-columns: 1fr; gap: 20px; }
+    .cl-layout.panel-open { grid-template-columns: 1fr 360px; align-items: start; }
+
+    /* ══ HEADER ══ */
+    .cl-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 18px; gap: 16px; flex-wrap: wrap;
+    }
+    .cl-title {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 21px; font-weight: 800; color: var(--t1); margin: 0 0 4px;
+    }
+    .cl-title-ico { width: 22px; height: 22px; color: var(--gold); flex-shrink: 0; }
+    .cl-sub { font-size: 12.5px; color: var(--t3); margin: 0; }
+
+    .cl-btn-new {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 10px 18px; background: var(--gold); color: var(--navy);
+      border: none; border-radius: var(--r); font-size: 13px; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: all .18s; white-space: nowrap; flex-shrink: 0;
+    }
+    .cl-btn-new svg { width: 14px; height: 14px; }
+    .cl-btn-new:hover { background: var(--gold-l); box-shadow: 0 4px 14px rgba(201,168,76,.4); transform: translateY(-1px); }
+    .cl-btn-new.full { width: 100%; justify-content: center; }
+
+    /* ══ FILTRES ══ */
+    .cl-filters { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+    .cl-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 20px;
+      border: 1.5px solid var(--bord); background: #fff;
+      font-size: 12.5px; font-weight: 600; color: var(--t2);
+      cursor: pointer; transition: all .14s; font-family: inherit;
+    }
+    .cl-chip:hover { border-color: var(--navy); color: var(--navy); }
+    .cl-chip.active { background: var(--navy); color: var(--gold-l); border-color: var(--navy); }
+    .cl-chip-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .6; flex-shrink: 0; }
+    .cl-chip.draft.active    { background: #64748b; border-color: #64748b; color: #fff; }
+    .cl-chip.active-c.active { background: var(--ok); border-color: var(--ok); color: #fff; }
+    .cl-chip.suspend.active  { background: var(--amber); border-color: var(--amber); color: #fff; }
+    .cl-chip.ended.active    { background: var(--late); border-color: var(--late); color: #fff; }
+
+    /* ══ TABLEAU ══ */
+    .cl-table-wrap { background: #fff; border-radius: var(--r2); box-shadow: var(--shadow); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      padding: 11px 14px; background: var(--navy);
+      color: rgba(255,255,255,.45); font-size: 10.5px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .7px; text-align: left; white-space: nowrap;
+    }
+    th.r { text-align: right; } th.c { text-align: center; }
+    tbody tr {
+      border-bottom: 1px solid var(--surf2);
+      cursor: pointer; transition: background .1s;
+      animation: fadeUp .28s ease both;
+    }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surf); }
+    tbody tr.selected td { background: #eff6ff !important; }
+    tbody tr.selected td:first-child { border-left: 3px solid var(--blue); }
+    tbody td { padding: 12px 14px; vertical-align: middle; }
+    td.r { text-align: right; } td.c { text-align: center; }
+
+    .bail-num {
+      font-family: monospace; font-size: 12px; font-weight: 700;
+      background: var(--surf2); color: var(--navy);
+      padding: 3px 9px; border-radius: 6px; white-space: nowrap;
+    }
+    .bien-code { font-size: 13px; font-weight: 700; color: var(--t1); font-family: monospace; }
+    .loc-cell { display: flex; align-items: center; gap: 9px; }
+    .loc-av {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: #fff; flex-shrink: 0;
+    }
+    .loc-nom { font-size: 13px; font-weight: 600; color: var(--t1); }
+    .loyer-val { font-size: 13.5px; font-weight: 700; color: var(--t1); }
+    .mru { font-size: 10px; font-weight: 500; color: var(--t3); }
+    .retard-tag { font-size: 10.5px; font-weight: 700; color: var(--late); margin-top: 2px; }
+    .date-val { font-size: 12.5px; color: var(--t2); }
+
+    .statut-pill {
+      display: inline-flex; padding: 4px 11px; border-radius: 20px;
+      font-size: 11.5px; font-weight: 700; white-space: nowrap;
+    }
+    .s-actif     { background: var(--ok-bg);   color: var(--ok); }
+    .s-brouillon { background: var(--surf2);    color: var(--t2); }
+    .s-suspendu  { background: var(--amber-bg); color: var(--amber); }
+    .s-termine   { background: var(--late-bg);  color: var(--late); }
+
+    /* Actions tableau */
+    .cl-acts { display: flex; align-items: center; gap: 5px; justify-content: flex-end; flex-wrap: wrap; }
+    .cl-act {
+      width: 30px; height: 30px; border-radius: 7px;
+      border: 1.5px solid var(--bord); background: #fff; color: var(--t3);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all .13s; flex-shrink: 0;
+    }
+    .cl-act svg { width: 14px; height: 14px; }
+    .cl-act:hover { background: var(--navy); color: var(--gold-l); border-color: var(--navy); }
+    .cl-act-label {
+      display: inline-flex; align-items: center; gap: 5px;
+      height: 30px; padding: 0 10px; border-radius: 7px;
+      border: 1.5px solid transparent; font-size: 11.5px; font-weight: 600;
+      cursor: pointer; transition: all .13s; font-family: inherit; white-space: nowrap;
+    }
+    .cl-act-label svg { width: 12px; height: 12px; }
+    .cl-act-label.green { background: var(--ok-bg);   color: var(--ok);   border-color: #86efac; }
+    .cl-act-label.green:hover { background: var(--ok); color: #fff; }
+    .cl-act-label.blue  { background: var(--blue-bg); color: var(--blue); border-color: #93c5fd; }
+    .cl-act-label.blue:hover  { background: var(--blue); color: #fff; }
+    .cl-act-label.red   { background: var(--late-bg); color: var(--late); border-color: #fca5a5; }
+    .cl-act-label.red:hover   { background: var(--late); color: #fff; }
+    .cl-closed { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--t3); padding: 0 6px; }
+    .cl-closed svg { width: 12px; height: 12px; }
+
+    /* Empty */
+    .cl-empty { text-align: center; padding: 60px 20px; }
+    .cl-empty-ico { font-size: 48px; margin-bottom: 12px; }
+    .cl-empty-h { font-size: 16px; font-weight: 700; color: var(--t1); margin-bottom: 6px; }
+    .cl-empty-p { font-size: 13px; color: var(--t3); margin: 0 0 16px; }
+
+    /* ══ PANNEAU RÉCAP ══ */
     .recap-pane {
-      background: #fff; border-radius: 14px; overflow: hidden;
+      background: #fff; border-radius: var(--r2); overflow: hidden;
       box-shadow: 0 4px 24px rgba(14,28,56,.12);
       position: sticky; top: 20px;
       max-height: calc(100vh - 60px); overflow-y: auto;
     }
     .recap-pane::-webkit-scrollbar { width: 3px; }
-    .recap-pane::-webkit-scrollbar-thumb { background: #e2e8f0; }
-    .rp-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: #0e1c38; }
-    .rp-title-block { display: flex; align-items: center; gap: 10px; }
-    .rp-avatar { width: 36px; height: 36px; background: #c9a96e; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: #0e1c38; flex-shrink: 0; }
-    .rp-nom { font-size: 13px; font-weight: 700; color: #fff; }
-    .rp-code { font-size: 11px; color: rgba(255,255,255,.5); font-family: monospace; margin-top: 2px; }
-    .rp-close { background: rgba(255,255,255,.12); border: none; color: #fff; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; }
-    .rp-close:hover { background: rgba(255,255,255,.2); }
-    .rp-loading { display: flex; align-items: center; gap: 10px; padding: 28px; color: #64748b; font-size: 13px; }
-    .spinner-sm { width: 16px; height: 16px; border: 2px solid #e2e8f0; border-top-color: #0e1c38; border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .statut-loyer { display: flex; align-items: flex-start; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #f1f5f9; }
-    .sl-ajour       { background: #f0fdf4; }
-    .sl-credit      { background: #ecfdf5; }
-    .sl-enretard    { background: #fef2f2; }
-    .sl-noncommence { background: #f8fafc; }
-    .sl-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
-    .sl-label { font-size: 13px; font-weight: 700; color: #0e1c38; }
-    .sl-detail { font-size: 11px; color: #64748b; margin-top: 3px; }
-    .kpi-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; padding: 10px 14px; border-bottom: 1px solid #f1f5f9; }
-    .kpi { background: #f8fafc; border-radius: 8px; padding: 9px 5px; text-align: center; border: 1px solid #e2e8f0; }
-    .kpi-ok { border-color: #86efac !important; background: #f0fdf4; }
-    .kpi-ko { border-color: #fca5a5 !important; background: #fef2f2; }
-    .kpi-icon { font-size: 15px; margin-bottom: 2px; }
-    .kpi-label { font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: .5px; }
-    .kpi-val { font-size: 12px; font-weight: 700; color: #0e1c38; margin: 2px 0; }
-    .kpi-status { font-size: 9px; color: #64748b; }
-    .solde-row { display: grid; grid-template-columns: 1fr 1fr 1fr; background: #f1f5f9; gap: 1px; border-bottom: 1px solid #f1f5f9; }
-    .solde-item { background: #fff; padding: 9px 10px; text-align: center; }
-    .si-label { display: block; font-size: 9px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; }
-    .si-val { font-size: 11px; font-weight: 700; color: #0e1c38; }
-    .si-ok { color: #16a34a; }
-    .solde-positif .si-val { color: #16a34a; }
-    .solde-negatif .si-val { color: #dc2626; }
-    .mois-section { padding: 11px 14px; border-bottom: 1px solid #f1f5f9; }
-    .mois-title { font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px; }
-    .mois-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; }
-    .mois-cell { text-align: center; padding: 4px 2px; border-radius: 5px; }
-    .mc-paye    { background: #d1fae5; } .mc-partiel { background: #fef3c7; }
-    .mc-impaye  { background: #fee2e2; } .mc-avance  { background: #dbeafe; }
-    .mc-futur   { background: #f1f5f9; opacity: .6; }
-    .mc-label { font-size: 7px; color: #64748b; font-weight: 600; text-transform: uppercase; }
-    .mc-icon { font-size: 10px; margin: 1px 0; }
-    .mc-paye .mc-icon    { color: #16a34a; } .mc-partiel .mc-icon { color: #d97706; }
-    .mc-impaye .mc-icon  { color: #dc2626; } .mc-avance .mc-icon  { color: #2563eb; }
-    .mc-montant { font-size: 7px; color: #64748b; }
-    .mois-legend { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
-    .leg { font-size: 9px; color: #64748b; display: flex; align-items: center; gap: 3px; }
-    .leg::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 2px; }
-    .leg-paye::before    { background: #d1fae5; } .leg-partiel::before { background: #fef3c7; }
-    .leg-impaye::before  { background: #fee2e2; } .leg-avance::before  { background: #dbeafe; }
-    .leg-futur::before   { background: #f1f5f9; }
-    .last-payment { padding: 9px 14px; font-size: 11px; color: #64748b; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 6px; }
-    .rp-actions { padding: 12px 14px; }
-    .btn-full { width: 100%; justify-content: center; }
-    .data-table tr.row-selected td { background: #eff6ff !important; }
-    .data-table tr.row-selected td:first-child { border-left: 3px solid #3b82f6; }
-    .data-table tr { cursor: pointer; }
-    .num-badge { font-family:monospace; background:var(--surf2); padding:3px 8px; border-radius:6px; font-size:.78rem; color:var(--navy); font-weight:700; }
-    .btn-danger { background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; }
-    .btn-danger:hover { background:#fecaca; }
-    .row-actions { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+    .recap-pane::-webkit-scrollbar-thumb { background: var(--bord); }
+    .rp-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:var(--navy); }
+    .rp-title-block { display:flex; align-items:center; gap:10px; }
+    .rp-avatar { width:36px; height:36px; background:var(--gold); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; color:var(--navy); flex-shrink:0; }
+    .rp-nom  { font-size:13px; font-weight:700; color:#fff; }
+    .rp-code { font-size:11px; color:rgba(255,255,255,.4); font-family:monospace; margin-top:2px; }
+    .rp-close { background:rgba(255,255,255,.1); border:none; color:#fff; width:26px; height:26px; border-radius:6px; cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; }
+    .rp-close:hover { background:rgba(220,38,38,.3); }
+    .rp-loading { display:flex; align-items:center; gap:10px; padding:28px; color:var(--t3); font-size:13px; }
+    .spinner-sm { width:16px; height:16px; border:2px solid var(--bord); border-top-color:var(--navy); border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .statut-loyer { display:flex; align-items:flex-start; gap:10px; padding:13px 16px; border-bottom:1px solid var(--surf2); }
+    .sl-ajour{background:var(--ok-bg)}.sl-credit{background:#ecfdf5}.sl-enretard{background:var(--late-bg)}.sl-noncommence{background:var(--surf)}
+    .sl-icon{font-size:20px;flex-shrink:0;margin-top:2px}.sl-label{font-size:13px;font-weight:700;color:var(--t1)}.sl-detail{font-size:11px;color:var(--t3);margin-top:3px}
+    .kpi-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;padding:10px 14px;border-bottom:1px solid var(--surf2)}
+    .kpi{background:var(--surf);border-radius:8px;padding:9px 5px;text-align:center;border:1px solid var(--bord)}
+    .kpi-ok{border-color:#86efac!important;background:var(--ok-bg)}.kpi-ko{border-color:#fca5a5!important;background:var(--late-bg)}
+    .kpi-icon{font-size:15px;margin-bottom:2px}.kpi-label{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px}
+    .kpi-val{font-size:12px;font-weight:700;color:var(--t1);margin:2px 0}.kpi-status{font-size:9px;color:var(--t3)}
+    .solde-row{display:grid;grid-template-columns:1fr 1fr 1fr;background:var(--surf2);gap:1px;border-bottom:1px solid var(--surf2)}
+    .solde-item{background:#fff;padding:9px 10px;text-align:center}
+    .si-label{display:block;font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+    .si-val{font-size:11px;font-weight:700;color:var(--t1)}.si-ok{color:var(--ok)}
+    .solde-positif .si-val{color:var(--ok)}.solde-negatif .si-val{color:var(--late)}
+    .mois-section{padding:11px 14px;border-bottom:1px solid var(--surf2)}
+    .mois-title{font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+    .mois-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
+    .mois-cell{text-align:center;padding:4px 2px;border-radius:5px}
+    .mc-paye{background:#d1fae5}.mc-partiel{background:#fef3c7}.mc-impaye{background:#fee2e2}.mc-avance{background:#dbeafe}.mc-futur{background:var(--surf2);opacity:.6}
+    .mc-label{font-size:7px;color:var(--t3);font-weight:600;text-transform:uppercase}.mc-icon{font-size:10px;margin:1px 0}
+    .mc-paye .mc-icon{color:var(--ok)}.mc-partiel .mc-icon{color:var(--amber)}.mc-impaye .mc-icon{color:var(--late)}.mc-avance .mc-icon{color:var(--blue)}
+    .mc-montant{font-size:7px;color:var(--t3)}
+    .mois-legend{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+    .leg{font-size:9px;color:var(--t3);display:flex;align-items:center;gap:3px}
+    .leg::before{content:'';display:inline-block;width:7px;height:7px;border-radius:2px}
+    .leg-paye::before{background:#d1fae5}.leg-partiel::before{background:#fef3c7}.leg-impaye::before{background:#fee2e2}.leg-avance::before{background:#dbeafe}.leg-futur::before{background:var(--surf2)}
+    .last-payment{padding:9px 14px;font-size:11px;color:var(--t3);border-bottom:1px solid var(--surf2);display:flex;align-items:center;gap:6px}
+    .rp-actions{padding:12px 14px}
+
   `]
 })
 export class ContratsLocationListComponent implements OnInit, OnDestroy {
@@ -579,6 +734,15 @@ export class ContratsLocationListComponent implements OnInit, OnDestroy {
 
   isDirection() { return this.auth.isDirection(); }
   peutResilier() { return this.auth.isPdg(); }
+
+  avatarColor(nom: string): string {
+    const colors = ['#0D1B2A','#1B3A5C','#0F3460','#1A4731','#533483','#7B3F00','#2B4865'];
+    let h = 0; for (const c of nom) h = (h * 31 + c.charCodeAt(0)) & 0xFFFFFF;
+    return colors[Math.abs(h) % colors.length];
+  }
+  initiales(nom: string): string {
+    return nom.split(' ').map((w: string) => w[0] ?? '').join('').toUpperCase().slice(0, 2);
+  }
 
   // ════════════════════════════════════════════════════════════
   //  RÉSILIATION
