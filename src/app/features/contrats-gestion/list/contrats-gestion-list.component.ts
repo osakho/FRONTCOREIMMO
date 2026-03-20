@@ -737,9 +737,21 @@ export class ContratsGestionListComponent implements OnInit, OnDestroy {
     });
   }
 
+  // etapeValide(): boolean {
+  //   if (this.etape === 1) return !!this.propSel && !!this.step1.tauxCommission && !!this.step1.dateDebut;
+  //   return true;
+  // }
   etapeValide(): boolean {
-    if (this.etape === 1) return !!this.propSel && !!this.step1.tauxCommission && !!this.step1.dateDebut;
-    return true;
+    if (this.etape !== 1) return true;
+    
+    const taux = Number(this.step1.tauxCommission);
+    
+    return (
+      this.propSel != null &&
+      this.step1.dateDebut?.length > 0 &&
+      !isNaN(taux) &&
+      taux >= 0 && taux <= 100
+    );
   }
 
   soumettre() {

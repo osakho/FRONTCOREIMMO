@@ -2,7 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule }               from '@angular/common';
 import { RouterLink, Router, ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
-import { ProprietairesService }        from '../../../core/services/api.services';
+import { ProprietairesService, FichiersService } from '../../../core/services/api.services';
 
 @Component({
   selector: 'kdi-proprietaire-form',
@@ -351,7 +351,8 @@ import { ProprietairesService }        from '../../../core/services/api.services
 export class ProprietaireFormComponent implements OnInit {
 
   private fb     = inject(FormBuilder);
-  private svc    = inject(ProprietairesService);
+  private svc        = inject(ProprietairesService) as ProprietairesService;
+  private fichiersSvc = inject(FichiersService) as FichiersService;
   private router = inject(Router);
   private route  = inject(ActivatedRoute);
 
@@ -475,11 +476,20 @@ export class ProprietaireFormComponent implements OnInit {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     this.submitting = true;
     this.errorMsg   = '';
-    const fd = this.svc.buildFormData(this.form.value, this.photoFile);
+    // Soumettre les données texte sans FormData
+    const fd = this.svc.buildFormData(this.form.value); // sans photo
+
+    const uploadPhotoSiPresent = (proprietaireId: string) => {
+      if (this.photoFile) {
+        this.fichiersSvc.uploadFile(proprietaireId, 'Proprietaire', 'PhotoIdentite', this.photoFile)
+          .subscribe({ error: () => console.warn('Photo non uploadée') });
+      }
+    };
 
     if (this.isEdit) {
       this.svc.update(this.editId, fd).subscribe({
         next: () => {
+          uploadPhotoSiPresent(this.editId);
           this.submitting = false;
           this.successMsg = 'Modifications enregistrées avec succès !';
           setTimeout(() => this.router.navigate(['/proprietaires', this.editId]), 1500);
@@ -491,7 +501,10 @@ export class ProprietaireFormComponent implements OnInit {
       });
     } else {
       this.svc.create(fd).subscribe({
-        next: () => this.router.navigate(['/proprietaires']),
+        next: (id: any) => {
+          uploadPhotoSiPresent(id);
+          this.router.navigate(['/proprietaires']);
+        },
         error: (err: any) => { this.submitting = false; this.errorMsg = err?.error?.message ?? 'Erreur.'; }
       });
     }

@@ -619,3 +619,102 @@ export class MotifsPretService extends ApiService {
     return this.http.delete<void>(`${this.base}/motifs-pret/${id}`);
   }
 }
+
+// =====================================================================================================================================================
+//  FICHIERS SERVICE — stockage base64 en base de données
+//  Remplace le stockage sur disque (wwwroot/uploads)
+// =====================================================================================================================================================
+
+export interface FichierMetaDto {
+  id:           string;
+  nomFichier:   string;
+  typeMime:     string;
+  tailleOctets: number;
+  role:         string;
+  creeLe:       string;
+}
+
+export interface FichierContenuDto extends FichierMetaDto {
+  contenuBase64: string;
+  dataUrl:       string;   // "data:image/jpeg;base64,..."  prêt pour <img [src]>
+}
+
+export type RoleFichier =
+  | 'PhotoIdentite'
+  | 'DocumentIdentite'
+  | 'ContratSigne'
+  | 'Avenant'
+  | 'PhotoPropriete'
+  | 'PlanPropriete'
+  | 'Autre';
+
+@Injectable({ providedIn: 'root' })
+export class FichiersService extends ApiService {
+
+  /** Upload un fichier à partir d'un objet File (lit le base64 automatiquement) */
+  uploadFile(
+    entiteId:   string,
+    entiteType: string,
+    role:       RoleFichier,
+    file:       File
+  ): Observable<FichierMetaDto> {
+    return new Observable(obs => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        this.post<FichierMetaDto>('/fichiers', {
+          entiteId,
+          entiteType,
+          role,
+          nomFichier:    file.name,
+          typeMime:      file.type || 'application/octet-stream',
+          contenuBase64: dataUrl   // inclut "data:...;base64," — le backend le nettoie
+        }).subscribe({ next: r => { obs.next(r); obs.complete(); }, error: e => obs.error(e) });
+      };
+      reader.onerror = () => obs.error(new Error('Lecture du fichier échouée'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /** Upload à partir d'un dataUrl déjà lu (ex : photoPreview déjà disponible) */
+  uploadDataUrl(
+    entiteId:   string,
+    entiteType: string,
+    role:       RoleFichier,
+    dataUrl:    string,
+    nomFichier: string,
+    typeMime:   string
+  ): Observable<FichierMetaDto> {
+    return this.post<FichierMetaDto>('/fichiers', {
+      entiteId, entiteType, role, nomFichier, typeMime, contenuBase64: dataUrl
+    });
+  }
+
+  /** Récupère le contenu base64 + dataUrl d'un fichier */
+  getContenu(id: string): Observable<FichierContenuDto> {
+    return this.get<FichierContenuDto>(`/fichiers/${id}`);
+  }
+
+  /** Liste les métadonnées des fichiers d'une entité (sans le contenu binaire) */
+  getParEntite(entiteType: string, entiteId: string, role?: RoleFichier): Observable<FichierMetaDto[]> {
+    const params = role ? new HttpParams().set('role', role) : undefined;
+    return this.get<FichierMetaDto[]>(`/fichiers/entite/${entiteType}/${entiteId}`, params);
+  }
+
+  /** Ouvre le fichier dans un nouvel onglet (téléchargement direct) */
+  telecharger(id: string): void {
+    window.open(`${this.base}/fichiers/${id}/telecharger`, '_blank');
+  }
+
+  supprimer(id: string): Observable<void> {
+    return this.delete<void>(`/fichiers/${id}`);
+  }
+
+  /** Formate la taille en Ko / Mo */
+  formatTaille(octets: number): string {
+    if (octets < 1024)       return `${octets} o`;
+    if (octets < 1024*1024)  return `${(octets/1024).toFixed(1)} Ko`;
+    return `${(octets/1024/1024).toFixed(1)} Mo`;
+  }
+}
+

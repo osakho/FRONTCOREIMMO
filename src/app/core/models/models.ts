@@ -821,6 +821,11 @@ export interface RecapFinancierContratDto {
   dernierPaiement?:  string;
   dateEntree:        string;
   mois:              MoisLoyerDto[];
+  collecteurId?:      string;
+  collecteurNom?:     string;
+  proprieteId?:       string;
+  proprieteLibelle?:  string;
+  proprietaireNom?:   string;
 }
 
 export interface SuiviLoyersGlobalDto {

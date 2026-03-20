@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule }                       from '@angular/common';
-import { RouterLink }                         from '@angular/router';
+import { RouterLink, ActivatedRoute }         from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ProprietesService, ProprietairesService } from '../../../core/services/api.services';
 import { ProprieteListItemDto, ProprietaireListItemDto } from '../../../core/models/models';
@@ -460,11 +460,13 @@ export class ProprietesListComponent implements OnInit {
   private svc      = inject(ProprietesService);
   private propSvc2 = inject(ProprietairesService);
   private fb       = inject(FormBuilder);
+  private route    = inject(ActivatedRoute);
 
   // ── Liste ──
   liste   = signal<any>({ items:[], totalCount:0, totalPages:1 });
   loading = signal(false);
   page    = 1;
+  proprietaireIdFiltre = '';   // pré-rempli depuis queryParam au chargement
   searchQuery  = '';
   filtreContrat = '';
   vue = 'grid';
@@ -493,11 +495,22 @@ export class ProprietesListComponent implements OnInit {
     description: [''],
   });
 
-  ngOnInit(): void { this.charger(); }
+  ngOnInit(): void {
+    // Lire le queryParam proprietaireId passé depuis la fiche propriétaire
+    // ("Voir le patrimoine →") pour pré-filtrer la liste sur ce propriétaire.
+    this.route.queryParams.subscribe(params => {
+      this.proprietaireIdFiltre = params['proprietaireId'] ?? '';
+      this.charger();
+    });
+  }
 
   charger(): void {
     this.loading.set(true);
-    this.svc.getAll(this.page, 20, this.searchQuery || undefined).subscribe({
+    this.svc.getAll(
+      this.page, 20,
+      this.searchQuery || undefined,
+      this.proprietaireIdFiltre || undefined
+    ).subscribe({
       next:  res => { this.liste.set(res); this.loading.set(false); },
       error: ()  => this.loading.set(false)
     });
