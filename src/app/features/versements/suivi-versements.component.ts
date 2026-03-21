@@ -162,7 +162,7 @@ export class SuiviVersementsService extends ApiService {
 
           <!-- Propriétés de ce propriétaire -->
           <div class="prop-body" *ngIf="isOpen(p.proprietaireId)">
-            <div class="propriete-block" *ngFor="let pr of p.proprietes">
+            <div class="propriete-block" *ngFor="let pr of proprietesFiltrees(p)">
 
               <div class="pr-header">
                 <div>
@@ -669,10 +669,17 @@ export class SuiviVersementsComponent implements OnInit {
 
   proprietairesFiltres(): SuiviVersementProprietaireDto[] {
     if (!this.data) return [];
-    if (!this.filtre) return this.data.proprietaires;
-    return this.data.proprietaires.filter(p =>
+    // Exclure les propriétaires dont le net global est 0 (aucun montant à verser)
+    const avecNet = this.data.proprietaires.filter(p => p.totalNetGlobal > 0);
+    if (!this.filtre) return avecNet;
+    return avecNet.filter(p =>
       p.proprietes.some(pr => pr.periodes.some(pe => pe.statut === this.filtre))
     );
+  }
+
+  // Retourne uniquement les propriétés avec un montant net > 0
+  proprietesFiltrees(p: SuiviVersementProprietaireDto): SuiviVersementProprieteDto[] {
+    return p.proprietes.filter(pr => pr.totalNet > 0);
   }
 
   // FIX 1 : colonne Reporté masquée si aucune période n'a de report

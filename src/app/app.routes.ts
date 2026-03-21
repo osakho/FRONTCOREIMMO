@@ -62,6 +62,7 @@ export const routes: Routes = [
       {path: 'versements', component:VersementsComponent},
       { path: 'versements',    component: VersementsComponent },
       { path: 'suivi-versements', loadComponent: () => import('./features/versements/suivi-versements.component').then(m => m.SuiviVersementsComponent) },
+       { path: 'bordereau-versements', loadComponent: () => import('./features/versements/bordereau-versements.component').then(m => m.BordereauVersementsComponent) },
       
       // Recouvrement
       { path: 'contentieux', loadComponent: () => import('./features/recouvrement/contentieux.component').then(m => m.ContentieuxComponent) },
