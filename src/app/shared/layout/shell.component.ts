@@ -445,13 +445,15 @@ export class ShellComponent implements OnInit {
           { label: 'Bordereau',            route: '/collectes/bordereau',  icon: this.svg(ICONS.fileText) },
           { label: 'Versements',           route: '/versements',           icon: this.svg(ICONS.creditCard) },
           { label: 'Suivi versements',     route: '/suivi-versements',     icon: this.svg(ICONS.wallet) },
-           { label: 'Bordereau versements',  route: '/bordereau-versements', icon: this.svg(ICONS.fileText) },
+          { label: 'Bordereau versements',  route: '/bordereau-versements', icon: this.svg(ICONS.fileText) },
+          { label: 'Grand Livre',             route: '/grand-livre',           icon: this.svg(ICONS.clipboardList) },
           { label: 'Reversements',         route: '/reversements',         icon: this.svg(ICONS.arrowDown) },
           { label: 'Contentieux',          route: '/contentieux',          icon: this.svg(ICONS.alertCircle), badge: '3', badgeColor: 'red' },
           { label: 'Recouvrement',         route: '/recouvrement',         icon: this.svg(ICONS.refresh) },
           { label: 'Charges propriétaires', route: '/charges-proprietaire', icon: this.svg(ICONS.wallet) },
           { label: 'Suivi collecteur',     route: '/suivi-collecteur', icon: this.svg(ICONS.clipboardList) },
           { label: 'Bord financier agence', route: '/tableau-bord-agence', icon: this.svg(ICONS.barChart) },
+          { label: 'Compte de résultat',     route: '/compte-resultat',     icon: this.svg(ICONS.pieChart) },
           
         ]
       },
@@ -473,14 +475,14 @@ export class ShellComponent implements OnInit {
         ]
       }
     ];
-
+    
     this.router.events.pipe(filter(e => e instanceof NavigationEnd))
       .subscribe((e: any) => {
         this.pageTitle = this.findTitle(e.urlAfterRedirects.split('?')[0]);
       });
     this.pageTitle = this.findTitle(this.router.url.split('?')[0]);
   }
-
+  
   private readonly titles: Record<string, string> = {
     '/dashboard':             'Tableau de bord',
     '/proprietaires':         'Propriétaires',
@@ -510,6 +512,8 @@ export class ShellComponent implements OnInit {
     '/rapports':              'Rapports',
     '/parametres':            'Paramètres',
     '/tableau-bord-agence':   'Tableau de bord financier',
+    '/compte-resultat':       'Compte de résultat',
+    '/grand-livre':           'Grand Livre propriétaires',
   };
 
   private findTitle(url: string): string {

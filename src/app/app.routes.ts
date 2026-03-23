@@ -62,7 +62,9 @@ export const routes: Routes = [
       {path: 'versements', component:VersementsComponent},
       { path: 'versements',    component: VersementsComponent },
       { path: 'suivi-versements', loadComponent: () => import('./features/versements/suivi-versements.component').then(m => m.SuiviVersementsComponent) },
-       { path: 'bordereau-versements', loadComponent: () => import('./features/versements/bordereau-versements.component').then(m => m.BordereauVersementsComponent) },
+      { path: 'bordereau-versements', loadComponent: () => import('./features/versements/bordereau-versements.component').then(m => m.BordereauVersementsComponent) },
+      { path: 'grand-livre', loadComponent: () => import('./features/versements/grand-livre.component').then(m => m.GrandLivreComponent), canActivate: [directionGuard] },
+      { path: 'compte-resultat', loadComponent: () => import('./features/tableau-bord-agence/compte-resultat-agence.component').then(m => m.CompteResultatAgenceComponent), canActivate: [directionGuard] },
       
       // Recouvrement
       { path: 'contentieux', loadComponent: () => import('./features/recouvrement/contentieux.component').then(m => m.ContentieuxComponent) },
