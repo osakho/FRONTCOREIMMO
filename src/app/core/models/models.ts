@@ -803,6 +803,8 @@ export interface MoisLoyerDto {
 export interface RecapFinancierContratDto {
   contratId:         string;
   locataireNom:      string;
+  locataireTel?:     string;
+  locataireEmail?:   string;
   produitCode:       string;
   loyer:             number;
   caution:           number;
@@ -1019,4 +1021,67 @@ export interface MotifPretDto {
   groupe:  string;
   libelle: string;
   ordre:   number;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  NOTIFICATIONS
+// ══════════════════════════════════════════════════════════════════════════════
+export type CanalNotification = 'email' | 'sms' | 'whatsapp';
+export type TypeNotification  =
+  // ── Locataires ──
+  | 'QuittanceLoyer'          // Quittance mensuelle
+  | 'RelancePaiement'         // Relance loyer impayé
+  | 'AvisEcheance'            // Rappel d'échéance
+  | 'ConfirmationEntree'      // Confirmation entrée dans les lieux
+  // ── Propriétaires ──
+  | 'AvisVersement'           // Avis de versement (avant exécution)
+  | 'BordereauVersement'      // Bordereau/preuve de versement
+  | 'ReleveCompte'            // Relevé de compte mensuel
+  | 'DevisAValider'           // Devis travaux à valider
+  | 'AvancementChantier'      // Avancement d'un chantier
+  | 'AvisImpot'               // Avis paiement impôt / taxe
+  | 'RelanceProprietaire'     // Relance (avance, charge…)
+  // ── Commun ──
+  | 'MessageLibre';           // Message libre
+
+export interface EnvoyerNotificationRequest {
+  destinataireId:   string;
+  typeDestinataire: 'Locataire' | 'Proprietaire' | 'Contact';
+  type:             TypeNotification;
+  canaux:           CanalNotification[];
+  sujet?:           string;
+  message?:         string;
+  parametres?:      Record<string, string>;
+}
+
+export interface EnvoyerMasseRequest {
+  destinataireIds:  string[];
+  typeDestinataire: 'Locataire' | 'Proprietaire';
+  type:             TypeNotification;
+  canaux:           CanalNotification[];
+  message?:         string;
+}
+
+export interface HistoriqueNotificationDto {
+  id:                string;
+  dateEnvoi:         string;
+  typeDestinataire:  string;
+  destinataireNom:   string;
+  destinataireTel:   string;
+  destinataireEmail?:string;
+  type:              TypeNotification;
+  typeLabel:         string;
+  canaux:            CanalNotification[];
+  statut:            'Envoye' | 'Echec' | 'EnAttente';
+  statutLabel:       string;
+  sujet?:            string;
+  apercuMessage?:    string;
+  envoyePar:         string;
+  erreur?:           string;
+}
+
+export interface StatutsEnvoiDto {
+  email?:    'ok' | 'echec' | 'ignore';
+  sms?:      'ok' | 'echec' | 'ignore';
+  whatsapp?: 'ok' | 'echec' | 'ignore';
 }

@@ -718,3 +718,82 @@ export class FichiersService extends ApiService {
   }
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  SERVICE DE NOTIFICATIONS — Email · SMS · WhatsApp
+//  Centralise tous les envois de notifications de l'application
+//  Endpoints backend :
+//    POST /notifications/envoyer          → envoi manuel ad-hoc
+//    POST /notifications/envoyer-masse    → envoi groupé
+//    GET  /notifications/historique       → journal des envois
+//    POST /recouvrement/{id}/relancer     → relance locataire (recouvrement)
+//    POST /contrats-location/{id}/notifier-locataire → notif locataire
+//    POST /reversements/notifier          → notif propriétaire après versement
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Notification types — définis dans models.ts, importés ici
+import type {
+  CanalNotification, TypeNotification,
+  EnvoyerNotificationRequest, EnvoyerMasseRequest,
+  HistoriqueNotificationDto, StatutsEnvoiDto,
+} from '../models/models';
+// Re-export for convenience
+export type { CanalNotification, TypeNotification, HistoriqueNotificationDto, StatutsEnvoiDto };
+
+@Injectable({ providedIn: 'root' })
+export class NotificationService extends ApiService {
+
+  /** Envoi unique — locataire ou propriétaire */
+  envoyer(req: EnvoyerNotificationRequest): Observable<StatutsEnvoiDto> {
+    return this.post<StatutsEnvoiDto>('/notifications/envoyer', req);
+  }
+
+  /** Envoi en masse (multi-destinataires) */
+  envoyerMasse(req: EnvoyerMasseRequest): Observable<{ nbEnvoyes: number; nbEchecs: number }> {
+    return this.post<{ nbEnvoyes: number; nbEchecs: number }>('/notifications/envoyer-masse', req);
+  }
+
+  /** Historique des notifications envoyées */
+  getHistorique(opts: {
+    page?: number;
+    pageSize?: number;
+    typeDestinataire?: string;
+    type?: TypeNotification;
+    canal?: CanalNotification;
+    dateDebut?: string;
+    dateFin?: string;
+  } = {}): Observable<import('../models/models').PagedList<HistoriqueNotificationDto>> {
+    let params = new HttpParams();
+    if (opts.page)              params = params.set('page', opts.page);
+    if (opts.pageSize)          params = params.set('pageSize', opts.pageSize!);
+    if (opts.typeDestinataire)  params = params.set('typeDestinataire', opts.typeDestinataire);
+    if (opts.type)              params = params.set('type', opts.type);
+    if (opts.canal)             params = params.set('canal', opts.canal);
+    if (opts.dateDebut)         params = params.set('dateDebut', opts.dateDebut);
+    if (opts.dateFin)           params = params.set('dateFin', opts.dateFin);
+    return this.get<import('../models/models').PagedList<HistoriqueNotificationDto>>('/notifications/historique', params);
+  }
+
+  /** Relance locataire via recouvrement (compatible existant) */
+  relancerLocataire(contratId: string, canal: CanalNotification, message?: string): Observable<void> {
+    return this.post<void>(`/recouvrement/${contratId}/relancer`, {
+      canal, message: message ?? ''
+    });
+  }
+
+  /** Notifier locataire (quittance, avis…) */
+  notifierLocataire(contratId: string, canal: CanalNotification, type: string): Observable<void> {
+    return this.post<void>(`/contrats-location/${contratId}/notifier-locataire`, { canal, type });
+  }
+
+  /** Notifier propriétaire après versement */
+  notifierProprietaire(req: {
+    proprietaireId: string;
+    canaux: CanalNotification[];
+    type: TypeNotification;
+    montant?: number;
+    message?: string;
+  }): Observable<StatutsEnvoiDto> {
+    return this.post<StatutsEnvoiDto>('/reversements/notifier', req);
+  }
+}

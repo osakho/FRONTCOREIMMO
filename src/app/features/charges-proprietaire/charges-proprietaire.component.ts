@@ -682,20 +682,51 @@ totalType(t: string): number {
     if (!this.formValide()) return;
     if (this.form.type === 'Travaux') {
       this.selectedChantiers.forEach(ch =>
-        this.svc.creer({ ...this.form, chantierOrigineId: ch.id, montant: ch.montant, proprietaireId: this.proprietaireId })
-          .subscribe({ next: () => this.load(), error: () => this.showToast('❌ Erreur') })
+        this.svc.creer({
+          type:              this.form.type,
+          chantierOrigineId: ch.id,
+          montant:           ch.montant,
+          notes:             this.form.notes,
+          proprietaireId:    this.proprietaireId
+        }).subscribe({ next: () => this.load(), error: () => this.showToast('❌ Erreur') })
       );
     } else {
-      const payload = this.form.type === 'Avance'
-        ? {
-            type:                 this.form.type,
-            libelle:              this.form.libelle,
-            montant:              this.form.montant,
-            remboursementMensuel: this.form.remboursementMensuel,
-            notes:                this.form.notes,
-            proprietaireId:       this.proprietaireId
-          }
-        : { ...this.form, proprietaireId: this.proprietaireId };
+      // Construire un payload minimal par type pour éviter que des champs
+      // parasites (remboursementMensuel, locataireId…) ne fassent échouer
+      // la validation backend sur les types Impot et Autre.
+      let payload: Record<string, unknown>;
+
+      if (this.form.type === 'Avance') {
+        payload = {
+          type:                 this.form.type,
+          libelle:              this.form.libelle,
+          montant:              this.form.montant,
+          remboursementMensuel: this.form.remboursementMensuel,
+          notes:                this.form.notes,
+          proprietaireId:       this.proprietaireId
+        };
+      } else if (this.form.type === 'Impot') {
+        payload = {
+          type:           this.form.type,
+          libelle:        this.form.libelle,
+          montant:        this.form.montant,
+          reference:      this.form.reference   || null,
+          periodeMois:    this.form.periodeMois  || null,
+          notes:          this.form.notes        || null,
+          proprietaireId: this.proprietaireId
+        };
+      } else {
+        // Autre
+        payload = {
+          type:           this.form.type,
+          libelle:        this.form.libelle,
+          montant:        this.form.montant,
+          reference:      this.form.reference || null,
+          notes:          this.form.notes     || null,
+          proprietaireId: this.proprietaireId
+        };
+      }
+
       this.svc.creer(payload)
         .subscribe({ next: () => this.load(), error: () => this.showToast('❌ Erreur') });
     }
@@ -704,9 +735,15 @@ totalType(t: string): number {
   }
 
   formValide(): boolean {
-    if (this.form.type === 'Travaux') return this.selectedChantiers.length > 0;
+    if (this.form.type === 'Travaux')
+      return this.selectedChantiers.length > 0;
     if (this.form.type === 'Avance')
       return !!(this.form.montant > 0 && this.form.libelle && this.form.remboursementMensuel > 0);
+    if (this.form.type === 'Impot')
+      // libelle doit être sélectionné (non vide) ET montant > 0
+      return !!(this.form.montant > 0 && this.form.libelle && this.form.libelle.trim() !== '');
+    if (this.form.type === 'Autre')
+      return !!(this.form.montant > 0 && this.form.libelle && this.form.libelle.trim() !== '');
     return !!(this.form.montant > 0 && (this.form.libelle || this.form.locataireId));
   }
 

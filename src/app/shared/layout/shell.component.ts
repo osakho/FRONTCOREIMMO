@@ -445,15 +445,16 @@ export class ShellComponent implements OnInit {
           { label: 'Bordereau',            route: '/collectes/bordereau',  icon: this.svg(ICONS.fileText) },
           { label: 'Versements',           route: '/versements',           icon: this.svg(ICONS.creditCard) },
           { label: 'Suivi versements',     route: '/suivi-versements',     icon: this.svg(ICONS.wallet) },
-          { label: 'Bordereau versements',  route: '/bordereau-versements', icon: this.svg(ICONS.fileText) },
-          { label: 'Grand Livre',             route: '/grand-livre',           icon: this.svg(ICONS.clipboardList) },
+          { label: 'Bordereau versements', route: '/bordereau-versements', icon: this.svg(ICONS.fileText) },
+          { label: 'Grand Livre',          route: '/grand-livre',          icon: this.svg(ICONS.clipboardList) },
+          { label: 'Notifications',        route: '/notifications',        icon: this.svg(ICONS.check) },          
           { label: 'Reversements',         route: '/reversements',         icon: this.svg(ICONS.arrowDown) },
           { label: 'Contentieux',          route: '/contentieux',          icon: this.svg(ICONS.alertCircle), badge: '3', badgeColor: 'red' },
           { label: 'Recouvrement',         route: '/recouvrement',         icon: this.svg(ICONS.refresh) },
           { label: 'Charges propriétaires', route: '/charges-proprietaire', icon: this.svg(ICONS.wallet) },
           { label: 'Suivi collecteur',     route: '/suivi-collecteur', icon: this.svg(ICONS.clipboardList) },
           { label: 'Bord financier agence', route: '/tableau-bord-agence', icon: this.svg(ICONS.barChart) },
-          { label: 'Compte de résultat',     route: '/compte-resultat',     icon: this.svg(ICONS.pieChart) },
+          { label: 'Compte de résultat',    route: '/compte-resultat',     icon: this.svg(ICONS.pieChart) },
           
         ]
       },
@@ -514,6 +515,7 @@ export class ShellComponent implements OnInit {
     '/tableau-bord-agence':   'Tableau de bord financier',
     '/compte-resultat':       'Compte de résultat',
     '/grand-livre':           'Grand Livre propriétaires',
+    '/notifications':         'Notifications',
   };
 
   private findTitle(url: string): string {
