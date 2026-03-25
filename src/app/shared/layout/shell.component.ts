@@ -230,7 +230,7 @@ interface NavSection {
 
     /* Items container */
     .section-items {
-      overflow: hidden; max-height: 500px;
+      overflow: hidden; max-height: 1000px;
       transition: max-height .28s ease, opacity .22s ease; opacity: 1;
     }
     .section-items.hidden { max-height: 0; opacity: 0; }
@@ -440,13 +440,13 @@ export class ShellComponent implements OnInit {
         label: 'Collectes & Finance', key: 'finance', collapsed: false,
         items: [
           { label: 'Collectes',            route: '/collectes',            icon: this.svg(ICONS.coins),       badge: '5', badgeColor: 'gold' },
-          { label: 'Validation collectes', route: '/collectes/validation', icon: this.svg(ICONS.checkSquare) },
+          // { label: 'Validation collectes', route: '/collectes/validation', icon: this.svg(ICONS.checkSquare) },
           { label: 'Rapport collecteur',   route: '/collectes/rapport',    icon: this.svg(ICONS.barChart) },
-          { label: 'Bordereau',            route: '/collectes/bordereau',  icon: this.svg(ICONS.fileText) },
+          // { label: 'Bordereau',            route: '/collectes/bordereau',  icon: this.svg(ICONS.fileText) },
           { label: 'Versements',           route: '/versements',           icon: this.svg(ICONS.creditCard) },
           { label: 'Suivi versements',     route: '/suivi-versements',     icon: this.svg(ICONS.wallet) },
-          { label: 'Bordereau versements', route: '/bordereau-versements', icon: this.svg(ICONS.fileText) },
-          { label: 'Grand Livre',          route: '/grand-livre',          icon: this.svg(ICONS.clipboardList) },
+          { label: 'Compte de résultat',    route: '/compte-resultat',     icon: this.svg(ICONS.pieChart) },
+          { label: 'Recettes agence',       route: '/recettes-agence',     icon: this.svg(ICONS.trendingUp) },
           { label: 'Notifications',        route: '/notifications',        icon: this.svg(ICONS.check) },          
           { label: 'Reversements',         route: '/reversements',         icon: this.svg(ICONS.arrowDown) },
           { label: 'Contentieux',          route: '/contentieux',          icon: this.svg(ICONS.alertCircle), badge: '3', badgeColor: 'red' },
@@ -454,8 +454,6 @@ export class ShellComponent implements OnInit {
           { label: 'Charges propriétaires', route: '/charges-proprietaire', icon: this.svg(ICONS.wallet) },
           { label: 'Suivi collecteur',     route: '/suivi-collecteur', icon: this.svg(ICONS.clipboardList) },
           { label: 'Bord financier agence', route: '/tableau-bord-agence', icon: this.svg(ICONS.barChart) },
-          { label: 'Compte de résultat',    route: '/compte-resultat',     icon: this.svg(ICONS.pieChart) },
-          
         ]
       },
       {
@@ -494,7 +492,8 @@ export class ShellComponent implements OnInit {
     '/contrats-gestion':      'Contrats de gestion',
     '/suivi-loyers':          'Suivi des loyers',
     '/suivi-versements': 'Suivi des versements',
-    '/bordereau-versements': 'Bordereau de versements',
+    '/compte-resultat':       'Compte de résultat',
+    '/recettes-agence':       'Recettes agence',
     '/collectes':             'Collectes',
     '/collectes/validation':  'Validation collectes',
     '/collectes/rapport':     'Rapport collecteur',
@@ -513,7 +512,6 @@ export class ShellComponent implements OnInit {
     '/rapports':              'Rapports',
     '/parametres':            'Paramètres',
     '/tableau-bord-agence':   'Tableau de bord financier',
-    '/compte-resultat':       'Compte de résultat',
     '/grand-livre':           'Grand Livre propriétaires',
     '/notifications':         'Notifications',
   };
@@ -557,4 +555,5 @@ const ICONS = {
   payments:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/><line x1="14" y1="15" x2="18" y2="15"/></svg>`,
   wallet: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>`,
   clipboardList: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>`,
+  trendingUp:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
 };
